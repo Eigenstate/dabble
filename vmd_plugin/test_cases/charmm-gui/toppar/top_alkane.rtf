@@ -1,0 +1,189 @@
+*  \\\\\\\ CHARMM36 All-Hydrogen Lipid Topology File ///////
+*  All comments and questions should be submitted to the 
+*  parameter forum at the CHARMM website: www.charmm.org
+*
+36  1
+
+!NOTE: Reordering of atoms in the choline region of the PC lipids as
+!requried for the domain decomposition code in CHARMM.  This will not
+!change the energies/forces, but PSFs generated with the previous
+!lipid toppar files may not work.  To overcome this a toppar stream
+!file, toppar_all36_lipid_orig_pc_atom_order.str, has been created
+!which contains the original atom ordering. August 2012
+!
+
+!references
+!
+!Jeffery B. Klauda, Richard M. Venable, J. Alfredo Freites, Joseph
+!W. O'Connor, Douglas J. Tobias, Carlos Mondragon-Ramirez, Igor
+!Vorobyov, Alexander D. MacKerell, Jr. and Richard W. Pastor "Update of
+!the CHARMM All-Atom Additive Force Field for Lipids: Validation on Six
+!Lipid Types" J. Phys. Chem. B 2010, 114, 7830-7843
+!
+! PUFA Modifications
+!Jeffery B. Klauda, Viviana Monje, Taehoon Kim, and Wonpil Im. "Improving
+!the CHARMM Force Field for Polyunsaturated Fatty Acid Chains" J. Phys. Chem. B.
+!2012 ASAP http://dx.doi.org/10.1021/jp304056p
+  
+!Atom nomenclature is based on that of Sundaralingan, M.,
+!Ann. N.Y. Acad. Sci. USA, 195:324-355, 1972
+!see lipid_convert.tgz for information on nomenclature conversion
+!Renaming of atom types by Rick Venable due to switching to the
+!nomenclature of Sundaralingan, M., Ann. N.Y. Acad. Sci. USA,
+!195:324-355, 1972
+!
+!1) toppar_all36_lipid_oldxopc.str
+!2) convert_lipid_c27_c36_xopc.str
+!
+!The above stream files have 1) the old definitions of DOPC
+!and POPC, which replace the new definitions when used.  The second
+!stream file does a RENAME conversion, which allows old coord sets to
+!be updated to the new "all36_lipid" convention.
+
+MASS 136  HL    1.008000 H ! polar H (equivalent to protein H)
+MASS 137  HCL   1.008000 H ! charged H for PE (equivalent to protein HC)
+MASS 138  HOL   1.008000 H ! Nucleic acid phosphate hydroxyl proton
+MASS 139  HAL1  1.008000 H ! alphatic proton
+MASS 140  HAL2  1.008000 H ! alphatic proton
+MASS 141  HAL3  1.008000 H ! alphatic proton
+MASS 142  HEL1  1.008000 H ! for alkene; RHC=CR
+MASS 143  HEL2  1.008000 H ! for alkene; H2C=CR. Currently unused.
+MASS 144  HBL   1.008000 H ! POPS SER backbone H
+MASS 145  CL   12.011000 C ! carbonyl C (acetic acid/methyl acetate)
+MASS 146  CTL1 12.011000 C ! sp3 carbon with 1 H  (-CH1-)
+MASS 147  CTL2 12.011000 C ! carbon of methylene group (-CH2-)
+MASS 148  CTL3 12.011000 C ! carbon of methyl group (-CH3)
+MASS 149  CTL5 12.011000 C ! carbon of methyl group (-CH3) for tetramethylammonium
+MASS 150  CEL1 12.011000 C ! for alkene; RHC=CR
+MASS 151  CEL2 12.011000 C ! for alkene; H2C=CR. Currently unused.
+MASS 152  CCL  12.011000 C ! for POPS
+MASS 153  NTL  14.007000 N ! ammonium nitrogen
+MASS 154  NH3L 14.007000 N ! nitrogen phosphatidylethanolamine
+MASS 155  OBL  15.999400 O ! acetic acid carboxyl oxygen (e. to protein OB)
+MASS 156  OCL  15.999400 O ! acetate oxygen
+MASS 157  OSL  15.999400 O ! ester oxygen
+MASS 158  O2L  15.999400 O ! Nucleic acid =O in phosphate or sulfate
+MASS 159  OHL  15.999400 O ! Nucleic acid phosphate hydroxyl oxygen
+MASS 160  OSLP 15.999400 O ! Phosphate oxygen, to avoid conflict with methylacetate type O
+MASS 161  PL   30.974000 P ! phosphorus
+MASS 162  SL   32.060000 S ! Sulfate sulfur
+MASS 163  CRL1 12.011000 C ! sp3 carbon with 1 H on a ring  (-CH1-) for sterols
+MASS 164  CRL2 12.011000 C ! carbon of methylene group on a ring (-CH2-) for sterols
+ 
+DEFA FIRS none LAST none
+AUTOGENERATE ANGLES DIHEDRALS
+
+RESI TETD           0.00 ! tetradecane
+GROUP
+ATOM  C1    CTL3   -0.27 !  H1X   H2X H3X H4X       H14X    H14X
+ATOM  H1X   HAL3    0.09 !    \    |   |   |        |      /
+ATOM  H1Y   HAL3    0.09 ! H1Z-C1--C2--C3--C4--...--C14--C14-H14Z
+ATOM  H1Z   HAL3    0.09 !    /    |   |   |        |      \
+GROUP                    !  H1Y   H2Y H3Y H4Y       H14Y    H14Y
+ATOM  C2    CTL2   -0.18
+ATOM  H2X   HAL2    0.09
+ATOM  H2Y   HAL2    0.09
+GROUP
+ATOM  C3    CTL2   -0.18
+ATOM  H3X   HAL2    0.09
+ATOM  H3Y   HAL2    0.09
+GROUP
+ATOM  C4    CTL2   -0.18
+ATOM  H4X   HAL2    0.09
+ATOM  H4Y   HAL2    0.09
+GROUP
+ATOM  C5    CTL2   -0.18
+ATOM  H5X   HAL2    0.09
+ATOM  H5Y   HAL2    0.09
+GROUP
+ATOM  C6    CTL2   -0.18
+ATOM  H6X   HAL2    0.09
+ATOM  H6Y   HAL2    0.09
+GROUP
+ATOM  C7    CTL2   -0.18
+ATOM  H7X   HAL2    0.09
+ATOM  H7Y   HAL2    0.09
+GROUP
+ATOM  C8    CTL2   -0.18
+ATOM  H8X   HAL2    0.09
+ATOM  H8Y   HAL2    0.09
+GROUP
+ATOM  C9    CTL2   -0.18
+ATOM  H9X   HAL2    0.09
+ATOM  H9Y   HAL2    0.09
+GROUP
+ATOM  C10   CTL2   -0.18
+ATOM  H10X  HAL2    0.09
+ATOM  H10Y  HAL2    0.09
+GROUP
+ATOM  C11   CTL2   -0.18
+ATOM  H11X  HAL2    0.09
+ATOM  H11Y  HAL2    0.09
+GROUP
+ATOM  C12   CTL2   -0.18
+ATOM  H12X  HAL2    0.09
+ATOM  H12Y  HAL2    0.09
+GROUP
+ATOM  C13   CTL2   -0.18
+ATOM  H13X  HAL2    0.09
+ATOM  H13Y  HAL2    0.09
+GROUP
+ATOM  C14   CTL3   -0.27
+ATOM  H14X  HAL3    0.09
+ATOM  H14Y  HAL3    0.09
+ATOM  H14Z  HAL3    0.09
+
+BOND  C1   C2     C2   C3     C3   C4     C4   C5     C5   C6     C6   C7
+BOND  C7   C8     C8   C9     C9   C10    C10  C11    C11  C12    C12  C13
+BOND  C13  C14
+BOND  C1   H1X    C1   H1Y    C1   H1Z    C2   H2X    C2   H2Y
+BOND  C3   H3X    C3   H3Y    C4   H4X    C4   H4Y
+BOND  C5   H5X    C5   H5Y    C6   H6X    C6   H6Y
+BOND  C7   H7X    C7   H7Y    C8   H8X    C8   H8Y
+BOND  C9   H9X    C9   H9Y    C10  H10X   C10  H10Y
+BOND  C11  H11X   C11  H11Y   C12  H12X   C12  H12Y
+BOND  C13  H13X   C13  H13Y   C14  H14X   C14  H14Y   C14  H14Z
+
+IC C1    C3    *C2    H2X        1.5309  113.30 -121.68  108.77   1.1141
+IC H2X   C3    *C2    H2Y        1.1141  108.77 -116.68  108.76   1.1141
+IC C3    C2    C1     H1X        1.5340  113.30  -59.94  110.46   1.1113
+IC H1X   C2    *C1    H1Y        1.1113  110.46  119.86  110.45   1.1113
+IC H1X   C2    *C1    H1Z        1.1113  110.46 -120.06  110.61   1.1112
+IC C1    C2    C3     C4         1.5393  112.41 -178.89  112.60   1.5347
+IC C4    C2    *C3    H3X        1.5347  112.60 -121.37  109.10   1.1131
+IC H3X   C2    *C3    H3Y        1.1131  109.10 -117.41  109.08   1.1131
+IC C2    C3    C4     C5         1.5393  112.41 -178.89  112.60   1.5347
+IC C5    C3    *C4    H4X        1.5347  112.60 -121.37  109.10   1.1131
+IC H4X   C3    *C4    H4Y        1.1131  109.10 -117.41  109.08   1.1131
+IC C3    C4    C5     C6         1.5393  112.41 -178.89  112.60   1.5347
+IC C6    C4    *C5    H5X        1.5347  112.60 -121.37  109.10   1.1131
+IC H5X   C4    *C5    H5Y        1.1131  109.10 -117.41  109.08   1.1131
+IC C4    C5    C6     C7         1.5393  112.41 -178.89  112.60   1.5347
+IC C7    C5    *C6    H6X        1.5347  112.60 -121.37  109.10   1.1131
+IC H6X   C5    *C6    H6Y        1.1131  109.10 -117.41  109.08   1.1131
+IC C5    C6    C7     C8         1.5393  112.41 -178.89  112.60   1.5347
+IC C8    C6    *C7    H7X        1.5347  112.60 -121.37  109.10   1.1131
+IC H7X   C6    *C7    H7Y        1.1131  109.10 -117.41  109.08   1.1131
+IC C6    C7    C8     C9         1.5393  112.41 -178.89  112.60   1.5347
+IC C9    C7    *C8    H8X        1.5347  112.60 -121.37  109.10   1.1131
+IC H8X   C7    *C8    H8Y        1.1131  109.10 -117.41  109.08   1.1131
+IC C7    C8    C9     C10        1.5393  112.41 -178.89  112.60   1.5347
+IC C10   C8    *C9    H9X        1.5347  112.60 -121.37  109.10   1.1131
+IC H9X   C8    *C9    H9Y        1.1131  109.10 -117.41  109.08   1.1131
+IC C8    C9    C10    C11        1.5355  112.60  179.88  112.66   1.5347
+IC C11   C9    *C10   H10X       1.5347  112.66 -121.27  109.06   1.1132
+IC H10X  C9    *C10   H10Y       1.1132  109.06 -117.36  109.14   1.1133
+IC C9    C10   C11    C12        1.5347  112.66 -179.12  112.61   1.5348
+IC C12   C10   *C11   H11X       1.5348  112.61 -121.34  109.09   1.1132
+IC H11X  C10   *C11   H11Y       1.1132  109.09 -117.41  109.09   1.1132
+IC C10   C11   C12    C13        1.5347  112.61  179.83  112.71   1.5340
+IC C13   C11   *C12   H12X       1.5340  112.71 -121.28  109.10   1.1132
+IC H12X  C11   *C12   H12Y       1.1132  109.10 -117.35  109.13   1.1133
+IC C11   C12   C13    C14        1.5348  112.71 -179.67  113.30   1.5309
+IC C14   C12   *C13   H13X       1.5309  113.30 -121.68  108.77   1.1141
+IC H13X  C12   *C13   H13Y       1.1141  108.77 -116.68  108.76   1.1141
+IC C12   C13   C14    H14X       1.5340  113.30  -59.94  110.46   1.1113
+IC H14X  C13   *C14   H14Y       1.1113  110.46  119.86  110.45   1.1113
+IC H14X  C13   *C14   H14Z       1.1113  110.46 -120.06  110.61   1.1112
+
+END

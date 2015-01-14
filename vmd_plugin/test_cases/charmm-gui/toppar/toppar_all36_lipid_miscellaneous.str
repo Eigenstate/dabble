@@ -1,0 +1,13 @@
+read rtf card append flex
+* Topology for miscellaneous lipids
+*
+32 1
+
+
+!* cardiolipin molecule assembly kit; append this file to the all36_lipid set
+!* begun may 2010 rick venable, nih/nhlbi Lab of computational biology
+!* venabler at nhlbi*nih*gov
+!*
+END
+
+return
