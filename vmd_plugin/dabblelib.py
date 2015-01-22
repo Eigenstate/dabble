@@ -1,12 +1,7 @@
-# sautelib.py
-# 
-# $Date: 2012/01/27 $
-# Dan Arlow and Thomas Mildorf
-# Dan.Arlow@deshawresearch.com
-# Thomas.Mildorf@deshawresearch.com
-# D E Shaw Research LLC
-
-
+# dabblelib.py
+# By Robin M. Betz
+# 21 January 2015
+# Loosely based off saute3.py from DESRES
 
 import os
 import tempfile
@@ -16,10 +11,11 @@ from numpy import *
 import vmd
 from atomsel import atomsel
 
-# Yes, these are different modules. With different functions. And we need both.
+# Yes, these are different modules. With different functions. Only 2nd one currently needed
 # VMD is the worst.
-from Molecule import * # http://www.ks.uiuc.edu/Research/vmd/current/ug/node188.html
-from molecule import * # http://www.ks.uiuc.edu/Research/vmd/current/ug/node182.html
+#from Molecule import * # http://www.ks.uiuc.edu/Research/vmd/current/ug/node188.html
+#from molecule import * # http://www.ks.uiuc.edu/Research/vmd/current/ug/node182.html
+import molecule
 
 
 ############################################################
@@ -32,24 +28,22 @@ __MEMBRANE_FULL_THICKNESS = 50.0
 
 __1M_SALT_IONS_PER_WATER = 0.018
 
-random.seed(2011)
+random.seed(2015)
 
 ############################################################
 #             STRUCTURE ANALYSIS FUNCTIONS                 #
 ############################################################
 
 
-# default sel was solute_sel = 'ctnumber 1'
-# seemed like an abstraction violation
-# 
 def get_net_charge(sel):
     charge = array(atomsel(sel).get('charge'))
     if charge.size == 0:
         return 0
-    assert any(charge != 0), 'all charges are zero! did you use a maeff file?'
+    if any (charge != 0) : print "WARNING: No charges found in input file!"
+    #assert any (charge != 0), 'All charges are zero! Check your input file has charges'
     net_charge = sum(charge)
     rslt = round(net_charge)
-    assert abs(rslt - net_charge) < .01, 'total charge is not integral (within a tolerance of .01) -- something wrong with your force field?'
+    assert abs(rslt - net_charge) < .01, 'Total charge is not integral (within a tolerance of .01). Check your input file.'
     return int(rslt)
 
 def get_system_net_charge():
@@ -254,7 +248,7 @@ def concatenate_mae_files(output_filename, input_filenames):
 
 def read_combined_mae_file(input_filenames):
     assert len(input_filenames) > 0, 'need at least one input filename'
-    tmp_filename = tempfile.mktemp(suffix='mae', prefix='saute_tmp')
+    tmp_filename = tempfile.mktemp(suffix='mae', prefix='dabble_tmp')
     concatenate_mae_files(tmp_filename, input_filenames)
     m = molecule.read(-1, 'mae', tmp_filename)
     os.remove(tmp_filename)
@@ -265,7 +259,7 @@ def write_ct_blocks(sel, output_filename):
     # Get all ctnumbers or use user field 
     try :
         ctnumbers = sorted(set(atomsel(sel).get('ctnumber')))
-        filenames = [tempfile.mktemp(suffix='mae', prefix='saute_tmp') for ctnumber in ctnumbers]
+        filenames = [tempfile.mktemp(suffix='mae', prefix='dabble_tmp') for ctnumber in ctnumbers]
         length = len(ctnumbers)
         
         for ctnumber, filename in zip(ctnumbers, filenames):
@@ -273,7 +267,7 @@ def write_ct_blocks(sel, output_filename):
         concatenate_mae_files(output_filename, filenames)
     except ValueError :
         users = sorted(set(atomsel(sel).get('user')))
-        filenames = [tempfile.mktemp(suffix='mae', prefix='saute_tmp_user') for id in users]
+        filenames = [tempfile.mktemp(suffix='mae', prefix='dabble_tmp_user') for id in users]
         length = len(users)
 
         for id, fn in zip(users, filenames):
@@ -314,14 +308,14 @@ def tile_system(input_filename, output_filename, times_x, times_y, times_z):
                 atomsel('all').moveby(tuple(tx))
                 atomsel('all').set('resid', new_resid)
                 new_resid += num_residues
-                tile_filename = tempfile.mktemp(suffix='mae', prefix='saute_tile_tmp')
+                tile_filename = tempfile.mktemp(suffix='mae', prefix='dabble_tile_tmp')
                 tile_filenames.append(tile_filename)
                 atomsel('all').write('mae', tile_filename)
                 atomsel('all').moveby(tuple(-tx))
     molecule.delete(tmp_top)
 
 # Write all of these tiles together into one large bilayer
-    merge_output_filename = tempfile.mktemp(suffix='mae', prefix='saute_merge_tile_tmp')
+    merge_output_filename = tempfile.mktemp(suffix='mae', prefix='dabble_merge_tile_tmp')
     concatenate_mae_files(merge_output_filename, tile_filenames)
 
 # Read that large bilayer file in as a new molecule and write it as the output file
@@ -361,7 +355,7 @@ def tile_membrane_patch(input_filename, output_filename, min_xy_size, min_z_size
     sys_dimensions = array([min_xy_size, min_xy_size, min_z_size])
     mem_dimensions = array(get_system_dimensions(filename=input_filename))
     times_x, times_y, times_z = [int(times) for times in ceil(sys_dimensions / mem_dimensions)]
-    assert times_z < 2, 'saute currently does not support tiling in the z dimension'
+    assert times_z < 2, 'dabble currently does not support tiling in the z dimension'
     # add support for tiling in the z direction?
     if times_x == 1 and times_y == 1 and times_z == 1:
         copy_file(input_molid, output_filename)
