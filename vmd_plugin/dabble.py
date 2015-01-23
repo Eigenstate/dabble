@@ -34,15 +34,28 @@ import os, tempfile
 
 import sys
 
+ 
+  
 class dabble:
-    __MEMBRANE_SYSTEM_PATH = '%s/equilibrated_tall_POPC_TIP3P_system.mae' %os.path.dirname(os.path.abspath(__file__))
+
+# Checks the file format of the output file is valid
+    def check_out_type(self,value):
+        if len(value) < 3 :
+              raise argparse.ArgumentTypeError("%s is too short to determine output filetype" % value)
+        ext = value[-3:]
+        print "ext is %s" % ext
+        if ext=='mae' :
+            self.write_pdb=False
+        elif ext=='pdb' :
+            self.write_pdb=True
+        else :
+            raise argparse.ArgumentTypeError("%s is invalid format. Currently only pdb and mae supported" % value)
+        return value
+     
 
     def __init__(self, args):
         # Redirect stdout
-        self.out = sys.stdout
-        sys.stdout = open('testou', 'w')
-        sys.stderr = open('tester', 'w')
-
+        self.out = sys.stderr
         self.dabble_main(args[1:])
     
 
@@ -56,17 +69,22 @@ class dabble:
                 self.out.write(s)
                 self.out.flush()
         return logger
-   
     
     def dabble_main(self, args):
-        parser = argparse.ArgumentParser(usage=USAGE)#prog='dabble', usage=USAGE, version=VERSION)
-# Positional arguments TODO: Better text
-        parser.add_argument('solute_filename')
-        parser.add_argument('output_filename')
-# Flag arguments 
+        parser = argparse.ArgumentParser(prog='dabble')
+        parser.add_argument('-i', '--input', dest='solute_filename',
+                            type=str, required=True,
+                            help='Path to .mae file to insert into membrane')
+        parser.add_argument('-o', '--output', dest='output_filename',
+                            type=self.check_out_type, required=True,
+                            help='Name of output file (including pdb extension)')
+        parser.add_argument('-M', '--custom-membrane-system', dest='membrane_system',
+                          type=str, required=True,
+                          help='custom membrane system path (must be a mae file)       ')
         parser.add_argument('-B', '--solute-selection', dest='solute_bb_sel',
-                          default='ctnumber 1', type=str,
-                          help='solute.maeff atomsel to compute bounding box           ')
+                          default=None, type=str,
+                          help='solute.maeff atomsel to compute bounding box [default: '
+                               'all residues in initial solute structure]')
         parser.add_argument('-L', '--lipid-selection', dest='lipid_sel',
                           default='lipid or resname POPS', type=str,
                           help='atomsel for the lipids in the membrane [default: '
@@ -74,10 +92,6 @@ class dabble:
         parser.add_argument('-C','--lipic-clash-check',dest='clash_lipids',
                           help='atomsel for lipids with rings (i.e. cholesterol)       '
                                'that might clash with other lipids.')
-        parser.add_argument('-M', '--custom-membrane-system', dest='membrane_system',
-                          default=self.__MEMBRANE_SYSTEM_PATH,  type=str,
-                          help='custom membrane system path (must be a mae file)       '
-                               '[default: built-in POPC + TIP3P]')
         parser.add_argument('-c', '--cation',
                           default='Na', type=str,
                           help='specify cation "Na" or "K"                             '
@@ -126,11 +140,10 @@ class dabble:
                                'calculating which lipids are clashing with             '
                                'the protein (i.e.: lipid tails, sidechains of          '
                                'peripheral membrane proteins)                           ')
+        print(WELCOME_SCREEN)
         opts = parser.parse_args(args)
-        
+
         log = self.make_logger(opts.quiet)
-        
-        log(WELCOME_SCREEN)
         
         log('\n\n')
     
@@ -144,6 +157,8 @@ class dabble:
         log('analyzing solute...\n')
         solute_id = molecule.load('mae',opts.solute_filename)
         solute_sel = dabblelib.get_solute_sel(molid=solute_id)
+        if not opts.solute_bb_sel:
+            opts.solute_bb_sel = solute_sel
     
         #log('solute_sel = "%s"\nsolute_bb_sel = "%s"\n\n' % (solute_sel, opts.solute_bb_sel))
         if solute_sel != opts.solute_bb_sel:
@@ -296,7 +311,7 @@ class dabble:
         
         log('writing system with %d atoms (containing %d lipid molecules and %d water molecules) to "%s"...' % (dabblelib.num_atoms_remaining(), dabblelib.num_lipids_remaining(opts.lipid_sel), dabblelib.num_waters_remaining(), opts.output_filename))
         
-        dabblelib.write_remaining_atoms(opts.output_filename)
+        dabblelib.write_remaining_atoms(opts.output_filename, write_pdb=self.write_pdb)
         
         log('done.\n\n')
     

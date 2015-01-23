@@ -1,7 +1,6 @@
 #!/opt/anaconda/bin/python
 
 import sys
-import VMD
 
 import dabble
 dabble.dabble(sys.argv)

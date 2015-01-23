@@ -82,11 +82,11 @@ def get_solute_sel(molid=None, filename=None):
     atomsel('all').set('user',1.)
     if molid is not None:
         #sel = 'ctnumber ' + ' '.join(map(str, set(atomsel('all', molid=molid).get('ctnumber'))))
-        sel = 'serial ' + ' '.join(map(str, set(atomsel('all', molid=molid).get('serial'))))
+        sel = 'residue' + ' '.join(map(str, set(atomsel('all', molid=molid).get('residue'))))
     elif filename is not None:
         top = molecule.get_top()
         tmp_top = molecule.read(-1, 'mae', input_filename)
-        sel = 'serial ' + ' '.join(map(str, set(atomsel('all').get('serial'))))
+        sel = 'residue' + ' '.join(map(str, set(atomsel('all').get('residue'))))
         molecule.delete(tmp_top)
         if top != -1: molecule.set_top(top)
     else:
@@ -255,7 +255,7 @@ def read_combined_mae_file(input_filenames):
     return m
 
 
-def write_ct_blocks(sel, output_filename):
+def write_ct_blocks(sel, output_filename, write_pdb=False):
     # Get all ctnumbers or use user field 
     try :
         ctnumbers = sorted(set(atomsel(sel).get('ctnumber')))
@@ -276,7 +276,18 @@ def write_ct_blocks(sel, output_filename):
             sel2.set('user', 0.0)
             sel2.write('mae', fn)
 
-    concatenate_mae_files(output_filename, filenames)
+    # Option lets us specify if we should write a pdb/psf or just a mae file
+    # Either way it writes a temp mae file, hacky but it works
+    if write_pdb :
+        temp_mae = tempfile.mktemp(suffix='mae', prefix='dabble_final')
+        concatenate_mae_files(temp_mae, filenames)
+        id = molecule.read(-1, 'mae', temp_mae)
+        molecule.write(id, 'pdb', output_filename)
+        os.remove(temp_mae)
+    else :
+        concatenate_mae_files(output_filename, filenames)
+
+    # Clean up
     for filename in filenames:
         os.remove(filename) # delete temporary files
     return length
@@ -509,8 +520,8 @@ def add_salt_ion(element):
     return gid
 
 
-def write_remaining_atoms(output_filename):
-    write_ct_blocks('beta 1', output_filename)
+def write_remaining_atoms(output_filename, write_pdb=False):
+    write_ct_blocks('beta 1', output_filename, write_pdb)
     return num_atoms_remaining()
     
 
