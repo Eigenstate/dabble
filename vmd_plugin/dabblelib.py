@@ -82,11 +82,11 @@ def get_solute_sel(molid=None, filename=None):
     atomsel('all').set('user',1.)
     if molid is not None:
         #sel = 'ctnumber ' + ' '.join(map(str, set(atomsel('all', molid=molid).get('ctnumber'))))
-        sel = 'residue' + ' '.join(map(str, set(atomsel('all', molid=molid).get('residue'))))
+        sel = 'residue ' + ' '.join(map(str, set(atomsel('all', molid=molid).get('residue'))))
     elif filename is not None:
         top = molecule.get_top()
         tmp_top = molecule.read(-1, 'mae', input_filename)
-        sel = 'residue' + ' '.join(map(str, set(atomsel('all').get('residue'))))
+        sel = 'residue ' + ' '.join(map(str, set(atomsel('all').get('residue'))))
         molecule.delete(tmp_top)
         if top != -1: molecule.set_top(top)
     else:
