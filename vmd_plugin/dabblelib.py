@@ -72,7 +72,6 @@ def diameter(v, chunkmem=30e6):
     return sqrt(d)
 
 
-# former default:  solute_sel = 'ctnumber 1'
 def solute_xy_diameter(solute_sel):
     a = atomsel(solute_sel)
     return diameter(transpose([a.get('x'), a.get('y')]))
@@ -81,7 +80,6 @@ def solute_xy_diameter(solute_sel):
 def get_solute_sel(molid=None, filename=None):
     atomsel('all').set('user',1.)
     if molid is not None:
-        #sel = 'ctnumber ' + ' '.join(map(str, set(atomsel('all', molid=molid).get('ctnumber'))))
         sel = 'residue ' + ' '.join(map(str, set(atomsel('all', molid=molid).get('residue'))))
     elif filename is not None:
         top = molecule.get_top()
@@ -92,7 +90,6 @@ def get_solute_sel(molid=None, filename=None):
     else:
       raise Exception('Specify molid or filename to get_solute_sel')
 
-    # Set the user attribute to 1 in case ctnumber isn't an available attribute
     return sel
 
 
@@ -100,7 +97,6 @@ def move(solute_sel, vector, molid=-1):
     atomsel(solute_sel, molid=molid).moveby(vector)
 
 
-# former default:  solute_sel = 'ctnumber 1'
 def get_cell_size(mem_buf,
                   wat_buf,
                   solute_sel,
@@ -256,25 +252,15 @@ def read_combined_mae_file(input_filenames):
 
 
 def write_ct_blocks(sel, output_filename, write_pdb=False):
-    # Get all ctnumbers or use user field 
-    try :
-        ctnumbers = sorted(set(atomsel(sel).get('ctnumber')))
-        filenames = [tempfile.mktemp(suffix='mae', prefix='dabble_tmp') for ctnumber in ctnumbers]
-        length = len(ctnumbers)
-        
-        for ctnumber, filename in zip(ctnumbers, filenames):
-            atomsel('ctnumber %d and (%s)' % (ctnumber, sel)).write('mae', filename)
-        concatenate_mae_files(output_filename, filenames)
-    except ValueError :
-        users = sorted(set(atomsel(sel).get('user')))
-        filenames = [tempfile.mktemp(suffix='mae', prefix='dabble_tmp_user') for id in users]
-        length = len(users)
+    users = sorted(set(atomsel(sel).get('user')))
+    filenames = [tempfile.mktemp(suffix='mae', prefix='dabble_tmp_user') for id in users]
+    length = len(users)
 
-        for id, fn in zip(users, filenames):
-            tempsel = atomsel('user %f and (%s)' % (id, sel))
-            sel2 = atomsel('index ' + ' '.join(map(str,set(tempsel.get('index')))))
-            sel2.set('user', 0.0)
-            sel2.write('mae', fn)
+    for id, fn in zip(users, filenames):
+        tempsel = atomsel('user %f and (%s)' % (id, sel))
+        sel2 = atomsel('index ' + ' '.join(map(str,set(tempsel.get('index')))))
+        sel2.set('user', 0.0)
+        sel2.write('mae', fn)
 
     # Option lets us specify if we should write a pdb/psf or just a mae file
     # Either way it writes a temp mae file, hacky but it works
@@ -299,13 +285,7 @@ def tile_system(input_filename, output_filename, times_x, times_y, times_z):
     new_resid = array(atomsel('all').get('residue'))
     num_residues = new_resid.max()
     atomsel('all').set('user', 2.)
-    try :
-        print("Found and using CT number")
-        using_ct = True
-        num_ct_blocks = max(atomsel('all').get('ctnumber')) # specific to mae files
-    except ValueError : # no ctnumber attribute
-        num_id_blocks = int(max(atomsel('all').get('user')))
-        using_ct = False
+    num_id_blocks = int(max(atomsel('all').get('user')))
     wx, wy, wz = get_system_dimensions(filename=input_filename)
 
 # Move the lipids over, save that file, move them back, repeat, then stack all of those
@@ -333,13 +313,9 @@ def tile_system(input_filename, output_filename, times_x, times_y, times_z):
     molecule.read(-1, 'mae', merge_output_filename)
     molecule.set_periodic(-1, -1, times_x * wx, times_y * wy, times_z * wz, 90.0, 90.0, 90.0)
 
-# Rewrite ctnumber. Will not run loop if ctnumber isn't present in this file type
-    if using_ct :
-        for ctnumber in range(1, 1 + num_ct_blocks * times_x * times_y * times_z) :
-            atomsel('ctnumber %d' % ctnumber).set('ctnumber', ((ctnumber-1) % num_ct_blocks) + 1)
-    else :
-        for id in range(1, 1 + num_id_blocks * times_x * times_y * times_z) :
-            atomsel('user %f' % id).set('user', ((id-1) % num_id_blocks) + 1)
+# Rewrite user attribute
+    for id in range(1, 1 + num_id_blocks * times_x * times_y * times_z) :
+        atomsel('user %f' % id).set('user', ((id-1) % num_id_blocks) + 1)
     write_ct_blocks('all', output_filename)
 
     molecule.delete(molecule.get_top())
@@ -379,9 +355,7 @@ def set_cell_to_square_prism(xy_size, z_size):
     molecule.set_periodic(-1, -1, xy_size, xy_size, z_size, 90.0, 90.0, 90.0)
 
 
-# former default: lipid_system_sel = 'not ctnumber 1'
 def center_membrane_system(solute_sel, lipid_sel, new_z_center=0):
-    #    lipid_system_sel = 'not ctnumber 1'
     lipid_system_sel = 'not (%s)' % str(solute_sel)
     x, y, z = atomsel('%s' % lipid_sel).center()
     atomsel(lipid_system_sel).moveby((-x, -y, new_z_center - z))
@@ -418,11 +392,9 @@ def remove_residues(sel):
     return remove_atoms('same residue as (%s)' % sel) # residue is guaranteed unique across insertions
 
 
-# former default: solute_sel = 'not ctnumber 1'
 def remove_z_residues(z_size, solute_sel):
     return remove_residues('(not (%s)) and noh and abs(z) > %f' % (solute_sel, z_size / 2.0))
 
-# former default: solute_sel = 'not ctnumber 1'
 def remove_xy_residues(xy_size, solute_sel, lipid_sel):
     half_xy_size = xy_size / 2.0
     box_sel_str = 'abs(x) > %f or abs(y) > %f' % (half_xy_size, half_xy_size)
@@ -486,7 +458,6 @@ def set_ion(gid, element):
     resname  = dict(Na='SOD', K='POT', Cl='CLA')[element]
     name     = dict(Na='NA', K='K', Cl='CL')[element]
     type     = dict(Na='NA', K='K', Cl='CL')[element]
-#    ctnumber = dict(Na=4, K=4, Cl=5)[element]
     charge   = dict(Na=1, K=1, Cl=-1)[element]
     sel.set('element', element)
     sel.set('name', name)
@@ -494,7 +465,6 @@ def set_ion(gid, element):
     sel.set('resname', resname)
     sel.set('chain', 'N')
     sel.set('segid', 'ION')
-#    sel.set('ctnumber', ctnumber)
     sel.set('charge', charge)
 
 
