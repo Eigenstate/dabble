@@ -78,7 +78,7 @@ class dabble:
         parser.add_argument('-o', '--output', dest='output_filename',
                             type=self.check_out_type, required=True,
                             help='Name of output file (including pdb extension)')
-        parser.add_argument('-M', '--custom-membrane-system', dest='membrane_system',
+        parser.add_argument('-M', '--membrane-system', dest='membrane_system',
                           type=str, required=True,
                           help='custom membrane system path (must be a mae file)       ')
         parser.add_argument('-B', '--solute-selection', dest='solute_bb_sel',
@@ -89,7 +89,7 @@ class dabble:
                           default='lipid or resname POPS', type=str,
                           help='atomsel for the lipids in the membrane [default: '
                                '"lipid or resname POPS"]')
-        parser.add_argument('-C','--lipic-clash-check',dest='clash_lipids',
+        parser.add_argument('-C','--lipid-clash-check',dest='clash_lipids',
                           help='atomsel for lipids with rings (i.e. cholesterol)       '
                                'that might clash with other lipids.')
         parser.add_argument('-c', '--cation',
