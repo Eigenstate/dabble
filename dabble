@@ -3,10 +3,10 @@
 # Set up PYTHONPATH so it can find VMD and the dabble module
 import sys, os
 os.environ['VMDDIR'] = os.path.abspath(os.path.dirname(sys.argv[0]))+"/vmd-1.9.2-python"
-if os.environ['VMDDIR'] not in os.environ['PYTHONPATH'] :
-  os.environ['PYTHONPATH'] += ":" + os.environ['VMDDIR']
-  os.environ['PYTHONPATH'] += ":" + os.environ['VMDDIR'] + "/scripts/python"
-  os.environ['PYTHONPATH'] += ":" + os.path.abspath(os.path.dirname(sys.argv[0]))+"/src"
+if os.environ['VMDDIR'] not in sys.path :
+  sys.path.append( os.environ['VMDDIR'] )
+  sys.path.append( os.environ['VMDDIR'] + "/scripts/python" )
+  sys.path.append( os.path.abspath(os.path.dirname(sys.argv[0])) + "/src" )
 
 import dabble
 dabble.dabble(sys.argv)
