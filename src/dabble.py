@@ -206,7 +206,7 @@ class dabble:
         log('done. patch dimensions are %.3f x %.3f x %.3f\n\n' % (x_mem, y_mem, z_mem))
     
         log('tiling membrane patch...')
-        tiled_membrane_filename = tempfile.mktemp(suffix='mae', prefix='dabble_membrane_tmp')
+        (h,tiled_membrane_filename) = tempfile.mkstemp(suffix='mae', prefix='dabble_membrane_tmp')
         times_x, times_y, times_z = dabblelib.tile_membrane_patch(opts.membrane_system, tiled_membrane_filename, xy_size, z_size)
         log('done. membrane patch tiled %d x %d x %d times.\n\n' % (times_x, times_y, times_z))
         

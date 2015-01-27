@@ -258,7 +258,7 @@ def concatenate_mae_files(output_filename, input_filenames):
 
 def read_combined_mae_file(input_filenames):
     assert len(input_filenames) > 0, 'need at least one input filename'
-    tmp_filename = tempfile.mktemp(suffix='mae', prefix='dabble_tmp')
+    tmp_filename = "dabble_tmp.mae"#ROBINtempfile.mkstemp(suffix='.mae', prefix='dabble_tmp')
     concatenate_mae_files(tmp_filename, input_filenames)
     m = molecule.read(-1, 'mae', tmp_filename)
     os.remove(tmp_filename)
@@ -267,7 +267,7 @@ def read_combined_mae_file(input_filenames):
 
 def write_ct_blocks(sel, output_filename, write_pdb=False):
     users = sorted(set(atomsel(sel).get('user')))
-    filenames = [tempfile.mktemp(suffix='mae', prefix='dabble_tmp_user') for id in users]
+    (h,filenames) = [tempfile.mkstemp(suffix='.mae', prefix='dabble_tmp_user') for id in users]
     length = len(users)
 
     for id, fn in zip(users, filenames):
@@ -279,7 +279,7 @@ def write_ct_blocks(sel, output_filename, write_pdb=False):
     # Option lets us specify if we should write a pdb/psf or just a mae file
     # Either way it writes a temp mae file, hacky but it works
     if write_pdb :
-        temp_mae = tempfile.mktemp(suffix='mae', prefix='dabble_final')
+        (h,temp_mae) = tempfile.mkstemp(suffix='.mae', prefix='dabble_final')
         concatenate_mae_files(temp_mae, filenames)
         id = molecule.read(-1, 'mae', temp_mae)
         molecule.write(id, 'pdb', output_filename)
@@ -313,14 +313,14 @@ def tile_system(input_filename, output_filename, times_x, times_y, times_z):
                 atomsel('all').moveby(tuple(tx))
                 atomsel('all').set('resid', new_resid)
                 new_resid += num_residues
-                tile_filename = tempfile.mktemp(suffix='mae', prefix='dabble_tile_tmp')
+                (h,tile_filename) = tempfile.mkstemp(suffix='.mae', prefix='dabble_tile_tmp')
                 tile_filenames.append(tile_filename)
                 atomsel('all').write('mae', tile_filename)
                 atomsel('all').moveby(tuple(-tx))
     molecule.delete(tmp_top)
 
 # Write all of these tiles together into one large bilayer
-    merge_output_filename = tempfile.mktemp(suffix='mae', prefix='dabble_merge_tile_tmp')
+    (h,merge_output_filename) = tempfile.mkstemp(suffix='.mae', prefix='dabble_merge_tile_tmp')
     concatenate_mae_files(merge_output_filename, tile_filenames)
 
 # Read that large bilayer file in as a new molecule and write it as the output file
