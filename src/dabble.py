@@ -43,7 +43,6 @@ class dabble:
         if len(value) < 3 :
               raise argparse.ArgumentTypeError("%s is too short to determine output filetype" % value)
         ext = value[-3:]
-        print "ext is %s" % ext
         if ext=='mae' :
             self.write_pdb=False
         elif ext=='pdb' :
@@ -99,6 +98,11 @@ class dabble:
         parser.add_argument('--move-solute', dest='z_move',
                           default=0, type=float,
                           help='value added to solute z coordinates                    '
+                               '[default: 0]')
+        parser.add_argument('--membrane-rotation', dest='z_rotation',
+                          default=0, type=float,
+                          help='Membrane rotation relative to Z axis of protein, in    '
+                               'degrees. Use the number from OPM if you have it.       '
                                '[default: 0]')
     # Edit: defaults for z_buf and xy_buf are set in main code, so that we can tell if a stupid user specifies both a buffer and absolute dimensions.
         parser.add_argument('-z', '--z-buffer-dist', dest='z_buf', default=20.0,
@@ -157,6 +161,8 @@ class dabble:
         log('analyzing solute...\n')
         solute_id = molecule.load('mae',opts.solute_filename)
         solute_sel = dabblelib.get_solute_sel(molid=solute_id)
+        log('Solute sel is %s'  % solute_sel)
+        dabblelib.orient_solute(molid=solute_id, z_move=opts.z_move, z_rotation=opts.z_rotation )
         if not opts.solute_bb_sel:
             opts.solute_bb_sel = solute_sel
     
@@ -169,8 +175,7 @@ class dabble:
         xy_size, z_size, dxy_sol, dxy_tm, dz_full = dabblelib.get_cell_size(opts.xy_buf,
                                                                            opts.z_buf,
                                                                            opts.solute_bb_sel,
-                                                                           molid=solute_id,
-                                                                           z_move=opts.z_move)
+                                                                           molid=solute_id)
     
         log('done.\nsolute xy diameter is %.2f (%.2f in the transmembrane region).\nsolute+membrane z diameter is %.2f\n' % (dxy_sol, dxy_tm, dz_full))
     
@@ -219,10 +224,6 @@ class dabble:
         dabblelib.center_membrane_system(solute_sel, opts.lipid_sel)    
         log('done.\n\n')
     
-        log('translating solute...')
-        dabblelib.move(solute_sel, (0, 0, opts.z_move))
-        log('done.\n\n')
-        
         # set "keep" mask to all atoms
         dabblelib.init_atoms()    
         log('removing molecules outside of the periodic cell...')

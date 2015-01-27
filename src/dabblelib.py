@@ -34,6 +34,19 @@ random.seed(2015)
 #             STRUCTURE ANALYSIS FUNCTIONS                 #
 ############################################################
 
+def orient_solute(molid, z_move=0, z_rotation=0):
+    import trans, math
+    trans.resetview(molid) # View affect rotation matrix, now it's I
+    # This is negative because we want membrane flat along the z-axis,
+    # and OPM lists the membrane rotation relative to the protein
+    theta = math.radians(-1*z_rotation)
+    # Rotation matrix in row order with 4th dimension just from I
+    rotmat = [ math.cos(theta), -1*math.sin(theta), 0, 0,
+               math.sin(theta),   math.cos(theta),  0, 0,
+                     0        ,         0,          1, 0,
+                     0        ,         0,          0, 1 ]
+    trans.set_rotation(molid, rotmat)
+    atomsel('all').moveby((0,0,z_move))
 
 def get_net_charge(sel):
     charge = array(atomsel(sel).get('charge'))
@@ -80,11 +93,17 @@ def solute_xy_diameter(solute_sel):
 def get_solute_sel(molid=None, filename=None):
     atomsel('all').set('user',1.)
     if molid is not None:
-        sel = 'residue ' + ' '.join(map(str, set(atomsel('all', molid=molid).get('residue'))))
+        min_res = min(atomsel('all').get('residue'))
+        max_res = max(atomsel('all').get('residue'))
+        sel = 'resid >= %d and resid <= %d' % (min_res,max_res)
+        #sel = 'resid ' + ' '.join(map(str, set(atomsel('all', molid=molid).get('residue'))))
     elif filename is not None:
         top = molecule.get_top()
         tmp_top = molecule.read(-1, 'mae', input_filename)
-        sel = 'residue ' + ' '.join(map(str, set(atomsel('all').get('residue'))))
+        min_res = min(atomsel('all').get('residue'))
+        max_res = max(atomsel('all').get('residue'))
+        sel = 'resid >= %d and resid <= %d' % (min_res,max_res)
+        #sel = 'resid ' + ' '.join(map(str, set(atomsel('all').get('residue'))))
         molecule.delete(tmp_top)
         if top != -1: molecule.set_top(top)
     else:
@@ -93,18 +112,13 @@ def get_solute_sel(molid=None, filename=None):
     return sel
 
 
-def move(solute_sel, vector, molid=-1):
-    atomsel(solute_sel, molid=molid).moveby(vector)
-
-
 def get_cell_size(mem_buf,
                   wat_buf,
                   solute_sel,
                   molid=None,
                   filename=None,
                   zh_mem_full=__MEMBRANE_FULL_THICKNESS / 2.0,
-                  zh_mem_hyd=__MEMBRANE_HYDROPHOBIC_THICKNESS / 2.0,
-                  z_move=0):
+                  zh_mem_hyd=__MEMBRANE_HYDROPHOBIC_THICKNESS / 2.0):
 
     if filename is not None :
         top = molecule.get_top()    
@@ -112,8 +126,6 @@ def get_cell_size(mem_buf,
 
     if molid is None:
         molid = molecule.get_top()
-
-    move(solute_sel, (0, 0, z_move), molid=molid)
 
     solute_z = atomsel(solute_sel, molid=molid).get('z') + [-zh_mem_full, zh_mem_full] # add in dummy values for the membrane boundaries in case the protein is peripheral
     z_min, z_max = min(solute_z), max(solute_z)
@@ -224,6 +236,8 @@ def get_system_dimensions(molid=None, filename=None):
         if top != -1: molecule.set_top(top)
     else:
         raise Exception('Specify molid or filename to get_system_dimensions')
+    if p['a']==0.0 and p['b']==0.0 and p['c']==0.0:
+        raise Exception('No periodic box found in membrane!')
     return p['a'], p['b'], p['c']
 
 
@@ -342,7 +356,9 @@ def tile_membrane_patch(input_filename, output_filename, min_xy_size, min_z_size
     sys_dimensions = array([min_xy_size, min_xy_size, min_z_size])
     mem_dimensions = array(get_system_dimensions(filename=input_filename))
     times_x, times_y, times_z = [int(times) for times in ceil(sys_dimensions / mem_dimensions)]
-    assert times_z < 2, 'dabble currently does not support tiling in the z dimension'
+    if times_z >=2 :
+      print "WARNING: you will need to add more solvent in the Z direction!"
+    #assert times_z < 2, 'dabble currently does not support tiling in the z dimension'
     # add support for tiling in the z direction?
     if times_x == 1 and times_y == 1 and times_z == 1:
         copy_file(input_molid, output_filename)
