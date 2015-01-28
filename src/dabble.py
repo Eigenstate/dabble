@@ -202,17 +202,19 @@ class dabble:
         log('xy solvent buffer: %4.1f\nxy transmembrane buffer: %4.1f\nz solvent buffer: %4.1f\n\n' % (xy_size - dxy_sol, xy_size - dxy_tm, z_size - dz_full))
         
         log('loading membrane patch...')
-        x_mem, y_mem, z_mem = dabblelib.get_system_dimensions(filename=opts.membrane_system)
+        membrane_id = molecule.load('mae',opts.membrane_system)
+        x_mem, y_mem, z_mem = dabblelib.get_system_dimensions(molid=membrane_id)
         log('done. patch dimensions are %.3f x %.3f x %.3f\n\n' % (x_mem, y_mem, z_mem))
     
         log('tiling membrane patch...')
-        (h,tiled_membrane_filename) = tempfile.mkstemp(suffix='mae', prefix='dabble_membrane_tmp')
-        times_x, times_y, times_z = dabblelib.tile_membrane_patch(opts.membrane_system, tiled_membrane_filename, xy_size, z_size)
+        #(h,tiled_membrane_filename) = tempfile.mkstemp(suffix='mae', prefix='dabble_membrane_tmp')
+        tiled_membrane_id, times_x, times_y, times_z = dabblelib.tile_membrane_patch(membrane_id, xy_size, z_size)
         log('done. membrane patch tiled %d x %d x %d times.\n\n' % (times_x, times_y, times_z))
         
         log('combining solute and tiled membrane patch...')
-        dabblelib.read_combined_mae_file([opts.solute_filename,tiled_membrane_filename])
-        os.remove(tiled_membrane_filename)
+        combined_id=dabblelib.combine_molecules([solute_id, tiled_membrane_id])
+        #dabblelib.read_combined_mae_file([opts.solute_filename,tiled_membrane_filename])
+        #os.remove(tiled_membrane_filename)
         log('done.\n\n')
     
         log('selecting cation %s...' % opts.cation)

@@ -241,7 +241,9 @@ def get_system_dimensions(molid=None, filename=None):
     return p['a'], p['b'], p['c']
 
 
-def concatenate_mae_files(output_filename, input_filenames):
+def concatenate_mae_files(output_filename, input_filenames=None, input_ids=None):
+    if input_ids is not None:
+      input_filenames = [ (molecule.get_filenames(id))[0] for id in input_ids ]
     assert len(input_filenames) > 0, 'need at least one input filename'
     outfile = open(output_filename, 'w')
     for line in open(input_filenames[0]):
@@ -255,19 +257,20 @@ def concatenate_mae_files(output_filename, input_filenames):
     outfile.close()
     return
 
-
-def read_combined_mae_file(input_filenames):
-    assert len(input_filenames) > 0, 'need at least one input filename'
-    tmp_filename = "dabble_tmp.mae"#ROBINtempfile.mkstemp(suffix='.mae', prefix='dabble_tmp')
-    concatenate_mae_files(tmp_filename, input_filenames)
-    m = molecule.read(-1, 'mae', tmp_filename)
-    os.remove(tmp_filename)
-    return m
-
+# Combines molecules with given input ids
+# Closes them, and returns the molecule id of a new molecule that combines them
+# Puts that new molecule on top
+def combine_molecules(input_ids) :
+    output_filename = tempfile.mkstemp(suffix='.mae', prefix='dabble_combine')[1]
+    concatenate_mae_files(output_filename, input_ids=input_ids);
+    output_id = molecule.load('mae', output_filename)
+    molecule.set_top(output_id)
+    for i in input_ids: molecule.delete(i)
+    return output_id
 
 def write_ct_blocks(sel, output_filename, write_pdb=False):
     users = sorted(set(atomsel(sel).get('user')))
-    (h,filenames) = [tempfile.mkstemp(suffix='.mae', prefix='dabble_tmp_user') for id in users]
+    filenames = [(tempfile.mkstemp(suffix='.mae', prefix='dabble_tmp_user'))[1] for id in users]
     length = len(users)
 
     for id, fn in zip(users, filenames):
@@ -292,15 +295,13 @@ def write_ct_blocks(sel, output_filename, write_pdb=False):
         os.remove(filename) # delete temporary files
     return length
 
-def tile_system(input_filename, output_filename, times_x, times_y, times_z):
+def tile_system(input_id, times_x, times_y, times_z):
 # Read in the equilibrated bilayer file and put it as the active molceule
-    top = molecule.get_top()
-    tmp_top = molecule.read(-1, 'mae', input_filename)
-    new_resid = array(atomsel('all').get('residue'))
+    new_resid = array(atomsel('all',molid=input_id).get('residue'))
     num_residues = new_resid.max()
-    atomsel('all').set('user', 2.)
+    atomsel('all',molid=input_id).set('user', 2.)
     num_id_blocks = int(max(atomsel('all').get('user')))
-    wx, wy, wz = get_system_dimensions(filename=input_filename)
+    wx, wy, wz = get_system_dimensions(molid=input_id)
 
 # Move the lipids over, save that file, move them back, repeat, then stack all of those
 # together to make a tiled membrane. Uses temporary mae files to save each "tile" since this
@@ -310,13 +311,13 @@ def tile_system(input_filename, output_filename, times_x, times_y, times_z):
         for ny in range(times_y):
             for nz in range(times_z):
                 tx = array([nx * wx, ny * wy, nz * wz])
-                atomsel('all').moveby(tuple(tx))
-                atomsel('all').set('resid', new_resid)
+                atomsel('all',molid=input_id).moveby(tuple(tx))
+                atomsel('all',molid=input_id).set('resid', new_resid)
                 new_resid += num_residues
                 (h,tile_filename) = tempfile.mkstemp(suffix='.mae', prefix='dabble_tile_tmp')
                 tile_filenames.append(tile_filename)
-                atomsel('all').write('mae', tile_filename)
-                atomsel('all').moveby(tuple(-tx))
+                atomsel('all',molid=input_id).write('mae', tile_filename)
+                atomsel('all',molid=input_id).moveby(tuple(-tx))
     molecule.delete(tmp_top)
 
 # Write all of these tiles together into one large bilayer
@@ -324,20 +325,21 @@ def tile_system(input_filename, output_filename, times_x, times_y, times_z):
     concatenate_mae_files(merge_output_filename, tile_filenames)
 
 # Read that large bilayer file in as a new molecule and write it as the output file
-    molecule.read(-1, 'mae', merge_output_filename)
-    molecule.set_periodic(-1, -1, times_x * wx, times_y * wy, times_z * wz, 90.0, 90.0, 90.0)
+    output_id = molecule.load('mae', merge_output_filename)
+    molecule.set_periodic(output_id, -1, times_x * wx, times_y * wy, times_z * wz, 90.0, 90.0, 90.0)
 
 # Rewrite user attribute
     for id in range(1, 1 + num_id_blocks * times_x * times_y * times_z) :
-        atomsel('user %f' % id).set('user', ((id-1) % num_id_blocks) + 1)
-    write_ct_blocks('all', output_filename)
+        atomsel('user %f' % id, molid=output_id).set('user', ((id-1) % num_id_blocks) + 1)
+    #write_ct_blocks('all', output_filename)
+    atomsel('all', molid=output_id).write('mae', merge_output_filename)
 
-    molecule.delete(molecule.get_top())
-    if top != -1: molecule.set_top(top)
+    #molecule.delete(molecule.get_top())
+    #if top != -1: molecule.set_top(top)
     for tile_filename in tile_filenames:
         os.remove(tile_filename)
-    os.remove(merge_output_filename)
-    return
+    #os.remove(merge_output_filename)
+    return output_id
 
 
 ############################################################
@@ -352,19 +354,21 @@ def copy_file(input_filename, output_filename):
     f.close() 
 
         
-def tile_membrane_patch(input_filename, output_filename, min_xy_size, min_z_size):
+def tile_membrane_patch(input_id, min_xy_size, min_z_size):
     sys_dimensions = array([min_xy_size, min_xy_size, min_z_size])
-    mem_dimensions = array(get_system_dimensions(filename=input_filename))
+    mem_dimensions = array(get_system_dimensions(molid=input_id))
     times_x, times_y, times_z = [int(times) for times in ceil(sys_dimensions / mem_dimensions)]
     if times_z >=2 :
       print "WARNING: you will need to add more solvent in the Z direction!"
+      times_z = 1
     #assert times_z < 2, 'dabble currently does not support tiling in the z dimension'
     # add support for tiling in the z direction?
     if times_x == 1 and times_y == 1 and times_z == 1:
-        copy_file(input_molid, output_filename)
+        output_id = input_id
+        #copy_file(input_filename, output_filename)
     else:
-        tile_system(input_filename, output_filename, times_x, times_y, times_z)
-    return times_x, times_y, times_z
+        output_id = tile_system(input_id, times_x, times_y, times_z)
+    return output_id, times_x, times_y, times_z
 
 
 def set_cell_to_square_prism(xy_size, z_size):
