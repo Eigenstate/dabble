@@ -34,19 +34,32 @@ random.seed(2015)
 #             STRUCTURE ANALYSIS FUNCTIONS                 #
 ############################################################
 
-def orient_solute(molid, z_move=0, z_rotation=0):
-    import trans, math
-    trans.resetview(molid) # View affect rotation matrix, now it's I
-    # This is negative because we want membrane flat along the z-axis,
-    # and OPM lists the membrane rotation relative to the protein
-    theta = math.radians(-1*z_rotation)
-    # Rotation matrix in row order with 4th dimension just from I
-    rotmat = [ math.cos(theta), -1*math.sin(theta), 0, 0,
-               math.sin(theta),   math.cos(theta),  0, 0,
-                     0        ,         0,          1, 0,
-                     0        ,         0,          0, 1 ]
-    trans.set_rotation(molid, rotmat)
-    atomsel('all').moveby((0,0,z_move))
+def orient_solute(molid, z_move=0, z_rotation=0, opm_pdb=None, opm_align=None):
+
+    # Check that OPM and alignment aren't both specified
+    if opm_pdb is not None and (z_move is not 0 or z_rotation is not 0) :
+        print("ERROR: Cannot specify an OPM pdb and manual orientation information");
+        quit(1);
+
+    if opm_pdb is not None :
+        opm = molecule.load('pdb',opm_pdb)
+        T=atomsel('protein and backbone', molid=molid).fit(atomsel(opm_align,molid=opm))
+        atomsel('all', molid=molid).move(T)
+    else :
+        import trans, math
+        trans.resetview(molid) # View affect rotation matrix, now it's I
+        # This is negative because we want membrane flat along the z-axis,
+        # and OPM lists the membrane rotation relative to the protein
+        theta = math.radians(-1*z_rotation)
+        # Rotation matrix in row order with 4th dimension just from I
+        rotmat = [ math.cos(theta), -1*math.sin(theta), 0, 0,
+                   math.sin(theta),   math.cos(theta),  0, 0,
+                         0        ,         0,          1, 0,
+                         0        ,         0,          0, 1 ]
+        trans.set_rotation(molid, rotmat)
+        atomsel('all').moveby((0,0,z_move))
+    return
+
 
 def get_net_charge(sel):
     charge = array(atomsel(sel).get('charge'))
@@ -95,14 +108,16 @@ def get_solute_sel(molid=None, filename=None):
     if molid is not None:
         min_res = min(atomsel('all').get('residue'))
         max_res = max(atomsel('all').get('residue'))
-        sel = 'resid >= %d and resid <= %d' % (min_res,max_res)
+        sel = 'protein'# or resname ETQ'
+        #sel = 'resid >= %d and resid <= %d' % (min_res,max_res)
         #sel = 'resid ' + ' '.join(map(str, set(atomsel('all', molid=molid).get('residue'))))
     elif filename is not None:
         top = molecule.get_top()
         tmp_top = molecule.read(-1, 'mae', input_filename)
         min_res = min(atomsel('all').get('residue'))
         max_res = max(atomsel('all').get('residue'))
-        sel = 'resid >= %d and resid <= %d' % (min_res,max_res)
+        sel = 'protein'
+        #sel = 'resid >= %d and resid <= %d' % (min_res,max_res)
         #sel = 'resid ' + ' '.join(map(str, set(atomsel('all').get('residue'))))
         molecule.delete(tmp_top)
         if top != -1: molecule.set_top(top)
@@ -223,6 +238,23 @@ def lipid_composition(lipid_sel):
 #              MAE FILE MANIPULATION FUNCTIONS             #
 ############################################################
 
+# Loads the input file, either pdb or mae, returns molecule id
+def load_solute(filename):
+    if len(filename) < 3 :
+        raise ValueError("Cannot determine filetype of input file '%s'" % filename)
+    ext = filename[-3:]
+    if ext=='mae' :
+        molid = molecule.load('mae', filename)
+    elif ext=='pdb' : # Need to convert to MAE because these things are stupid
+        temp_mae = tempfile.mkstemp(suffix='.mae', prefix='dabble_input')[1]
+        molid = molecule.load('pdb', filename)
+        atomsel('all').write('mae', temp_mae)
+        molecule.delete(molid)
+        molid = molecule.load('mae', temp_mae)
+    else :
+        raise ValueError("Filetype '%s' currently unsupported for input protein" % ext) 
+    return molid
+
 
 # Accepts either a filename or a molecule id to get the dimensions of
 def get_system_dimensions(molid=None, filename=None):
@@ -318,7 +350,6 @@ def tile_system(input_id, times_x, times_y, times_z):
                 tile_filenames.append(tile_filename)
                 atomsel('all',molid=input_id).write('mae', tile_filename)
                 atomsel('all',molid=input_id).moveby(tuple(-tx))
-    molecule.delete(tmp_top)
 
 # Write all of these tiles together into one large bilayer
     (h,merge_output_filename) = tempfile.mkstemp(suffix='.mae', prefix='dabble_merge_tile_tmp')

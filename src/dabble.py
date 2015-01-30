@@ -84,9 +84,9 @@ class dabble:
                           type=str, required=True,
                           help='custom membrane system path (must be a mae file)       ')
         parser.add_argument('-B', '--solute-selection', dest='solute_bb_sel',
-                          default=None, type=str,
+                          default='protein', type=str,
                           help='solute.maeff atomsel to compute bounding box [default: '
-                               'all residues in initial solute structure]')
+                               'protein]')
         parser.add_argument('-L', '--lipid-selection', dest='lipid_sel',
                           default='lipid or resname POPS', type=str,
                           help='atomsel for the lipids in the membrane [default: '
@@ -98,16 +98,7 @@ class dabble:
                           default='Na', type=str,
                           help='specify cation "Na" or "K"                             '
                                '[default: "Na"]')
-        parser.add_argument('--move-solute', dest='z_move',
-                          default=0, type=float,
-                          help='value added to solute z coordinates                    '
-                               '[default: 0]')
-        parser.add_argument('--membrane-rotation', dest='z_rotation',
-                          default=0, type=float,
-                          help='Membrane rotation relative to Z axis of protein, in    '
-                               'degrees. Use the number from OPM if you have it.       '
-                               '[default: 0]')
-    # Edit: defaults for z_buf and xy_buf are set in main code, so that we can tell if a stupid user specifies both a buffer and absolute dimensions.
+   # Edit: defaults for z_buf and xy_buf are set in main code, so that we can tell if a stupid user specifies both a buffer and absolute dimensions.
         parser.add_argument('-z', '--z-buffer-dist', dest='z_buf', default=20.0,
                           type=float,
                           help='buffer distance in the membrane normal direction.      '
@@ -147,6 +138,25 @@ class dabble:
                                'calculating which lipids are clashing with             '
                                'the protein (i.e.: lipid tails, sidechains of          '
                                'peripheral membrane proteins)                           ')
+        # Can specify orientation either manually or by providing an OPM aligned PDB
+        parser.add_argument('--opm-pdb', dest='opm_pdb',
+                          default=None, type=str,
+                          help='oriented pdb file from OPM to align protein to         '
+                                '[default: None]')
+        parser.add_argument('--opm-align', dest='opm_align',
+                          default='protein and backbone', type=str,
+                          help='atomsel for OPM backbone atoms to align to             '
+                               '[default: protein and backbone]')
+        parser.add_argument('--move-solute', dest='z_move',
+                          default=0, type=float,
+                          help='value added to solute z coordinates                    '
+                               '[default: 0]')
+        parser.add_argument('--membrane-rotation', dest='z_rotation',
+                          default=0, type=float,
+                          help='Membrane rotation relative to Z axis of protein, in    '
+                               'degrees. Use the number from OPM if you have it.       '
+                               '[default: 0]')
+ 
         print(WELCOME_SCREEN)
         opts = parser.parse_args(args)
 
@@ -162,16 +172,17 @@ class dabble:
         log('done.\n\n')
     
         log('analyzing solute...\n')
-        solute_id = molecule.load('mae',opts.solute_filename)
-        solute_sel = dabblelib.get_solute_sel(molid=solute_id)
+        solute_id = dabblelib.load_solute(opts.solute_filename)
+        solute_sel = opts.solute_bb_sel
+        #solute_sel = dabblelib.get_solute_sel(molid=solute_id)
         log('Solute sel is %s'  % solute_sel)
-        dabblelib.orient_solute(molid=solute_id, z_move=opts.z_move, z_rotation=opts.z_rotation )
-        if not opts.solute_bb_sel:
-            opts.solute_bb_sel = solute_sel
+        dabblelib.orient_solute(molid=solute_id, z_move=opts.z_move, z_rotation=opts.z_rotation, opm_pdb=opts.opm_pdb, opm_align=opts.opm_align )
+        #if not opts.solute_bb_sel:
+        #    opts.solute_bb_sel = solute_sel
     
         #log('solute_sel = "%s"\nsolute_bb_sel = "%s"\n\n' % (solute_sel, opts.solute_bb_sel))
-        if solute_sel != opts.solute_bb_sel:
-            log('WARNING:  solute_bb_sel != solute_sel\n')
+        #if solute_sel != opts.solute_bb_sel:
+        #    log('WARNING:  solute_bb_sel != solute_sel\n')
             
         log('computing the size of the periodic cell...')
         
