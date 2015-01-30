@@ -24,17 +24,20 @@ WELCOME_SCREEN = '''
 |               Stanford University             |
  ===============================================
 '''
-
-import argparse
-import os, tempfile
+# Try/catch here to detect if we're on Sherlock w/o python module
+try:
+    import argparse
+    import os, tempfile
+except ImportError:
+    print("ERROR: Couldn't import required Python modules!")
+    print("       Are you on Sherlock?")
+    print("       Try 'module load python/2.7.5'")
 
 ############################################################
 #                       PLUGIN STUFF                       #
 ############################################################
 
 import sys
-
- 
   
 class dabble:
 
