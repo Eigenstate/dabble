@@ -34,7 +34,7 @@ random.seed(2015)
 #             STRUCTURE ANALYSIS FUNCTIONS                 #
 ############################################################
 
-def orient_solute(molid, z_move=0, z_rotation=0, opm_pdb=None, opm_align=None):
+def orient_solute(molid, z_move=0, z_rotation=0, opm_pdb=None, opm_align='protein and backbone'):
 
     # Check that OPM and alignment aren't both specified
     if opm_pdb is not None and (z_move is not 0 or z_rotation is not 0) :
@@ -45,6 +45,7 @@ def orient_solute(molid, z_move=0, z_rotation=0, opm_pdb=None, opm_align=None):
         opm = molecule.load('pdb',opm_pdb)
         T=atomsel('protein and backbone', molid=molid).fit(atomsel(opm_align,molid=opm))
         atomsel('all', molid=molid).move(T)
+        molecule.delete(opm)
     else :
         import trans, math
         trans.resetview(molid) # View affect rotation matrix, now it's I
@@ -544,5 +545,67 @@ def add_salt_ion(element):
 def write_remaining_atoms(output_filename, write_pdb=False):
     write_ct_blocks('beta 1', output_filename, write_pdb)
     return num_atoms_remaining()
+
+
+# Splits up the system into the individual pdb files needed for psfgen
+def write_psfgen_blocks(molid=0,lipid_sel="lipid"):
+    # Clean up all temp files from previous runs
+    import glob
+    print("Removing %d old psfgen blocks" % len(glob.glob("/tmp/psf_*.pdb")))
+    for oldfile in glob.glob("/tmp/psf_*.pdb") :
+        os.remove(oldfile)
+
+    # Save water 10k molecules at a time
+    write_water_blocks(molid=molid)
+
+    # Now ions if present
+    if len(atomsel('ions',molid=molid)) > 0 :
+        temp = tempfile.mkstemp(suffix='.pdb', prefix='psf_ions_')[1]
+        atomsel('ions',molid=molid).write('pdb',temp)
+
+    # Save lipid
+    temp = tempfile.mkstemp(suffix='.pdb', prefix='psf_lipid_')[1]
+    atomsel(lipid_sel,molid=molid).write('pdb', temp)
+  
+    # Now protein
+    temp = tempfile.mkstemp(suffix='.pdb', prefix='psf_protein_')[1]
+    atomsel('protein',molid=molid).write('pdb',temp)
+
+    # Check if there is anything else and let the user know about it
+    leftovers = atomsel('not water and not lipid and not protein and not ions',molid=molid)
+    if len(leftovers) > 0:
+        temp = tempfile.mkstemp(suffix='.pdb', prefix='psf_extra_')[1]
+        leftovers.write('pdb',temp)
+        print("\n\nALERT: Found what is probably a ligand!")
+        print("Residue names are: ")
+        print set(leftovers.get('resname'))
+        print("Saving to '%s'" % temp)
+        print("Good luck with psfgen lololol")
+
+    from VMD import evaltcl
+    script = "/home/robin/Work/Dror_rotation/workflow/src/save_pdb_psf.tcl"
+    evaltcl('play %s' % script)
+    return
+
+# Writes a bunch of temp files with 10000 waters each, to bypass psfgen
+# being stupid with files with more than 10000 of a residue
+def write_water_blocks(molid=0):
+    # Select all the waters. We'll use the user field to track which ones have been written
+    atomsel('water',molid=molid).set('user', 0.0)
+    all=atomsel('water and user 0.0',molid=molid)
+    num_written = len(all)/(9999*3)+1
+    print("Going to write %d files for %d atoms" % (num_written, len(all)))
+
+    # Pull out and write 10k waters at a time
+    for i in range(num_written) :
+        residues = all.get('residue')[:9999*3] # 9999 molecules, 3 atoms each
+        batch = atomsel('residue ' + ' '.join(map(str,set(residues))), molid=molid)
+        temp=[k for k in range(9999) for _ in range(3)]
+        batch.set('resid', [k for k in range(1,len(batch)/3+1) for _ in range(3)])
+        temp = tempfile.mkstemp(suffix='_%d.pdb' % i, prefix='psf_wat_')[1]
+        batch.write('pdb', temp)
+        batch.set('user', 1.0)
+        all.update()
+    return num_written
     
 

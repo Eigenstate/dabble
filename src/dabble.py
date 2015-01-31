@@ -156,6 +156,10 @@ class dabble:
                           help='Membrane rotation relative to Z axis of protein, in    '
                                'degrees. Use the number from OPM if you have it.       '
                                '[default: 0]')
+        # Can also parameterize
+        parser.add_argument('--write-psf', dest='write_psf_name',
+                            default=None, help="Write a pdb and psf file"
+                            "with this prefix, using charmm parameters")
  
         print(WELCOME_SCREEN)
         opts = parser.parse_args(args)
@@ -230,7 +234,7 @@ class dabble:
         #dabblelib.read_combined_mae_file([opts.solute_filename,tiled_membrane_filename])
         #os.remove(tiled_membrane_filename)
         log('done.\n\n')
-    
+
         log('selecting cation %s...' % opts.cation)
         count = dabblelib.set_cations(opts.cation, solute_sel)
         log('done.\n\n')
@@ -329,6 +333,14 @@ class dabble:
         log('writing system with %d atoms (containing %d lipid molecules and %d water molecules) to "%s"...' % (dabblelib.num_atoms_remaining(), dabblelib.num_lipids_remaining(opts.lipid_sel), dabblelib.num_waters_remaining(), opts.output_filename))
         
         dabblelib.write_remaining_atoms(opts.output_filename, write_pdb=self.write_pdb)
+
+
+# TEMP TODO --Robin TESTING
+        if opts.write_psf_name is not None:
+            log('saving pdb and psf files')
+            log('you can\'t specify the filename yet.')
+            log('look for psfgen_output.pdb and psfgen_output.psf')
+            dabblelib.write_psfgen_blocks(molid=molecule.get_top(), lipid_sel=opts.lipid_sel)
         
         log('done.\n\n')
     
