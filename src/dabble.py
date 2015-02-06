@@ -337,9 +337,9 @@ class dabble:
 
 # TEMP TODO --Robin TESTING
         if opts.write_psf_name is not None:
-            log('saving pdb and psf files')
-            log('you can\'t specify the filename yet.')
-            log('look for psfgen_output.pdb and psfgen_output.psf')
+            log('saving pdb and psf files\n')
+            log('you can\'t specify the filename yet.\n')
+            log('look for psfgen_output.pdb and psfgen_output.psf\n')
             dabblelib.write_psfgen_blocks(molid=molecule.get_top(), lipid_sel=opts.lipid_sel)
         
         log('done.\n\n')

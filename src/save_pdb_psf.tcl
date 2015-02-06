@@ -16,7 +16,12 @@ puts $output
 
 # Load the parameters
 resetpsf
-topology /opt/vmd_src/plugins/readcharmmtop/top_all27_prot_lipid_na.inp
+set dabbledir $::env(DABBLEDIR)
+topology ${dabbledir}/charmm_params/top_water_ions.rtf
+topology ${dabbledir}/charmm_params/top_all36_cgenff.rtf
+topology ${dabbledir}/charmm_params/top_all36_prot.rtf
+topology ${dabbledir}/charmm_params/top_all36_lipid.rtf
+puts "INFO: Done reading topology"
 
 # First pull out the water and set the segment
 set waterfiles [glob -directory /tmp psf_wat_*.pdb]
@@ -65,17 +70,21 @@ foreach lipnam $lipidfile {
 set protfile [glob -directory /tmp psf_protein_*.pdb]
 set i 0
 foreach protnam $protfile {
+  # Residue substitutions
+  # DONE IN PYTHON CODE NOW THAT PRODUCES INPUT PDB
+
+  # Segment definition needs to come AFTER residue aliases!
   segment P${i} {
     pdb $protnam
   }
-  pdbalias residue HIS HSE
-  pdbalias atom ILE CD1 CD
+  
+  #EXTRA_PROTEIN_COMMANDS
   coordpdb $protnam P${i}
   incr i
 }
 
 # Write the output files
-writepsf ${output}.psf
+writepsf x-plor cmap ${output}.psf
 writepdb ${output}.pdb
 
 
