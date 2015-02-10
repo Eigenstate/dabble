@@ -1,0 +1,53 @@
+* Equilibrated POPC bilayer: 256 POPC and 6596 TIP3 
+* System Size: 93.5008 X 93.5008 X 58.73732
+*
+
+! Read topology
+open read card unit 10 name top_all27_prot_lipid.rtf
+read  rtf card unit 10
+close unit 10
+
+! Read parameters
+open read card unit 10 name par_all27_prot_lipid_new.prm  
+read para card unit 10
+close unit 10
+
+! Read PSF
+open read card unit 10 name popc_n256.psf
+read psf  card unit 10 
+
+! Read Coordinate
+open read card unit 10 name popc_n256.crd
+read coor card unit 10 
+
+
+!
+! PBC & Energy setup
+!
+
+calc A = sqrt( 256 / 2.0 * 68.3 ) ! 68.3 A**2 / POPC at 303 K
+calc B = @A
+calc C = 58.73732
+
+open read unit 10 card name crystal_image.str
+CRYSTAL DEFINE TETRAGONAL @A @B @C 90.0 90.0 90.0
+CRYSTAL READ UNIT 10 CARD
+
+!Image centering by residue
+IMAGE BYRESID XCEN 0.0 YCEN 0.0 ZCEN 0.0 
+
+! Nonbonded Options
+
+calc FFTx = 108
+calc FFTy = 108
+calc FFTz = 72
+
+nbonds atom vatom vfswitch bycb -
+       ctonnb 10.0 ctofnb 12.0 cutnb 16.0 cutim 16.0 -
+       inbfrq -1 imgfrq -1 wmin 1.0 cdie eps 1.0 -
+         ewald pmew fftx @fftx ffty @ffty fftz @fftz  kappa .34 spline order 6
+
+
+energy
+
+stop
