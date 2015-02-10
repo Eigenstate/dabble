@@ -555,18 +555,40 @@ def write_psfgen_blocks(molid=0,lipid_sel="lipid"):
     for oldfile in glob.glob("/tmp/psf_*.pdb") :
         os.remove(oldfile)
 
+    # Prompt user for any extra commands TODO working on this
+    #import sys
+    #print("\n\nEnter any extra commands for psfgen PROTEIN step here, followed by END \n")
+    #print("Example: patch DISU blah blah")
+    #protein_opts='\n'.join(iter(raw_input, 'END'))
+    #print(protein_opts + "\n")
+
     # Save water 10k molecules at a time
     write_water_blocks(molid=molid)
 
     # Save the protein with correct atom names
     write_protein_blocks(molid=molid)
 
-    # Now ions if present
+    # Now ions if present, changing the atom names
     if len(atomsel('ions',molid=molid)) > 0 :
+        atomsel('ions and name NA').set('name','SOD')
+        atomsel('ions and name CL').set('name','CLA')
+        atomsel('ions and name K').set('name','POT')
+        atomsel('ions and name NA').set('resname','SOD')
+        atomsel('ions and name CL').set('resname','CLA')
+        atomsel('ions and name K').set('resname','POT')
         temp = tempfile.mkstemp(suffix='.pdb', prefix='psf_ions_')[1]
         atomsel('ions',molid=molid).write('pdb',temp)
 
-    # Save lipid
+    # Save lipid after renumbering residues
+#residues = all.get('residue')[:9999*3] # 9999 molecules, 3 atoms each
+#        batch = atomsel('residue ' + ' '.join(map(str,set(residues))), molid=molid)
+#        arr = [k for k in range(1,len(batch)/3+1) for _ in range(3)]
+#        try :
+#            batch.set('resid', [k for k in range(1,len(batch)/3+1) for _ in range(3)])
+#       except ValueError:
+#           print("\n\nERROR: Number of water molecules does not match number of water atoms!")
+#           print("Check for crystallographic waters without hydrogens")
+#           quit(1)
     temp = tempfile.mkstemp(suffix='.pdb', prefix='psf_lipid_')[1]
     atomsel(lipid_sel,molid=molid).write('pdb', temp)
 
@@ -602,17 +624,26 @@ def write_protein_blocks(molid=0):
     atomsel('resname ACE and name O').set('name','OY')
 
     # Disulfide briges
+    bridges=atomsel('name SG and resname CYS CYX').get('resid')
+    print('\nALERT: The following residues are involved in disulfide bridges');
+    print('They will be listed one at a time. Please specify 
     atomsel('resname CYX and name CB').set('name','1CB')
     atomsel('resname CYX and name SG').set('name','1SG')
     print("Found %d CYX residues that could be disulfide bridges!" % len(atomsel('resname CYX')))
     atomsel('resname CYX').set('resname','CYS')
     #atomsel('resname CYX').set('resname','DISU')
 
-    # Histidine
-    atomsel('resname HIS').set('resname','HSE') # TODO: Is this a good default?
+    # Histidine naming convention
     atomsel('resname HID').set('resname','HSD')
     atomsel('resname HIE').set('resname','HSE')
-    atomsel('resname HIP').set('resname','HSP')
+    atomsel('resname HIP').set('resname','HSP') 
+
+    # Determine protonation states of those just called HIS based on atom names
+    atomsel('resname HIS and same residue as name HE2').set('resname','HSE')
+    atomsel('resname HIS and same residue as name HD1').set('resname','HSD')
+    # NOTE: This atomsel MUST come after the previous two!
+    atomsel('resname HIS and same residue as name HE2 and same residue as name HD1').set('resname',
+            'HSP')
 
     # Isoleucine
     atomsel('resname ILE and name CD1').set('name','CD')
