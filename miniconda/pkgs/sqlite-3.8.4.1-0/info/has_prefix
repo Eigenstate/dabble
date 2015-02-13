@@ -1,0 +1,2 @@
+lib/libsqlite3.la
+lib/pkgconfig/sqlite3.pc

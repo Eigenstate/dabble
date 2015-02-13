@@ -1,0 +1,8 @@
+pkg: yaml-0.1.4
+dist: yaml-0.1.4-0
+src_fn: yaml-0.1.4.tar.gz
+home: http://www.yaml.org/
+license: ??? (http://www.yaml.org/spec/1.2/spec.html)
+has_bin: False
+has_lib: True
+has_py: False

@@ -1,0 +1,4 @@
+bin/f2py
+lib/python2.7/site-packages/numpy/__config__.py
+lib/python2.7/site-packages/numpy/distutils/__config__.py
+lib/python2.7/site-packages/numpy/distutils/site.cfg

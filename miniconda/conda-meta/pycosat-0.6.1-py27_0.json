@@ -1,0 +1,27 @@
+{
+  "arch": "x86_64", 
+  "build": "py27_0", 
+  "build_number": 0, 
+  "depends": [
+    "python 2.7*"
+  ], 
+  "files": [
+    "lib/python2.7/site-packages/pycosat-0.6.1-py2.7.egg-info", 
+    "lib/python2.7/site-packages/pycosat.so", 
+    "lib/python2.7/site-packages/test_pycosat.py", 
+    "lib/python2.7/site-packages/test_pycosat.pyc"
+  ], 
+  "license": "MIT", 
+  "link": {
+    "source": "/share/PI/rondror/software/dabble/miniconda/pkgs/pycosat-0.6.1-py27_0", 
+    "type": "hard-link"
+  }, 
+  "name": "pycosat", 
+  "platform": "linux", 
+  "requires": [
+    "python 2.7"
+  ], 
+  "ucs": 4, 
+  "url": null, 
+  "version": "0.6.1"
+}

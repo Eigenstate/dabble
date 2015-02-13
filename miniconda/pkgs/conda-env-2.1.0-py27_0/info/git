@@ -1,0 +1,19 @@
+==> git log -n1 <==
+commit 4feca873c443c25feb6daad97332db61a77d5140
+Merge: a25326f c218312
+Author: Travis Swicegood <development@domain51.com>
+Date:   Fri Feb 6 13:34:59 2015 -0800
+
+    Bring activate/deactivate into conda-env (v2.1.0)
+
+==> git describe --tags --dirty <==
+v2.1.0
+
+==> git status <==
+# Not currently on any branch.
+# Untracked files:
+#   (use "git add <file>..." to include in what will be committed)
+#
+#	ANACONDA_DIST.txt
+nothing added to commit but untracked files present (use "git add" to track)
+

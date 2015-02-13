@@ -1,0 +1,16 @@
+{
+  "arch": "x86_64", 
+  "build": "py27_0", 
+  "build_number": 0, 
+  "depends": [
+    "python 2.7*"
+  ], 
+  "license": "BSD", 
+  "name": "numpy", 
+  "platform": "linux", 
+  "requires": [
+    "python 2.7"
+  ], 
+  "ucs": 4, 
+  "version": "1.9.1"
+}

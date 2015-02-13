@@ -1,0 +1,23 @@
+pkg: pycosat-0.6.1
+dist: pycosat-0.6.1-py27_0
+home: https://github.com/ilanschnell/pycosat
+license: MIT
+has_bin: False
+has_lib: False
+has_py: True
+
+==> gcc --version <==
+gcc (GCC) 4.1.2 20080704 (Red Hat 4.1.2-54)
+Copyright (C) 2006 Free Software Foundation, Inc.
+This is free software; see the source for copying conditions.  There is NO
+warranty; not even for MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.
+
+==> gfortran --version <==
+GNU Fortran (GCC) 4.1.2 20080704 (Red Hat 4.1.2-54)
+Copyright (C) 2007 Free Software Foundation, Inc.
+
+GNU Fortran comes with NO WARRANTY, to the extent permitted by law.
+You may redistribute copies of GNU Fortran
+under the terms of the GNU General Public License.
+For more information about these matters, see the file named COPYING
+

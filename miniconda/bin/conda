@@ -1,0 +1,5 @@
+#!/share/PI/rondror/software/dabble/miniconda/bin/python
+import sys
+from conda.cli import main
+
+sys.exit(main())

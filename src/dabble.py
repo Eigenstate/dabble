@@ -170,7 +170,7 @@ class dabble:
     
         log('launching VMD...')
         
-        import VMD, molecule
+        import vmd, molecule
         import dabblelib
         
         log('done.\n\n')

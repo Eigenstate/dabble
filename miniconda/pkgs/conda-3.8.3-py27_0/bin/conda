@@ -1,0 +1,5 @@
+#!/opt/anaconda1anaconda2anaconda3/bin/python
+import sys
+from conda.cli import main
+
+sys.exit(main())

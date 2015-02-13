@@ -1,0 +1,6 @@
+#!/share/PI/rondror/software/dabble/miniconda/bin/python
+if __name__ == '__main__':
+    import sys
+    from conda_env.cli.main import main
+
+    sys.exit(main())

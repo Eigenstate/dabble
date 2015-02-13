@@ -1,0 +1,11 @@
+{
+  "arch": "x86_64", 
+  "build": "0", 
+  "build_number": 0, 
+  "depends": [], 
+  "license": "Apache-style (http://www.openssl.org/source/license.html)", 
+  "name": "openssl", 
+  "platform": "linux", 
+  "requires": [], 
+  "version": "1.0.1k"
+}

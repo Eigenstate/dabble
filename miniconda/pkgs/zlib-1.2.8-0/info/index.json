@@ -1,0 +1,11 @@
+{
+  "arch": "x86_64", 
+  "build": "0", 
+  "build_number": 0, 
+  "depends": [], 
+  "license": "zlib (http://zlib.net/zlib_license.html)", 
+  "name": "zlib", 
+  "platform": "linux", 
+  "requires": [], 
+  "version": "1.2.8"
+}

@@ -1,0 +1,23 @@
+pkg: conda-3.8.4
+dist: conda-3.8.4-py27_0
+home: http://conda.pydata.org/
+license: BSD
+has_bin: True
+has_lib: False
+has_py: True
+
+==> gcc --version <==
+gcc (GCC) 4.8.2
+Copyright (C) 2013 Free Software Foundation, Inc.
+This is free software; see the source for copying conditions.  There is NO
+warranty; not even for MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.
+
+==> gfortran --version <==
+GNU Fortran (GCC) 4.8.2
+Copyright (C) 2013 Free Software Foundation, Inc.
+
+GNU Fortran comes with NO WARRANTY, to the extent permitted by law.
+You may redistribute copies of GNU Fortran
+under the terms of the GNU General Public License.
+For more information about these matters, see the file named COPYING
+

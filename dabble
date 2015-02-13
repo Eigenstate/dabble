@@ -1,14 +1,7 @@
-#!/usr/bin/env python
+#!/bin/bash
+
+# Use our own python to avoid problems
+PYTHON="$(cd "$( dirname "${BASH_SOURCE[0]}" )" && pwd )/miniconda/bin/python"
 
 # Set up PYTHONPATH so it can find VMD and the dabble module
-import sys, os
-os.environ['DABBLEDIR'] = os.path.abspath(os.path.dirname(sys.argv[0]))
-os.environ['VMDDIR'] = os.path.abspath(os.path.dirname(sys.argv[0]))+"/vmd-1.9.2-python"
-if os.environ['VMDDIR'] not in sys.path :
-  sys.path.append( os.environ['VMDDIR'] )
-  sys.path.append( os.environ['VMDDIR'] + "/scripts/python" )
-  sys.path.append( os.path.abspath(os.path.dirname(sys.argv[0])) + "/src" )
-
-import dabble
-dabble.dabble(sys.argv)
-
+$PYTHON src/init_dabble.py "$@"

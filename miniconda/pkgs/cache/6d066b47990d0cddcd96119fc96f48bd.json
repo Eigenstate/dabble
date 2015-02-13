@@ -1,0 +1,216 @@
+{
+  "_url": "https://conda.binstar.org/hicham/linux-64/", 
+  "info": {
+    "arch": "x86_64", 
+    "default_numpy_version": "1.7", 
+    "default_python_version": "2.7", 
+    "platform": "linux"
+  }, 
+  "packages": {
+    "astroid-1.0.0-py27_0.tar.bz2": {
+      "arch": "x86_64", 
+      "binstar": {
+        "channel": "main", 
+        "owner_id": "52540f5a59466e43430c3d00", 
+        "package_id": "5256ff2c59466e0dcccd9309"
+      }, 
+      "build": "py27_0", 
+      "build_number": 0, 
+      "depends": [
+        "logilab-common", 
+        "python 2.7*"
+      ], 
+      "md5": "15c2c72d30e4f9cdc4306d916d674965", 
+      "name": "astroid", 
+      "platform": "linux", 
+      "requires": [], 
+      "size": 146132, 
+      "version": "1.0.0"
+    }, 
+    "fiona-1.0.2-py27_0.tar.bz2": {
+      "arch": "x86_64", 
+      "binstar": {
+        "channel": "main", 
+        "owner_id": "52540f5a59466e43430c3d00", 
+        "package_id": "5255677f59466e0dcccd92e0"
+      }, 
+      "build": "py27_0", 
+      "build_number": 0, 
+      "depends": [
+        "python 2.7*", 
+        "six"
+      ], 
+      "md5": "0921d9dfe265712e9dbabc39da6254ac", 
+      "name": "fiona", 
+      "platform": "linux", 
+      "requires": [], 
+      "size": 439412, 
+      "version": "1.0.2"
+    }, 
+    "fn-0.2.12-py27_0.tar.bz2": {
+      "arch": "x86_64", 
+      "binstar": {
+        "channel": "main", 
+        "owner_id": "52540f5a59466e43430c3d00", 
+        "package_id": "5255660d59466e0dcccd92dc"
+      }, 
+      "build": "py27_0", 
+      "build_number": 0, 
+      "depends": [
+        "python 2.7*"
+      ], 
+      "md5": "18104ae4efda97f97c1982d2020c2b3e", 
+      "name": "fn", 
+      "platform": "linux", 
+      "requires": [], 
+      "size": 21417, 
+      "version": "0.2.12"
+    }, 
+    "futures-2.1.4-py27_0.tar.bz2": {
+      "arch": "x86_64", 
+      "binstar": {
+        "channel": "main", 
+        "owner_id": "52540f5a59466e43430c3d00", 
+        "package_id": "5255663759466e6e55f6b00a"
+      }, 
+      "build": "py27_0", 
+      "build_number": 0, 
+      "depends": [
+        "python 2.7*"
+      ], 
+      "md5": "323a474bac6a309e183b80dfcb0b7970", 
+      "name": "futures", 
+      "platform": "linux", 
+      "requires": [], 
+      "size": 21338, 
+      "version": "2.1.4"
+    }, 
+    "joblib-0.7.1-py27_0.tar.bz2": {
+      "arch": "x86_64", 
+      "binstar": {
+        "channel": "main", 
+        "owner_id": "52540f5a59466e43430c3d00", 
+        "package_id": "5255683159466e0dcccd92e5"
+      }, 
+      "build": "py27_0", 
+      "build_number": 0, 
+      "depends": [
+        "python 2.7*"
+      ], 
+      "md5": "ad40ca8392549fa8831f6d10d9e0934a", 
+      "name": "joblib", 
+      "platform": "linux", 
+      "requires": [], 
+      "size": 70061, 
+      "version": "0.7.1"
+    }, 
+    "logilab-common-0.60.0-py27_0.tar.bz2": {
+      "arch": "x86_64", 
+      "binstar": {
+        "channel": "main", 
+        "owner_id": "52540f5a59466e43430c3d00", 
+        "package_id": "5256fee859466e0dcccd9306"
+      }, 
+      "build": "py27_0", 
+      "build_number": 0, 
+      "depends": [
+        "python 2.7*"
+      ], 
+      "md5": "278ba7582c3a76020d5f4e6fe6a12ca8", 
+      "name": "logilab-common", 
+      "platform": "linux", 
+      "requires": [], 
+      "size": 298841, 
+      "version": "0.60.0"
+    }, 
+    "microbuild-0.3.3-py27_0.tar.bz2": {
+      "arch": "x86_64", 
+      "binstar": {
+        "channel": "main", 
+        "owner_id": "52540f5a59466e43430c3d00", 
+        "package_id": "5255567f59466e0dcccd92d9"
+      }, 
+      "build": "py27_0", 
+      "build_number": 0, 
+      "depends": [
+        "python 2.7*"
+      ], 
+      "md5": "9179dcc96a8b79d87b794a6b50628fc0", 
+      "name": "microbuild", 
+      "platform": "linux", 
+      "requires": [], 
+      "size": 7720, 
+      "version": "0.3.3"
+    }, 
+    "path.py-4.3-py27_0.tar.bz2": {
+      "arch": "x86_64", 
+      "binstar": {
+        "channel": "main", 
+        "owner_id": "52540f5a59466e43430c3d00", 
+        "package_id": "5254595259466e6e55f6affa"
+      }, 
+      "build": "py27_0", 
+      "build_number": 0, 
+      "depends": [
+        "python 2.7*"
+      ], 
+      "md5": "02490ef4aac8b7655cbb8e6624491df8", 
+      "name": "path.py", 
+      "platform": "linux", 
+      "requires": [], 
+      "size": 32711, 
+      "version": "4.3"
+    }, 
+    "pyqt-4.10.3-0.tar.bz2": {
+      "arch": "x86_64", 
+      "binstar": {
+        "channel": "main", 
+        "owner_id": "52540f5a59466e43430c3d00", 
+        "package_id": "52543e6659466e0dcccd92cd"
+      }, 
+      "build": "0", 
+      "build_number": 0, 
+      "depends": [], 
+      "md5": "ca56574fe48bbfaad87f00c4c2e7c89b", 
+      "name": "pyqt", 
+      "platform": "linux", 
+      "requires": [], 
+      "size": 758, 
+      "version": "4.10.3"
+    }, 
+    "qscintilla-2.7.2-0.tar.bz2": {
+      "arch": "x86_64", 
+      "binstar": {
+        "channel": "main", 
+        "owner_id": "52540f5a59466e43430c3d00", 
+        "package_id": "5254435359466e0dcccd92d0"
+      }, 
+      "build": "0", 
+      "build_number": 0, 
+      "depends": [], 
+      "md5": "fc92f6469d27239f99287d7f7746b94a", 
+      "name": "qscintilla", 
+      "platform": "linux", 
+      "requires": [], 
+      "size": 903, 
+      "version": "2.7.2"
+    }, 
+    "sip-4.15.2-0.tar.bz2": {
+      "arch": "x86_64", 
+      "binstar": {
+        "channel": "main", 
+        "owner_id": "52540f5a59466e43430c3d00", 
+        "package_id": "5254321559466e0dcccd92ca"
+      }, 
+      "build": "0", 
+      "build_number": 0, 
+      "depends": [], 
+      "md5": "2ddf5b94a1bf65110c6eb50fa4f8e4a3", 
+      "name": "sip", 
+      "platform": "linux", 
+      "requires": [], 
+      "size": 715, 
+      "version": "4.15.2"
+    }
+  }
+}

@@ -1,0 +1,5 @@
+#!/share/PI/rondror/software/dabble/miniconda/bin/python
+
+from idlelib.PyShell import main
+if __name__ == '__main__':
+    main()

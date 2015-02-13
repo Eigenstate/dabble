@@ -1,0 +1,10 @@
+{
+  "arch": "x86_64", 
+  "build": "2", 
+  "build_number": 2, 
+  "depends": [], 
+  "name": "readline", 
+  "platform": "linux", 
+  "requires": [], 
+  "version": "6.2"
+}

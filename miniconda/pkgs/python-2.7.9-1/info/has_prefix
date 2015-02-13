@@ -1,0 +1,8 @@
+bin/2to3
+bin/idle
+bin/pydoc
+bin/python-config
+bin/smtpd.py
+lib/pkgconfig/python-2.7.pc
+lib/python2.7/_sysconfigdata.py
+lib/python2.7/config/Makefile

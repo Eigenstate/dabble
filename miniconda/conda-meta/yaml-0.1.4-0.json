@@ -1,0 +1,24 @@
+{
+  "arch": "x86_64", 
+  "build": "0", 
+  "build_number": 0, 
+  "files": [
+    ".index/yaml-0.1.4-0", 
+    "include/yaml.h", 
+    "lib/libyaml-0.so.2", 
+    "lib/libyaml-0.so.2.0.2", 
+    "lib/libyaml.a", 
+    "lib/libyaml.la", 
+    "lib/libyaml.so", 
+    "lib/pkgconfig/yaml-0.1.pc"
+  ], 
+  "link": {
+    "source": "/share/PI/rondror/software/dabble/miniconda/pkgs/yaml-0.1.4-0", 
+    "type": "hard-link"
+  }, 
+  "name": "yaml", 
+  "platform": "linux", 
+  "requires": [], 
+  "url": null, 
+  "version": "0.1.4"
+}

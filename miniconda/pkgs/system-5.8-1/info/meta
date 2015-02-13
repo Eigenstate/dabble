@@ -1,0 +1,7 @@
+pkg: system-5.8
+dist: system-5.8-1
+home: None
+license: None
+has_bin: False
+has_lib: True
+has_py: False

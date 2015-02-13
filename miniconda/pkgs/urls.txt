@@ -1,0 +1,3 @@
+http://repo.continuum.io/pkgs/free/linux-64/numpy-1.9.1-py27_0.tar.bz2
+http://repo.continuum.io/pkgs/free/linux-64/conda-env-2.1.0-py27_0.tar.bz2
+http://repo.continuum.io/pkgs/free/linux-64/conda-3.8.4-py27_0.tar.bz2

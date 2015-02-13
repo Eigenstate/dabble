@@ -1,0 +1,10 @@
+  These are the initialization scripts used by Tcl, TclX, TclDP as     
+well as the core VMD routines.  The 'vmd' startup script should set
+several environment variables as follows:
+  TCL_LIBRARY    $VMDDIR/scripts/tcl
+  TCLX_LIBRARY   $VMDDIR/scripts/tclX
+  DP_LIBRARY     $VMDDIR/scripts/dp
+and the vmd scripts are in
+                 $VMDDIR/scripts/vmd
+
+						Andrew Dalke
