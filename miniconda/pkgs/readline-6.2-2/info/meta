@@ -1,7 +1,0 @@
-pkg: readline-6.2
-dist: readline-6.2-2
-home: http://cnswww.cns.cwru.edu/php/chet/readline/rltop.html
-license: GPL 3
-has_bin: False
-has_lib: True
-has_py: False

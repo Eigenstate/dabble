@@ -545,6 +545,3 @@ def add_salt_ion(element):
 def write_remaining_atoms(output_filename, write_pdb=False):
     write_ct_blocks('beta 1', output_filename, write_pdb)
     return num_atoms_remaining()
-
-   
-

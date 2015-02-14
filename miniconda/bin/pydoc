@@ -1,5 +1,0 @@
-#!/share/PI/rondror/software/dabble/miniconda/bin/python
-
-import pydoc
-if __name__ == '__main__':
-    pydoc.cli()
