@@ -1,5 +1,0 @@
-bin/c_rehash
-include/openssl/opensslconf.h
-lib/pkgconfig/libcrypto.pc
-lib/pkgconfig/libssl.pc
-lib/pkgconfig/openssl.pc

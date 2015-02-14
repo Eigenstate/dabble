@@ -1,9 +1,0 @@
-{
-  "arch": "x86_64", 
-  "build": "1", 
-  "build_number": 1, 
-  "name": "system", 
-  "platform": "linux", 
-  "requires": [], 
-  "version": "5.8"
-}

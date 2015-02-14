@@ -625,8 +625,8 @@ def write_protein_blocks(molid=0):
 
     # Disulfide briges
     bridges=atomsel('name SG and resname CYS CYX').get('resid')
-    print('\nALERT: The following residues are involved in disulfide bridges');
-    print('They will be listed one at a time. Please specify 
+    print('\nALERT: The following residues are involved in disulfide bridges')
+    print('They will be listed one at a time. Please specify')
     atomsel('resname CYX and name CB').set('name','1CB')
     atomsel('resname CYX and name SG').set('name','1SG')
     print("Found %d CYX residues that could be disulfide bridges!" % len(atomsel('resname CYX')))
