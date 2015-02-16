@@ -106,17 +106,8 @@ def write_psf(psf_name, molid=0, lipid_sel="lipid"):
     # Save the protein with correct atom names
     # TODO: Multiple chains
     if len(atomsel('protein',molid=molid)) > 0:
-        temp = write_protein_blocks(molid=molid)
-        string='''
-          set protnam %s
-          segment P {
-            pdb $protnam
-          }
-      
-          #EXTRA_PROTEIN_COMMANDS
-          coordpdb $protnam P''' % temp
-        file.write(string)
-    # End protein
+        temp = write_protein_blocks(file,molid=molid)
+        # End protein
 
     # Check if there is anything else and let the user know about it
     leftovers = atomsel('not water and not lipid and not (protein or resname ACE) and not ions',molid=molid)
@@ -143,7 +134,7 @@ def write_psf(psf_name, molid=0, lipid_sel="lipid"):
 
 # Writes the temporary protein PDB file with correct atom names for psfgen
 # This is also the worst.
-def write_protein_blocks(molid=0):
+def write_protein_blocks(file,molid=0):
     # Put molid on top to simplify atom selections
     old_top=molecule.get_top()
     molecule.set_top(molid)
@@ -163,17 +154,30 @@ def write_protein_blocks(molid=0):
     atomsel('resname ACE and name C').set('name','CY')
     atomsel('resname ACE and name O').set('name','OY')
 
-    # NMA (from 
-
     # Disulfide briges
-    bridges=atomsel('name SG and resname CYS CYX').get('resid')
-    print('\nALERT: The following residues are involved in disulfide bridges')
-    print('They will be listed one at a time. Please specify')
-    atomsel('resname CYX and name CB').set('name','1CB')
-    atomsel('resname CYX and name SG').set('name','1SG')
-    print("Found %d CYX residues that could be disulfide bridges!" % len(atomsel('resname CYX')))
-    atomsel('resname CYX').set('resname','CYS')
-    #atomsel('resname CYX').set('resname','DISU')
+    disulfide_patches = ''
+    indices = set( atomsel('name SG and resname CYX').get('index') )
+    while len(indices) > 0 :
+        idx1 = indices.pop()
+        matches = set( atomsel('name SG and resname CYX and not index %d and within 2.5 of index %d'
+          % (idx1, idx1)
+
+        # Sanity check
+        if len(matches) > 1 :
+            print('\nERROR: Found more than one possible disulfide bond partner for atom %d'
+                    '       Don\'t know what to do now... quack quack quack goodbye' % idx1)
+            quit(1)
+        elif len(matches) < 1 :
+            print('\nERROR: Found no disulfide bond partner for atom %d'
+                    '       Please check your input file is prepared properly' % idx1)
+        idx2 = matches.pop()
+        indices.remove(idx2)
+
+        # Set up the disu patch line
+        res1 = atomsel('index %d' % idx1).get('resid')
+        res2 = atomsel('index %d' % idx2).get('resid')
+        print("\nINFO: Disulfide bond between residues %d and %d" % (res1,res2))
+        disulfide_patches += 'patch DISU P:%d P:%d\n' % (res1,res2)
 
     # Histidine naming convention
     atomsel('resname HID').set('resname','HSD')
@@ -250,6 +254,17 @@ def write_protein_blocks(molid=0):
     atomsel('resname ACE or protein').write('pdb',temp)
     print("Wrote %d atoms to the protein temp file" % len(atomsel('resname ACE or protein')))
     molecule.set_top(old_top)
+
+    # Now write to psfgen input file
+    string='''
+          set protnam %s
+          segment P {
+            pdb $protnam
+          } ''' % temp
+    file.write(string)
+    file.write(disulfide_patches)
+    file.write('coordpdb $protnam P') 
+
     return temp
 
 # Writes a bunch of temp files with 10000 waters each, to bypass psfgen
