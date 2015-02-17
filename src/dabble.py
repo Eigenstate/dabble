@@ -47,9 +47,11 @@ class dabble:
               raise argparse.ArgumentTypeError("%s is too short to determine output filetype" % value)
         ext = value[-3:]
         if ext=='mae' :
-            self.write_pdb=False
+            self.out_fmt='mae'
         elif ext=='pdb' :
-            self.write_pdb=True
+            self.out_fmt='pdb'
+        elif ext=='psf' :
+            self.out_fmt='psf'
         else :
             raise argparse.ArgumentTypeError("%s is invalid format. Currently only pdb and mae supported" % value)
         return value
@@ -81,7 +83,7 @@ class dabble:
                             type=self.check_out_type, required=True,
                             help='Name of output file (including pdb extension)')
         parser.add_argument('-M', '--membrane-system', dest='membrane_system',
-                          type=str, required=True,
+                          type=str, default="$DABBLEDIR/lipid_membranes/popc/equilibrated_POPC_membrane_with_TIP3P.mae")
                           help='custom membrane system path (must be a mae file)       ')
         parser.add_argument('-B', '--solute-selection', dest='solute_bb_sel',
                           default='protein', type=str,
@@ -187,7 +189,7 @@ class dabble:
         #log('solute_sel = "%s"\nsolute_bb_sel = "%s"\n\n' % (solute_sel, opts.solute_bb_sel))
         #if solute_sel != opts.solute_bb_sel:
         #    log('WARNING:  solute_bb_sel != solute_sel\n')
-            
+
         log('computing the size of the periodic cell...')
         
         xy_size, z_size, dxy_sol, dxy_tm, dz_full = dabblelib.get_cell_size(opts.xy_buf,
@@ -332,16 +334,18 @@ class dabble:
         
         log('writing system with %d atoms (containing %d lipid molecules and %d water molecules) to "%s"...' % (dabblelib.num_atoms_remaining(), dabblelib.num_lipids_remaining(opts.lipid_sel), dabblelib.num_waters_remaining(), opts.output_filename))
         
-        dabblelib.write_remaining_atoms(opts.output_filename, write_pdb=self.write_pdb)
+        dabblelib.write_remaining_atoms(opts.output_filename, out_fmt=self.out_fmt)
 
+        # Write psf file if necessary 
+        if (opts.out_fmt=='psf') :
+            opts.write_psf_name = opts.output_filename
 
-# TEMP TODO --Robin TESTING
-        if opts.write_psf_name is not None:
-            log('saving pdb and psf files\n')
-            log('you can\'t specify the filename yet.\n')
-            log('look for psfgen_output.pdb and psfgen_output.psf\n')
-            dabblelib.write_psfgen_blocks(molid=molecule.get_top(), lipid_sel=opts.lipid_sel)
-        
+        if opts.write_psf_name is not None :
+            opts.write_psf_name.replace(".psf","") # extension appended by psfgen 
+            log('Saving pdb and psf files\n'
+            import dabblepsf
+            dabblepsf.write_psf(opts.write_psf_name,molid=molecule.get_top(), lipid_sel=opts.lipid_sel)
+
         log('done.\n\n')
     
         log('[exit]\n')

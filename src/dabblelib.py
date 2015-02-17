@@ -301,7 +301,7 @@ def combine_molecules(input_ids) :
     for i in input_ids: molecule.delete(i)
     return output_id
 
-def write_ct_blocks(sel, output_filename, write_pdb=False):
+def write_ct_blocks(sel, output_filename, out_fmt='mae'):
     users = sorted(set(atomsel(sel).get('user')))
     filenames = [(tempfile.mkstemp(suffix='.mae', prefix='dabble_tmp_user'))[1] for id in users]
     length = len(users)
@@ -314,14 +314,14 @@ def write_ct_blocks(sel, output_filename, write_pdb=False):
 
     # Option lets us specify if we should write a pdb/psf or just a mae file
     # Either way it writes a temp mae file, hacky but it works
-    if write_pdb :
+    if out_fmt=='mae' :
+        concatenate_mae_files(output_filename, filenames)
+    else :
         (h,temp_mae) = tempfile.mkstemp(suffix='.mae', prefix='dabble_final')
         concatenate_mae_files(temp_mae, filenames)
         id = molecule.read(-1, 'mae', temp_mae)
         molecule.write(id, 'pdb', output_filename)
         os.remove(temp_mae)
-    else :
-        concatenate_mae_files(output_filename, filenames)
 
     # Clean up
     for filename in filenames:
@@ -542,6 +542,6 @@ def add_salt_ion(element):
     return gid
 
 
-def write_remaining_atoms(output_filename, write_pdb=False):
-    write_ct_blocks('beta 1', output_filename, write_pdb)
+def write_remaining_atoms(output_filename, out_fmt='mae'):
+    write_ct_blocks('beta 1', output_filename, out_fmt)
     return num_atoms_remaining()
