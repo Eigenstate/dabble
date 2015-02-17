@@ -83,7 +83,8 @@ class dabble:
                             type=self.check_out_type, required=True,
                             help='Name of output file (including pdb extension)')
         parser.add_argument('-M', '--membrane-system', dest='membrane_system',
-                          type=str, default="$DABBLEDIR/lipid_membranes/popc/equilibrated_POPC_membrane_with_TIP3P.mae")
+                          type=str,
+                          default='$DABBLEDIR/lipid_membranes/popc/equilibrated_POPC_membrane_with_TIP3P.mae',
                           help='custom membrane system path (must be a mae file)       ')
         parser.add_argument('-B', '--solute-selection', dest='solute_bb_sel',
                           default='protein', type=str,
@@ -337,12 +338,12 @@ class dabble:
         dabblelib.write_remaining_atoms(opts.output_filename, out_fmt=self.out_fmt)
 
         # Write psf file if necessary 
-        if (opts.out_fmt=='psf') :
+        if (self.out_fmt=='psf') :
             opts.write_psf_name = opts.output_filename
 
         if opts.write_psf_name is not None :
             opts.write_psf_name.replace(".psf","") # extension appended by psfgen 
-            log('Saving pdb and psf files\n'
+            log('Saving pdb and psf files\n')
             import dabblepsf
             dabblepsf.write_psf(opts.write_psf_name,molid=molecule.get_top(), lipid_sel=opts.lipid_sel)
 
