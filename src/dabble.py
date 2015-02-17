@@ -84,7 +84,7 @@ class dabble:
                             help='Name of output file (including pdb extension)')
         parser.add_argument('-M', '--membrane-system', dest='membrane_system',
                           type=str,
-                          default='$DABBLEDIR/lipid_membranes/popc/equilibrated_POPC_membrane_with_TIP3P.mae',
+                          default='%s/lipid_membranes/popc/equilibrated_POPC_membrane_with_TIP3P.mae' % os.environ['DABBLEDIR'],
                           help='custom membrane system path (must be a mae file)       ')
         parser.add_argument('-B', '--solute-selection', dest='solute_bb_sel',
                           default='protein', type=str,
