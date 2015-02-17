@@ -273,6 +273,9 @@ def write_protein_blocks(file,molid=0):
 # Writes a bunch of temp files with 10000 waters each, to bypass psfgen
 # being stupid with files with more than 10000 of a residue
 def write_water_blocks(molid=0):
+    # Set consistent residue names, crystal waters can be named HOH, etc
+    atomsel('water').set('resname','TIP3')
+
     # Select all the waters. We'll use the user field to track which ones have been written
     atomsel('water',molid=molid).set('user', 0.0)
     all=atomsel('water and user 0.0',molid=molid)
