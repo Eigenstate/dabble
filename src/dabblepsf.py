@@ -59,7 +59,7 @@ def write_psf(psf_name, molid=0, lipid_sel="lipid"):
         set waterfiles [glob -directory /tmp psf_wat_*.pdb]
         set i 0
         foreach watnam $waterfiles {
-          set mid mol new $watnam
+          set mid [mol new $watnam]
           set water [atomselect top "water"]
           segment W${i} {
             auto none
@@ -159,8 +159,7 @@ def write_protein_blocks(file,molid=0):
     indices = set( atomsel('name SG and resname CYX').get('index') )
     while len(indices) > 0 :
         idx1 = indices.pop()
-        matches = set( atomsel('name SG and resname CYX and not index %d and within 2.5 of index %d'
-          % (idx1, idx1)
+        matches = set( atomsel('name SG and resname CYX and not index %d and within 2.5 of index %d' % (idx1, idx1) ))
 
         # Sanity check
         if len(matches) > 1 :
@@ -174,10 +173,13 @@ def write_protein_blocks(file,molid=0):
         indices.remove(idx2)
 
         # Set up the disu patch line
-        res1 = atomsel('index %d' % idx1).get('resid')
-        res2 = atomsel('index %d' % idx2).get('resid')
+        res1 = atomsel('index %d' % idx1).get('resid')[0]
+        res2 = atomsel('index %d' % idx2).get('resid')[0]
         print("\nINFO: Disulfide bond between residues %d and %d" % (res1,res2))
         disulfide_patches += 'patch DISU P:%d P:%d\n' % (res1,res2)
+
+    # Rename CYX -> CYS for naming conventions
+    atomsel('resname CYX').set('resname','CYS')
 
     # Histidine naming convention
     atomsel('resname HID').set('resname','HSD')
@@ -260,7 +262,8 @@ def write_protein_blocks(file,molid=0):
           set protnam %s
           segment P {
             pdb $protnam
-          } ''' % temp
+          } 
+          ''' % temp
     file.write(string)
     file.write(disulfide_patches)
     file.write('coordpdb $protnam P') 
