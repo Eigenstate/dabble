@@ -1,7 +1,9 @@
 #!/bin/bash
 
 # Use our own python to avoid problems
-PYTHON="$(cd "$( dirname "${BASH_SOURCE[0]}" )" && pwd )/miniconda/bin/python"
+DABBLEDIR="$(cd "$( dirname "${BASH_SOURCE[0]}" )" && pwd)"
+PYTHON="$DABBLEDIR/miniconda/bin/python"
+#PYTHON="$(cd "$( dirname "${BASH_SOURCE[0]}" )" && pwd )/miniconda/bin/python"
 
 # Set up PYTHONPATH so it can find VMD and the dabble module
-$PYTHON src/init_dabble.py "$@"
+$PYTHON $DABBLEDIR/src/init_dabble.py "$@"
