@@ -30,8 +30,9 @@ def write_psf(psf_name, molid=0, lipid_sel="lipid"):
 
     # Specify default parameter sets
     string='''
-    topology ${dabbledir}/charmm_params/top_water_ions.rtf
+    topology ${dabbledir}/charmm_params/top_all36_caps.rtf
     topology ${dabbledir}/charmm_params/top_all36_cgenff.rtf
+    topology ${dabbledir}/charmm_params/top_water_ions.rtf
     topology ${dabbledir}/charmm_params/top_all36_prot.rtf
     topology ${dabbledir}/charmm_params/top_all36_lipid.rtf
     '''
@@ -41,6 +42,7 @@ def write_psf(psf_name, molid=0, lipid_sel="lipid"):
     # TODO: Only ask if a ligand or something is found
     print("""\nWhich CHARMM topology files should I use?"
     Currently using:
+       - top_all36_caps.rtf (capping groups by Robin)
        - top_water_ions.rtf
        - top_all36_cgenff.rtf
        - top_all36_prot.rtf
@@ -53,20 +55,20 @@ def write_psf(psf_name, molid=0, lipid_sel="lipid"):
         for t in rtfs: 
             file.write("topology %s\n" % t)
 
+    # Now ions if present, changing the atom names
+    if len(atomsel('element Na Cl K',molid=molid)) > 0 :
+        temp = write_ion_blocks(file,tmp_dir,molid=molid)
+    # End ions
+
     # Save water 10k molecules at a time
     if len(atomsel('water',molid=molid)) > 0:
         write_water_blocks(file,tmp_dir,molid=molid)
     # End water
 
-    # Now ions if present, changing the atom names
-    if len(atomsel('ions',molid=molid)) > 0 :
-        temp = write_ion_blocks(file,tmp_dir,molid=molid)
-           # End ions
-
     # Now lipid
     if len(atomsel(lipid_sel)) > 0:
         temp=write_lipid_blocks(file,tmp_dir,lipid_sel=lipid_sel,molid=molid)
-     # End lipid
+    # End lipid
 
     # Save the protein with correct atom names
     # TODO: Multiple chains
@@ -104,6 +106,10 @@ def write_protein_blocks(file,tmp_dir,molid=0):
     old_top=molecule.get_top()
     molecule.set_top(molid)
 
+    # Renumber residues starting from 1
+    T = atomsel('protein or resname ACE NMA')
+    T.set('resid',[r+1 for r in T.get('residue')])
+
     # Check the protein has hydrogens
     if len(atomsel('protein and element H')) == 0:
         print("\n\nERROR: There are no hydrogens on your protein")
@@ -111,16 +117,33 @@ def write_protein_blocks(file,tmp_dir,molid=0):
         print("       because psfgen cannot be trusted to do it correctly.\n")
         quit(1)
 
-    # Terminal residues ACE TODO NMA
+    # Terminal residue ACE
     atomsel('resname ACE and name CH3').set('name','CAY')
-    atomsel('resname ACE and name HH31').set('name','HY1')
+    atomsel('resname ACE and name HH31').set('name','HY1') # H could be named HH31 or H1
     atomsel('resname ACE and name HH32').set('name','HY2')
     atomsel('resname ACE and name HH33').set('name','HY3')
+    atomsel('resname ACE and name H1').set('name','HY1')
+    atomsel('resname ACE and name H2').set('name','HY2')
+    atomsel('resname ACE and name H3').set('name','HY3')
+    atomsel('resname ACE and name 1H').set('name','HY1')
+    atomsel('resname ACE and name 2H').set('name','HY2')
+    atomsel('resname ACE and name 3H').set('name','HY3')
     atomsel('resname ACE and name C').set('name','CY')
     atomsel('resname ACE and name O').set('name','OY')
 
+    # Terminal residue NMA
+    atomsel('resname NMA and name HN').set('name','HNT')
+    atomsel('resname NMA and name H').set('name','HNT')
+    atomsel('resname NMA and name N').set('name','NT')
+    atomsel('resname NMA and name CA').set('name','CAT')
+    atomsel('resname NMA and name HA1').set('name','HT1')
+    atomsel('resname NMA and name HA2').set('name','HT2')
+    atomsel('resname NMA and name HA3').set('name','HT3')
+
+    patches = ''
+    # NOTE: No patch for ACE or NMA  since this is done in the termini rtf file as a regular residue
+
     # Disulfide briges
-    disulfide_patches = ''
     indices = set( atomsel('name SG and resname CYX').get('index') )
     while len(indices) > 0 :
         idx1 = indices.pop()
@@ -141,7 +164,7 @@ def write_protein_blocks(file,tmp_dir,molid=0):
         res1 = atomsel('index %d' % idx1).get('resid')[0]
         res2 = atomsel('index %d' % idx2).get('resid')[0]
         print("\nINFO: Disulfide bond between residues %d and %d" % (res1,res2))
-        disulfide_patches += 'patch DISU P:%d P:%d\n' % (res1,res2)
+        patches += 'patch DISU P:%d P:%d\n' % (res1,res2)
 
     # Rename CYX -> CYS for naming conventions
     atomsel('resname CYX').set('resname','CYS')
@@ -198,6 +221,10 @@ def write_protein_blocks(file,tmp_dir,molid=0):
         else :
             atomsel('residue %s' % residue).set('resname','ASP')
 
+    for resid in set(atomsel('resname ASPP').get('resid')) :
+        patches += 'patch ASPP P:%d\n' % resid
+    atomsel('resname ASPP').set('resname','ASP')
+
     # Hydrogens
     atomsel('(resname ACE or protein) and name H').set('name','HN')
     atomsel('(resname ACE or protein) and name HA2').set('name','HA1')
@@ -206,19 +233,16 @@ def write_protein_blocks(file,tmp_dir,molid=0):
     atomsel('(resname ACE or protein) and name HG3').set('name','HG2')
     atomsel('(resname ACE or protein) and name HB2 and not resname ALA').set('name','HB1')
     atomsel('(resname ACE or protein) and name HB3 and not resname ALA').set('name','HB2')
-    atomsel('(resname ACE or protein) and name HD2 and not (resname HSP HSE HSD ASPP PHE)').set('name','HD1')
-    atomsel('(resname ACE or protein) and name HD3 and not (resname HIS HSE HSD PHE)').set('name','HD2')
+    atomsel('(resname ACE or protein) and name HD2 and not (resname ILE HSP HSE HSD ASP PHE)').set('name','HD1')
+    atomsel('(resname ACE or protein) and name HD3 and not (resname ILE HIS HSE HSD ASP PHE)').set('name','HD2')
     atomsel('(resname ACE or protein) and name HE2 and not (resname TRP HSP HSE HSD GLUP PHE)').set('name','HE1')
     atomsel('(resname ACE or protein) and name HE3 and not (resname TRP HSP HSE HSD PHE)').set('name','HE2')
     atomsel('(resname ACE or protein) and name HG and resname SER CYS').set('name','HG1')
 
-    # Renumber residues
-    T = atomsel('resname ACE or protein')
-    T.set('resid',T.get('residue'))
-
     # Now protein
     temp = tempfile.mkstemp(suffix='.pdb', prefix='psf_protein_', dir=tmp_dir)[1]
-    atomsel('resname ACE or protein').write('pdb',temp)
+    print("Writing temporary protein file...")
+    write_ordered_pdb(temp, sel='resname ACE or protein', molid=molid)
     print("Wrote %d atoms to the protein temp file" % len(atomsel('resname ACE or protein')))
     molecule.set_top(old_top)
 
@@ -230,7 +254,7 @@ def write_protein_blocks(file,tmp_dir,molid=0):
       } 
     ''' % temp
     file.write(string)
-    file.write(disulfide_patches)
+    file.write(patches)
     file.write('coordpdb $protnam P') 
 
     return temp
@@ -239,19 +263,21 @@ def write_protein_blocks(file,tmp_dir,molid=0):
 # being stupid with files with more than 10000 of a residue
 def write_water_blocks(file,tmp_dir,molid=0):
     # Set consistent residue and atom names, crystal waters can be named HOH, etc
-    atomsel('water').set('resname','TIP3')
-    atomsel('water and name O').set('name','OH2')
+    atomsel('water not name CLA SOD POT').set('resname','TIP3')
+    atomsel('water not name CLA SOD POT').set('chain','W')
+    atomsel('chain W and name O').set('name','OH2')
 
     # Select all the waters. We'll use the user field to track which ones have been written
-    atomsel('water',molid=molid).set('user', 0.0)
-    all=atomsel('water and user 0.0',molid=molid)
+    atomsel('chain W',molid=molid).set('user', 0.0)
+    all=atomsel('chain W and user 0.0',molid=molid)
     num_written = len(all)/(9999*3)+1
     print("Going to write %d files for %d water atoms" % (num_written-1, len(all)))
 
     # Pull out and write 10k waters at a time
     for i in range(num_written) :
         residues = all.get('residue')[:9999*3] # 9999 molecules, 3 atoms each
-        batch = atomsel('residue ' + ' '.join(map(str,set(residues))), molid=molid)
+        batchtxt = 'residue ' + ' '.join(map(str,set(residues)))
+        batch = atomsel(batchtxt, molid=molid)
         try :
             batch.set('resid', [k for k in range(1,len(batch)/3+1) for _ in range(3)])
         except ValueError:
@@ -261,7 +287,7 @@ def write_water_blocks(file,tmp_dir,molid=0):
             print("       Check your crystallographic waters in the input structure.\n")
             quit(1)
         temp = tempfile.mkstemp(suffix='_%d.pdb' % i, prefix='psf_wat_', dir=tmp_dir)[1]
-        batch.write('pdb', temp)
+        batch.write('pdb',temp)
         batch.set('user', 1.0)
         all.update()
 
@@ -275,7 +301,6 @@ def write_water_blocks(file,tmp_dir,molid=0):
           auto none
           pdb $watnam
         }
-        pdbalias atom HOH O OH2
         coordpdb $watnam W${i}
         mol delete $mid
         incr i
@@ -369,7 +394,7 @@ def write_lipid_blocks(file,tmp_dir,lipid_sel="lipid",molid=0):
 
     # Write temporary lipid pdb
     temp = tempfile.mkstemp(suffix='.pdb', prefix='psf_lipid_', dir=tmp_dir)[1]
-    atomsel(lipid_sel,molid=molid).write('pdb', temp)
+    atomsel(lipid_sel,molid=molid).write('pdb',temp)
 
     # Write to file
     string='''
@@ -388,27 +413,29 @@ def write_lipid_blocks(file,tmp_dir,lipid_sel="lipid",molid=0):
 
 def write_ion_blocks(file,tmp_dir,molid=0) :
     # Fix the names
-    atomsel('ions and name NA').set('name','SOD')
-    atomsel('ions and name CL').set('name','CLA')
-    atomsel('ions and name K').set('name','POT')
-    atomsel('ions and name NA').set('resname','SOD')
-    atomsel('ions and name CL').set('resname','CLA')
-    atomsel('ions and name K').set('resname','POT')
+    atomsel('name NA').set('name','SOD')
+    atomsel('name CL').set('name','CLA')
+    atomsel('name K').set('name','POT')
+    atomsel('name NA').set('resname','SOD')
+    atomsel('name CL').set('resname','CLA')
+    atomsel('name K').set('resname','POT')
 
     # Renumber the residues since some may be above 10k
-    residues = atomsel('ions',molid=molid).get('residue')
+    residues = atomsel('name SOD CLA POT',molid=molid).get('residue')
     batch = atomsel('residue ' + ' '.join(map(str,set(residues))), molid=molid)
     batch.set('resid', [k for k in range(1,len(batch)+1)])
 
     # Save the temporary ions file
     temp = tempfile.mkstemp(suffix='.pdb', prefix='psf_ions_', dir=tmp_dir)[1]
-    atomsel('ions',molid=molid).write('pdb',temp)
+    atomsel('name SOD CLA POT',molid=molid).write('pdb',temp)
 
     string='''
       set ionfile %s
       set mid [mol new $ionfile]
       segment I {
         pdb $ionfile 
+        first none
+        last none
       }
       coordpdb $ionfile I
       mol delete $mid
@@ -416,4 +443,26 @@ def write_ion_blocks(file,tmp_dir,molid=0) :
     file.write(string)
 
     return temp
+
+# Writes a pdb in order of residues, renumbering the atoms
+# accordingly, since psfgen wants each residue sequentially
+def write_ordered_pdb(filename, sel, molid=0) :
+    f = open(filename, 'w')
+
+    resids = set( atomsel(sel).get('residue') ) # Much much faster then get resids
+    idx = 1
+    for r in resids :
+       atoms = atomsel('residue %d' % r).get('index')
+       for i in atoms :
+           a = atomsel('index %d' % i)
+           
+        #  entry="%-6s%5s %5s%-4s%c%4s%c   %8.3f%8.3f%8.3f%6.2f%6.2f      %-4s%2s\n",
+           entry='%-6s%5d %-4s%c%-4s%c%4s%c   %8.3f%8.3f%8.3f%6.2f%6.2f      %-4s%2s\n' % ('ATOM',idx,
+                 a.get('name')[0],' ', a.get('resname')[0],
+                 a.get('chain')[0], a.get('resid')[0],' ',
+                 a.get('x')[0], a.get('y')[0], a.get('z')[0],
+                 0.0,0.0, a.get('segname')[0], a.get('element')[0] )
+           idx += 1
+           f.write(entry)
+    f.close()
 
