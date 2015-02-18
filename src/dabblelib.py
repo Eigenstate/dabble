@@ -543,5 +543,8 @@ def add_salt_ion(element):
 
 
 def write_remaining_atoms(output_filename, out_fmt='mae'):
+    # PSF output written later
+    if out_fmt=='psf': return
+
     write_ct_blocks('beta 1', output_filename, out_fmt)
     return num_atoms_remaining()
