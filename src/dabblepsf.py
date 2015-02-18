@@ -7,13 +7,14 @@ def write_psf(psf_name, molid=0, lipid_sel="lipid"):
     # Clean up all temp files from previous runs
     # TODO: Move to end if successful
 
-    print("Removing %d old psfgen blocks" % len(glob.glob("/tmp/psf_*.pdb")))
-    for oldfile in glob.glob("/tmp/psf_*.pdb") :
-        os.remove(oldfile)
-    for oldfile in glob.glob("/tmp/dabble_psfgen*.tcl") :
-        os.remove(oldfile)
-
-    filename = tempfile.mkstemp(suffix='.tcl', prefix='dabble_psfgen')[1]
+    #print("Removing %d old psfgen blocks" % len(glob.glob("/tmp/psf_*.pdb")))
+    #for oldfile in glob.glob("/tmp/psf_*.pdb") :
+    #    os.remove(oldfile)
+    #for oldfile in glob.glob("/tmp/dabble_psfgen*.tcl") :
+    #    os.remove(oldfile)
+    
+    tmp_dir = tempfile.mkdtemp(prefix='dabble_psfgen')
+    filename = tempfile.mkstemp(suffix='.tcl', prefix='dabble_psfgen', dir=tmp_dir)[1]
     file = open(filename,'w')
 
     #  Finds the psfgen package and sets the output file name
@@ -54,65 +55,29 @@ def write_psf(psf_name, molid=0, lipid_sel="lipid"):
 
     # Save water 10k molecules at a time
     if len(atomsel('water',molid=molid)) > 0:
-        write_water_blocks(molid=molid)
-        string = '''
-        set waterfiles [glob -directory /tmp psf_wat_*.pdb]
-        set i 0
-        foreach watnam $waterfiles {
-          set mid [mol new $watnam]
-          set water [atomselect top "water"]
-          segment W${i} {
-            auto none
-            pdb $watnam
-          }
-          pdbalias atom HOH O OH2
-          coordpdb $watnam W${i}
-          mol delete $mid
-          incr i
-        }
-        '''
-        file.write(string)
+        write_water_blocks(file,tmp_dir,molid=molid)
     # End water
 
     # Now ions if present, changing the atom names
     if len(atomsel('ions',molid=molid)) > 0 :
-        temp = write_ion_blocks(molid=molid)
-        string='''
-        set ionfile %s
-        set mid [mol new $ionfile]
-        segment I {
-          pdb $ionfile 
-        }
-        coordpdb $ionfile I
-        mol delete $mid ''' % temp
-        file.write(string)
-    # End ions
+        temp = write_ion_blocks(file,tmp_dir,molid=molid)
+           # End ions
 
     # Now lipid
     if len(atomsel(lipid_sel)) > 0:
-        temp=write_lipid_blocks(lipid_sel=lipid_sel,molid=molid)
-        string='''
-          set lipidfile %s
-          set mid [mol new $lipidfile]
-          segment L {
-            pdb $lipidfile
-          }
-          coordpdb $lipidfile L
-          mol delete $mid
-        ''' % temp
-        file.write(string)
-    # End lipid
+        temp=write_lipid_blocks(file,tmp_dir,lipid_sel=lipid_sel,molid=molid)
+     # End lipid
 
     # Save the protein with correct atom names
     # TODO: Multiple chains
     if len(atomsel('protein',molid=molid)) > 0:
-        temp = write_protein_blocks(file,molid=molid)
+        temp = write_protein_blocks(file,tmp_dir,molid=molid)
         # End protein
 
     # Check if there is anything else and let the user know about it
     leftovers = atomsel('not water and not lipid and not (protein or resname ACE) and not ions',molid=molid)
     if len(leftovers) > 0:
-        temp = tempfile.mkstemp(suffix='.pdb', prefix='psf_extra_')[1]
+        temp = tempfile.mkstemp(suffix='.pdb', prefix='psf_extra_', dir=tmp_dir)[1]
         leftovers.write('pdb',temp)
         print("\n\nALERT: Found what is probably a ligand!")
         print("Residue names are: ")
@@ -134,7 +99,7 @@ def write_psf(psf_name, molid=0, lipid_sel="lipid"):
 
 # Writes the temporary protein PDB file with correct atom names for psfgen
 # This is also the worst.
-def write_protein_blocks(file,molid=0):
+def write_protein_blocks(file,tmp_dir,molid=0):
     # Put molid on top to simplify atom selections
     old_top=molecule.get_top()
     molecule.set_top(molid)
@@ -252,18 +217,18 @@ def write_protein_blocks(file,molid=0):
     T.set('resid',T.get('residue'))
 
     # Now protein
-    temp = tempfile.mkstemp(suffix='.pdb', prefix='psf_protein_')[1]
+    temp = tempfile.mkstemp(suffix='.pdb', prefix='psf_protein_', dir=tmp_dir)[1]
     atomsel('resname ACE or protein').write('pdb',temp)
     print("Wrote %d atoms to the protein temp file" % len(atomsel('resname ACE or protein')))
     molecule.set_top(old_top)
 
     # Now write to psfgen input file
     string='''
-          set protnam %s
-          segment P {
-            pdb $protnam
-          } 
-          ''' % temp
+      set protnam %s
+      segment P {
+        pdb $protnam
+      } 
+    ''' % temp
     file.write(string)
     file.write(disulfide_patches)
     file.write('coordpdb $protnam P') 
@@ -272,7 +237,7 @@ def write_protein_blocks(file,molid=0):
 
 # Writes a bunch of temp files with 10000 waters each, to bypass psfgen
 # being stupid with files with more than 10000 of a residue
-def write_water_blocks(molid=0):
+def write_water_blocks(file,tmp_dir,molid=0):
     # Set consistent residue names, crystal waters can be named HOH, etc
     atomsel('water').set('resname','TIP3')
 
@@ -280,7 +245,7 @@ def write_water_blocks(molid=0):
     atomsel('water',molid=molid).set('user', 0.0)
     all=atomsel('water and user 0.0',molid=molid)
     num_written = len(all)/(9999*3)+1
-    print("Going to write %d files for %d atoms" % (num_written, len(all)))
+    print("Going to write %d files for %d water atoms" % (num_written-1, len(all)))
 
     # Pull out and write 10k waters at a time
     for i in range(num_written) :
@@ -294,14 +259,33 @@ def write_water_blocks(molid=0):
                 (len(residues),len(batch)))
             print("       Check your crystallographic waters in the input structure.\n")
             quit(1)
-        temp = tempfile.mkstemp(suffix='_%d.pdb' % i, prefix='psf_wat_')[1]
+        temp = tempfile.mkstemp(suffix='_%d.pdb' % i, prefix='psf_wat_', dir=tmp_dir)[1]
         batch.write('pdb', temp)
         batch.set('user', 1.0)
         all.update()
+
+    string = '''
+      set waterfiles [glob -directory %s psf_wat_*.pdb]
+      set i 0
+      foreach watnam $waterfiles {
+        set mid [mol new $watnam]
+        set water [atomselect top "water"]
+        segment W${i} {
+          auto none
+          pdb $watnam
+        }
+        pdbalias atom HOH O OH2
+        coordpdb $watnam W${i}
+        mol delete $mid
+        incr i
+      }
+      ''' % tmp_dir
+    file.write(string)
+
     return num_written
 
 # Gotta renumber the lipid residues too because some can have **** instead of resid
-def write_lipid_blocks(lipid_sel="lipid",molid=0):
+def write_lipid_blocks(file,tmp_dir,lipid_sel="lipid",molid=0):
     # Set the user field of all lipids, we'll use it to keep track of which
     # were written
     atomsel(lipid_sel,molid=molid).set('user',0.0)
@@ -383,11 +367,25 @@ def write_lipid_blocks(lipid_sel="lipid",molid=0):
     # TODO: This will probably be different for non-POPC lipids...
 
     # Write temporary lipid pdb
-    temp = tempfile.mkstemp(suffix='.pdb', prefix='psf_lipid_')[1]
+    temp = tempfile.mkstemp(suffix='.pdb', prefix='psf_lipid_', dir=tmp_dir)[1]
     atomsel(lipid_sel,molid=molid).write('pdb', temp)
+
+    # Write to file
+    string='''
+      set lipidfile %s
+      set mid [mol new $lipidfile]
+      segment L {
+        pdb $lipidfile
+      }
+      coordpdb $lipidfile L
+      mol delete $mid
+    ''' % temp
+    file.write(string)
+
     return temp
 
-def write_ion_blocks(molid=0) :
+
+def write_ion_blocks(file,tmp_dir,molid=0) :
     # Fix the names
     atomsel('ions and name NA').set('name','SOD')
     atomsel('ions and name CL').set('name','CLA')
@@ -402,7 +400,19 @@ def write_ion_blocks(molid=0) :
     batch.set('resid', [k for k in range(1,len(batch)+1)])
 
     # Save the temporary ions file
-    temp = tempfile.mkstemp(suffix='.pdb', prefix='psf_ions_')[1]
+    temp = tempfile.mkstemp(suffix='.pdb', prefix='psf_ions_', dir=tmp_dir)[1]
     atomsel('ions',molid=molid).write('pdb',temp)
+
+    string='''
+      set ionfile %s
+      set mid [mol new $ionfile]
+      segment I {
+        pdb $ionfile 
+      }
+      coordpdb $ionfile I
+      mol delete $mid
+    ''' % temp
+    file.write(string)
+
     return temp
 
