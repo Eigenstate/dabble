@@ -1,0 +1,76 @@
+* Prot36 capping groups represented as residues, not patches
+
+RESI ACE           0.00 ! acetylated N-terminus
+                       ! do NOT use to create dipeptides, see ACED
+GROUP                  ! use in generate statement
+ATOM CAY  CT3    -0.27 !
+ATOM HY1  HA3     0.09 ! HY1 HY2 HY3
+ATOM HY2  HA3     0.09 !    \ | /
+ATOM HY3  HA3     0.09 !     CAY
+GROUP                  !      |
+ATOM CY   C       0.51 !      CY=OY
+ATOM OY   O      -0.51 !      |
+                       !
+BOND CY CAY CY N CAY HY1 CAY HY2 CAY HY3
+DOUBLE OY CY  
+IMPR CY CAY N OY    
+IMPR N CY CA HN    
+CMAP CY  N  CA  C   N  CA  C  +N
+ACCEPTOR OY CY   
+IC CY   N    CA   C     0.0000  0.0000  -60.0000  0.0000  0.0000
+IC CY   CA   *N   HN    0.0000  0.0000  180.0000  0.0000  0.0000
+IC CAY  CY   N    CA    0.0000  0.0000  180.0000  0.0000  0.0000
+IC N    CAY  *CY  OY    0.0000  0.0000  180.0000  0.0000  0.0000
+IC OY   CY   CAY  HY1   0.0000  0.0000  180.0000  0.0000  0.0000
+IC OY   CY   CAY  HY2   0.0000  0.0000   60.0000  0.0000  0.0000
+IC OY   CY   CAY  HY3   0.0000  0.0000  -60.0000  0.0000  0.0000
+
+RESI NMA          0.00 ! N-Methylamide C-terminus
+GROUP                  ! use in generate statement
+ATOM C    C       0.51 !
+ATOM O    O      -0.51 !      |
+GROUP                  !      C=O
+ATOM NT   NH1    -0.47 !      | 
+ATOM HNT  H       0.31 !      NT-HNT
+ATOM CAT  CT3    -0.11 !      |
+ATOM HT1  HA3     0.09 ! HT1-CAT-HT3
+ATOM HT2  HA3     0.09 !      | 
+ATOM HT3  HA3     0.09 !     HT2
+                       !
+BOND C NT  NT HNT  NT CAT  CAT HT1  CAT HT2  CAT HT3   
+IMPR NT C CAT HNT C CA NT O   
+CMAP -C  N  CA  C   N  CA  C  NT
+!CMAP CY  N  CA  C   N  CA  C  NT
+DONOR HNT NT   
+IC N    CA   C    NT    0.0000  0.0000  180.0000  0.0000  0.0000
+IC NT   CA   *C   O     0.0000  0.0000  180.0000  0.0000  0.0000
+IC C    CAT  *NT  HNT   0.0000  0.0000  180.0000  0.0000  0.0000
+IC CA   C    NT   CAT   0.0000  0.0000  180.0000  0.0000  0.0000
+IC C    NT   CAT  HT1   0.0000  0.0000   60.0000  0.0000  0.0000
+IC C    NT   CAT  HT2   0.0000  0.0000  180.0000  0.0000  0.0000
+IC C    NT   CAT  HT3   0.0000  0.0000  -60.0000  0.0000  0.0000
+
+RESI MMA          0.00 ! N-Methylamide C-terminus
+GROUP                  ! use in generate statement
+ATOM NT   NH1    -0.47 !      | 
+ATOM HNT  H       0.31 !      NT-HNT
+ATOM CAT  CT3    -0.11 !      |
+ATOM HT1  HA3     0.09 ! HT1-CAT-HT3
+ATOM HT2  HA3     0.09 !      | 
+ATOM HT3  HA3     0.09 !     HT2
+                       !
+BOND NT  NT HNT  NT CAT  CAT HT1  CAT HT2  CAT HT3   
+IMPR NT C CAT HNT C CA NT O   
+CMAP -C  N  CA  C   N  CA  C  NT
+!CMAP CY  N  CA  C   N  CA  C  NT
+DONOR HNT NT   
+IC N    CA   C    NT    0.0000  0.0000  180.0000  0.0000  0.0000
+IC NT   CA   *C   O     0.0000  0.0000  180.0000  0.0000  0.0000
+IC C    CAT  *NT  HNT   0.0000  0.0000  180.0000  0.0000  0.0000
+IC CA   C    NT   CAT   0.0000  0.0000  180.0000  0.0000  0.0000
+IC C    NT   CAT  HT1   0.0000  0.0000   60.0000  0.0000  0.0000
+IC C    NT   CAT  HT2   0.0000  0.0000  180.0000  0.0000  0.0000
+IC C    NT   CAT  HT3   0.0000  0.0000  -60.0000  0.0000  0.0000
+
+
+
