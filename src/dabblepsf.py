@@ -165,7 +165,7 @@ def write_protein_blocks(file,tmp_dir,chain,molid=0):
         res1 = atomsel('index %d' % idx1).get('resid')[0]
         res2 = atomsel('index %d' % idx2).get('resid')[0]
         print("\nINFO: Disulfide bond between residues %d and %d" % (res1,res2))
-        patches += 'patch DISU P:%d P:%d\n' % (res1,res2)
+        patches += 'patch DISU P%s:%d P%s:%d\n' % (chain,res1,chain,res2)
 
     # Rename CYX -> CYS for naming conventions
     atomsel('resname CYX').set('resname','CYS')
@@ -221,7 +221,7 @@ def write_protein_blocks(file,tmp_dir,chain,molid=0):
             atomsel('chain %s and residue %s' % (chain,residue)).set('resname','ASP')
 
     for resid in set(atomsel('chain %s and resname ASPP' % chain).get('resid')) :
-        patches += 'patch ASPP P:%d\n' % resid
+        patches += 'patch ASPP P%s:%d\n' % (chain,resid)
     atomsel('resname ASPP').set('resname','ASP')
 
     # Hydrogens
