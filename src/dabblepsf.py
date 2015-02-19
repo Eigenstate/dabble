@@ -57,6 +57,9 @@ def write_psf(psf_name, molid=0, lipid_sel="lipid"):
         for t in rtfs: 
             file.write("topology %s\n" % t)
 
+    # Mark all atoms as unsaved with the user field
+    atomsel('all',molid=molid).set('user',1.0)
+
     # Now ions if present, changing the atom names
     if len(atomsel('element Na Cl K',molid=molid)) > 0 :
         temp = write_ion_blocks(file,tmp_dir,molid=molid)
@@ -73,22 +76,17 @@ def write_psf(psf_name, molid=0, lipid_sel="lipid"):
     # End lipid
 
     # Save the protein with correct atom names
-    chains = set( atomsel('protein or resname ACE',molid=molid).get('chain') )
+    chains = set( atomsel('user 1.0 and (protein or (resname ACE NMA))',molid=molid).get('chain') )
     for ch in chains : 
         print("Writing protein chain %s" % ch)
-        temp = write_protein_blocks(file,chain=ch,tmp_dir=tmp_dir,molid=molid)
+        write_protein_blocks(file,chain=ch,tmp_dir=tmp_dir,molid=molid)
     # End protein
 
     # Check if there is anything else and let the user know about it
-    leftovers = atomsel('not water and not lipid and not (protein or resname ACE) and not ions',molid=molid)
-    if len(leftovers) > 0:
-        temp = tempfile.mkstemp(suffix='.pdb', prefix='psf_extra_', dir=tmp_dir)[1]
-        leftovers.write('pdb',temp)
-        print("\n\nALERT: Found what is probably a ligand!")
-        print("Residue names are: ")
-        print set(leftovers.get('resname'))
-        print("Saving to '%s'" % temp)
-        print("Good luck with psfgen lololol")
+    print("Found extra ligands: %s" % set( atomsel('user 1.0',molid=molid).get('resname') ))
+    leftovers = set( atomsel('user 1.0',molid=molid).get('residue') )
+    for l in leftovers :
+        write_ligand_blocks(file, tmp_dir, residue=l, molid=molid)
 
     #protein_opts='\n'.join(iter(raw_input, 'END'))
 
@@ -179,8 +177,7 @@ def write_protein_blocks(file,tmp_dir,chain,molid=0):
 
     # Determine protonation states of those just called HIS based on atom names
     atomsel('chain %s and resname HIS and same residue as name HE2'% chain).set('resname','HSE')
-    atomsel('chain %s and resname HIS and same residue as name HD1'% chain).set('resname','HSD')
-    # NOTE: This atomsel MUST come after the previous two!
+    atomsel('chain %s and resname HIS and same residue as name HD1'% chain).set('resname','HSD') # NOTE: This atomsel MUST come after the previous two!
     atomsel('chain %s and resname HIS and same residue as name HE2 and same residue as name HD1' % chain).set('resname','HSP')
     
     # Isoleucine
@@ -244,7 +241,7 @@ def write_protein_blocks(file,tmp_dir,chain,molid=0):
     # Now protein
     temp = tempfile.mkstemp(suffix='.pdb', prefix='psf_protein_', dir=tmp_dir)[1]
     print("Writing temporary protein file...")
-    write_ordered_pdb(temp, sel='chain %s and (resname ACE or protein)' % chain, molid=molid)
+    write_ordered_pdb(temp, sel='chain %s and (resname ACE NMA or protein)' % chain, molid=molid)
     print("Wrote %d atoms to the protein chain %s" % (len(atomsel('chain %s and resname ACE or protein' % chain)),chain))
     molecule.set_top(old_top)
 
@@ -270,8 +267,7 @@ def write_water_blocks(file,tmp_dir,molid=0):
     atomsel('chain W and name O').set('name','OH2')
 
     # Select all the waters. We'll use the user field to track which ones have been written
-    atomsel('chain W',molid=molid).set('user', 0.0)
-    all=atomsel('chain W and user 0.0',molid=molid)
+    all=atomsel('chain W and user 1.0',molid=molid)
     num_written = len(all)/(9999*3)+1
     print("Going to write %d files for %d water atoms" % (num_written, len(all)))
 
@@ -289,22 +285,19 @@ def write_water_blocks(file,tmp_dir,molid=0):
             print("       Check your crystallographic waters in the input structure.\n")
             quit(1)
         temp = tempfile.mkstemp(suffix='_%d.pdb' % i, prefix='psf_wat_', dir=tmp_dir)[1]
+        batch.set('user', 0.0)
         batch.write('pdb',temp)
-        batch.set('user', 1.0)
         all.update()
 
     string = '''
       set waterfiles [glob -directory %s psf_wat_*.pdb]
       set i 0
       foreach watnam $waterfiles {
-        set mid [mol new $watnam]
-        set water [atomselect top "water"]
         segment W${i} {
           auto none
           pdb $watnam
         }
         coordpdb $watnam W${i}
-        mol delete $mid
         incr i
       }
       ''' % tmp_dir
@@ -396,6 +389,7 @@ def write_lipid_blocks(file,tmp_dir,lipid_sel="lipid",molid=0):
 
     # Write temporary lipid pdb
     temp = tempfile.mkstemp(suffix='.pdb', prefix='psf_lipid_', dir=tmp_dir)[1]
+    atomsel(lipid_sel,molid=molid).set('user', 0.0)
     atomsel(lipid_sel,molid=molid).write('pdb',temp)
 
     # Write to file
@@ -429,27 +423,51 @@ def write_ion_blocks(file,tmp_dir,molid=0) :
 
     # Save the temporary ions file
     temp = tempfile.mkstemp(suffix='.pdb', prefix='psf_ions_', dir=tmp_dir)[1]
+    atomsel('name SOD CLA POT',molid=molid).set('user',0.0) # mark as saved
     atomsel('name SOD CLA POT',molid=molid).write('pdb',temp)
 
     string='''
       set ionfile %s
-      set mid [mol new $ionfile]
       segment I {
         pdb $ionfile 
         first none
         last none
       }
       coordpdb $ionfile I
-      mol delete $mid
     ''' % temp
     file.write(string)
 
     return temp
 
+
+def write_ligand_blocks(file, tmp_dir, residue, molid=0) :
+    A = atomsel('residue %d' % residue)
+
+    # Adjust residue name if known ligand
+    if 'CLR' in A.get('resname') :
+        A.set('resname','CLOL') # cgenff naming convention
+
+    # Save in a temporary file
+    temp = tempfile.mkstemp(suffix='.pdb', prefix='psf_extras_', dir=tmp_dir)[1]
+    A.set('user', 0.0)
+    A.write('pdb',temp)
+    name = A.get('resname')[0]
+
+    string = '''
+      segment %s {
+        pdb %s
+      }
+      coordpdb %s %s
+    ''' % (name, temp, temp, name)
+    file.write(string)
+    return temp
+
+
 # Writes a pdb in order of residues, renumbering the atoms
 # accordingly, since psfgen wants each residue sequentially
 def write_ordered_pdb(filename, sel, molid=0) :
     f = open(filename, 'w')
+    atomsel(sel).set('user', 0.0) # Mark as written
 
     resids = set( atomsel(sel).get('residue') ) # Much much faster then get resids
     idx = 1
