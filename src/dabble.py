@@ -86,8 +86,8 @@ class dabble:
                           type=str,
                           default='%s/lipid_membranes/popc/equilibrated_POPC_membrane_with_TIP3P.mae' % os.environ['DABBLEDIR'],
                           help='custom membrane system path (must be a mae file)       ')
-        parser.add_argument('-B', '--solute-selection', dest='solute_bb_sel',
-                          default='protein', type=str,
+        parser.add_argument('-B', '--solute-selection', dest='solute_sel',
+                          default='all residues in input file', type=str,
                           help='solute.maeff atomsel to compute bounding box [default: '
                                'protein]')
         parser.add_argument('-L', '--lipid-selection', dest='lipid_sel',
@@ -180,9 +180,8 @@ class dabble:
     
         log('analyzing solute...\n')
         solute_id = dabblelib.load_solute(opts.solute_filename)
-        solute_sel = opts.solute_bb_sel
-        #solute_sel = dabblelib.get_solute_sel(molid=solute_id)
-        log('Solute sel is %s'  % solute_sel)
+        opts.solute_sel = dabblelib.get_solute_sel(molid=solute_id)
+        #log('Solute sel is %s'  % opts.solute_sel)
         dabblelib.orient_solute(molid=solute_id, z_move=opts.z_move, z_rotation=opts.z_rotation, opm_pdb=opts.opm_pdb, opm_align=opts.opm_align )
         #if not opts.solute_bb_sel:
         #    opts.solute_bb_sel = solute_sel
@@ -195,7 +194,7 @@ class dabble:
         
         xy_size, z_size, dxy_sol, dxy_tm, dz_full = dabblelib.get_cell_size(opts.xy_buf,
                                                                            opts.z_buf,
-                                                                           opts.solute_bb_sel,
+                                                                           opts.solute_sel,
                                                                            molid=solute_id)
     
         log('done.\nsolute xy diameter is %.2f (%.2f in the transmembrane region).\nsolute+membrane z diameter is %.2f\n' % (dxy_sol, dxy_tm, dz_full))
@@ -239,12 +238,12 @@ class dabble:
         log('done.\n\n')
 
         log('selecting cation %s...' % opts.cation)
-        count = dabblelib.set_cations(opts.cation, solute_sel)
+        count = dabblelib.set_cations(opts.cation, opts.solute_sel)
         log('done.\n\n')
         
         log('centering the membrane system on the origin...')
     
-        dabblelib.center_membrane_system(solute_sel, opts.lipid_sel)    
+        dabblelib.center_membrane_system(opts.solute_sel, opts.lipid_sel)    
         log('done.\n\n')
     
         # set "keep" mask to all atoms
@@ -252,10 +251,10 @@ class dabble:
         log('removing molecules outside of the periodic cell...')
         
         # cut away atoms in the z direction
-        dabblelib.remove_z_residues(z_size, solute_sel)
+        dabblelib.remove_z_residues(z_size, opts.solute_sel)
         
         # cut away atoms outside of the cell
-        dabblelib.remove_xy_residues(xy_size, solute_sel, opts.lipid_sel)
+        dabblelib.remove_xy_residues(xy_size, opts.solute_sel, opts.lipid_sel)
         dabblelib.set_cell_to_square_prism(xy_size, z_size)
         
         log('done.\n\n')
@@ -273,12 +272,12 @@ class dabble:
         log('removing water and lipids that clash with the protein...')
         
         if opts.lipid_friendly_sel:
-           dabblelib.remove_overlapping_residues(solute_sel,
+           dabblelib.remove_overlapping_residues(opts.solute_sel,
                                                 opts.lipid_sel,
                                                 lipid_friendly_sel=opts.lipid_friendly_sel,
                                                 lipid_dist=opts.lipid_dist)
         else:
-           dabblelib.remove_overlapping_residues(solute_sel,
+           dabblelib.remove_overlapping_residues(opts.solute_sel,
                                                 opts.lipid_sel,
                                                 lipid_dist=opts.lipid_dist)
         
@@ -286,7 +285,7 @@ class dabble:
         
         log('removing lipid molecules that could possibly stick through aromatic rings...')
         
-        dangerous_lipids_removed = dabblelib.remove_lipids_near_rings(solute_sel, opts.lipid_sel)
+        dangerous_lipids_removed = dabblelib.remove_lipids_near_rings(opts.solute_sel, opts.lipid_sel)
         dangerous_lipids2lipids_removed=0
         lipid_stuck_on_protein=0
     
@@ -295,7 +294,7 @@ class dabble:
            pointy_lipid_type='((' + opts.lipid_sel  + ') and not (' + opts.clash_lipids + ')) and (abs(x)> %f or  abs(y) > %f)' % (edge_dim, edge_dim)
            ring_lipid_type=opts.clash_lipids + ' and (abs(x)> %f or  abs(y) > %f)'  % (edge_dim, edge_dim)
            dangerous_lipids2lipids_removed = dabblelib.remove_lipid_boundary_clash(pointy_lipid_type,ring_lipid_type)
-           lipid_stuck_on_protein = dabblelib.remove_lipids_near_rings(solute_sel, opts.clash_lipids, ring_sel='noh and protein and not backbone',dist=1.25)
+           lipid_stuck_on_protein = dabblelib.remove_lipids_near_rings(opts.solute_sel, opts.clash_lipids, ring_sel='noh and protein and not backbone',dist=1.25)
         
         lipids_removed=dangerous_lipids_removed+dangerous_lipids2lipids_removed+lipid_stuck_on_protein
         
@@ -315,7 +314,7 @@ class dabble:
             
     
         log('************************************************************\n')
-        log('solute net charge is %+d and system net charge is %+d\n' % (dabblelib.get_net_charge(solute_sel), dabblelib.get_system_net_charge()))
+        log('solute net charge is %+d and system net charge is %+d\n' % (dabblelib.get_net_charge(opts.solute_sel), dabblelib.get_system_net_charge()))
         log('************************************************************\n')
         log('\n')
         

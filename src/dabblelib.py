@@ -107,19 +107,13 @@ def solute_xy_diameter(solute_sel):
 def get_solute_sel(molid=None, filename=None):
     atomsel('all').set('user',1.)
     if molid is not None:
-        min_res = min(atomsel('all').get('residue'))
-        max_res = max(atomsel('all').get('residue'))
-        sel = 'protein'# or resname ETQ'
-        #sel = 'resid >= %d and resid <= %d' % (min_res,max_res)
-        #sel = 'resid ' + ' '.join(map(str, set(atomsel('all', molid=molid).get('residue'))))
+        #sel = 'protein or (resname ACE NMA)'
+        sel = 'resid ' + ' '.join(map(str, set(atomsel('all', molid=molid).get('resid'))))
     elif filename is not None:
         top = molecule.get_top()
         tmp_top = molecule.read(-1, 'mae', input_filename)
-        min_res = min(atomsel('all').get('residue'))
-        max_res = max(atomsel('all').get('residue'))
-        sel = 'protein'
-        #sel = 'resid >= %d and resid <= %d' % (min_res,max_res)
-        #sel = 'resid ' + ' '.join(map(str, set(atomsel('all').get('residue'))))
+        #sel = 'protein or (resname ACE NMA)'
+        sel = 'resid ' + ' '.join(map(str, set(atomsel('all').get('resid'))))
         molecule.delete(tmp_top)
         if top != -1: molecule.set_top(top)
     else:
