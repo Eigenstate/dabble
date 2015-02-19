@@ -1,5 +1,5 @@
 import molecule
-import glob,os,tempfile
+import sys,glob,os,tempfile
 from atomsel import *
 
 # Writes a psf file with the given options
@@ -40,6 +40,7 @@ def write_psf(psf_name, molid=0, lipid_sel="lipid"):
 
     # Ask the user what parameter sets they want to use
     # TODO: Only ask if a ligand or something is found
+    sys.stdout.flush()
     print("""\nWhich CHARMM topology files should I use?"
     Currently using:
        - top_all36_caps.rtf (capping groups by Robin)
@@ -49,6 +50,7 @@ def write_psf(psf_name, molid=0, lipid_sel="lipid"):
        - top_all36_lipid.rtf """)
     print("Enter the full path to the filename(s), separated by a comma, of any "
           "other rtf files you wish to use.\n")
+    sys.stdout.flush()
     inp = raw_input('> ')
     if inp:
         rtfs = inp.split(',')
@@ -71,10 +73,11 @@ def write_psf(psf_name, molid=0, lipid_sel="lipid"):
     # End lipid
 
     # Save the protein with correct atom names
-    # TODO: Multiple chains
-    if len(atomsel('protein',molid=molid)) > 0:
-        temp = write_protein_blocks(file,tmp_dir,molid=molid)
-        # End protein
+    chains = set( atomsel('protein or resname ACE',molid=molid).get('chain') )
+    for ch in chains : 
+        print("Writing protein chain %s" % ch)
+        temp = write_protein_blocks(file,chain=ch,tmp_dir=tmp_dir,molid=molid)
+    # End protein
 
     # Check if there is anything else and let the user know about it
     leftovers = atomsel('not water and not lipid and not (protein or resname ACE) and not ions',molid=molid)
@@ -101,13 +104,13 @@ def write_psf(psf_name, molid=0, lipid_sel="lipid"):
 
 # Writes the temporary protein PDB file with correct atom names for psfgen
 # This is also the worst.
-def write_protein_blocks(file,tmp_dir,molid=0):
+def write_protein_blocks(file,tmp_dir,chain,molid=0):
     # Put molid on top to simplify atom selections
     old_top=molecule.get_top()
     molecule.set_top(molid)
 
     # Renumber residues starting from 1
-    T = atomsel('protein or resname ACE NMA')
+    T = atomsel('(protein or resname ACE NMA) and chain %s' % chain)
     T.set('resid',[r+1 for r in T.get('residue')])
 
     # Check the protein has hydrogens
@@ -118,36 +121,36 @@ def write_protein_blocks(file,tmp_dir,molid=0):
         quit(1)
 
     # Terminal residue ACE
-    atomsel('resname ACE and name CH3').set('name','CAY')
-    atomsel('resname ACE and name HH31').set('name','HY1') # H could be named HH31 or H1
-    atomsel('resname ACE and name HH32').set('name','HY2')
-    atomsel('resname ACE and name HH33').set('name','HY3')
-    atomsel('resname ACE and name H1').set('name','HY1')
-    atomsel('resname ACE and name H2').set('name','HY2')
-    atomsel('resname ACE and name H3').set('name','HY3')
-    atomsel('resname ACE and name 1H').set('name','HY1')
-    atomsel('resname ACE and name 2H').set('name','HY2')
-    atomsel('resname ACE and name 3H').set('name','HY3')
-    atomsel('resname ACE and name C').set('name','CY')
-    atomsel('resname ACE and name O').set('name','OY')
+    atomsel('chain %s and resname ACE and name CH3' % chain).set('name','CAY')
+    atomsel('chain %s and resname ACE and name HH31'% chain).set('name','HY1') # H could be named HH31 or H1
+    atomsel('chain %s and resname ACE and name HH32'% chain).set('name','HY2')
+    atomsel('chain %s and resname ACE and name HH33'% chain).set('name','HY3')
+    atomsel('chain %s and resname ACE and name H1'% chain).set('name','HY1')
+    atomsel('chain %s and resname ACE and name H2'% chain).set('name','HY2')
+    atomsel('chain %s and resname ACE and name H3'% chain).set('name','HY3')
+    atomsel('chain %s and resname ACE and name 1H'% chain).set('name','HY1')
+    atomsel('chain %s and resname ACE and name 2H'% chain).set('name','HY2')
+    atomsel('chain %s and resname ACE and name 3H'% chain).set('name','HY3')
+    atomsel('chain %s and resname ACE and name C'% chain).set('name','CY')
+    atomsel('chain %s and resname ACE and name O'% chain).set('name','OY')
 
     # Terminal residue NMA
-    atomsel('resname NMA and name HN').set('name','HNT')
-    atomsel('resname NMA and name H').set('name','HNT')
-    atomsel('resname NMA and name N').set('name','NT')
-    atomsel('resname NMA and name CA').set('name','CAT')
-    atomsel('resname NMA and name HA1').set('name','HT1')
-    atomsel('resname NMA and name HA2').set('name','HT2')
-    atomsel('resname NMA and name HA3').set('name','HT3')
+    atomsel('chain %s and resname NMA and name HN'% chain).set('name','HNT')
+    atomsel('chain %s and resname NMA and name H'% chain).set('name','HNT')
+    atomsel('chain %s and resname NMA and name N'% chain).set('name','NT')
+    atomsel('chain %s and resname NMA and name CA'% chain).set('name','CAT')
+    atomsel('chain %s and resname NMA and name HA1'% chain).set('name','HT1')
+    atomsel('chain %s and resname NMA and name HA2'% chain).set('name','HT2')
+    atomsel('chain %s and resname NMA and name HA3'% chain).set('name','HT3')
 
     patches = ''
     # NOTE: No patch for ACE or NMA  since this is done in the termini rtf file as a regular residue
 
     # Disulfide briges
-    indices = set( atomsel('name SG and resname CYX').get('index') )
+    indices = set( atomsel('chain %s and name SG and resname CYX'% chain).get('index') )
     while len(indices) > 0 :
         idx1 = indices.pop()
-        matches = set( atomsel('name SG and resname CYX and not index %d and within 2.5 of index %d' % (idx1, idx1) ))
+        matches = set( atomsel('chain %s and name SG and resname CYX and not index %d and within 2.5 of index %d' % (chain, idx1, idx1) ))
 
         # Sanity check
         if len(matches) > 1 :
@@ -170,92 +173,91 @@ def write_protein_blocks(file,tmp_dir,molid=0):
     atomsel('resname CYX').set('resname','CYS')
 
     # Histidine naming convention
-    atomsel('resname HID').set('resname','HSD')
-    atomsel('resname HIE').set('resname','HSE')
-    atomsel('resname HIP').set('resname','HSP') 
+    atomsel('chain %s and resname HID'% chain).set('resname','HSD')
+    atomsel('chain %s and resname HIE'% chain).set('resname','HSE')
+    atomsel('chain %s and resname HIP'% chain).set('resname','HSP') 
 
     # Determine protonation states of those just called HIS based on atom names
-    atomsel('resname HIS and same residue as name HE2').set('resname','HSE')
-    atomsel('resname HIS and same residue as name HD1').set('resname','HSD')
+    atomsel('chain %s and resname HIS and same residue as name HE2'% chain).set('resname','HSE')
+    atomsel('chain %s and resname HIS and same residue as name HD1'% chain).set('resname','HSD')
     # NOTE: This atomsel MUST come after the previous two!
-    atomsel('resname HIS and same residue as name HE2 and same residue as name HD1').set('resname',
-            'HSP')
+    atomsel('chain %s and resname HIS and same residue as name HE2 and same residue as name HD1' % chain).set('resname','HSP')
     
     # Isoleucine
-    atomsel('resname ILE and name CD1').set('name','CD')
-    atomsel('resname ILE and name HD11').set('name','HD1')
-    atomsel('resname ILE and name HD12').set('name','HD2')
-    atomsel('resname ILE and name HD13').set('name','HD3')
-    atomsel('resname ILE and name HG12').set('name','HG11')
-    atomsel('resname ILE and name HG13').set('name','HG12')
+    atomsel('chain %s and resname ILE and name CD1'% chain).set('name','CD')
+    atomsel('chain %s and resname ILE and name HD11'% chain).set('name','HD1')
+    atomsel('chain %s and resname ILE and name HD12'% chain).set('name','HD2')
+    atomsel('chain %s and resname ILE and name HD13'% chain).set('name','HD3')
+    atomsel('chain %s and resname ILE and name HG12'% chain).set('name','HG11')
+    atomsel('chain %s and resname ILE and name HG13'% chain).set('name','HG12')
 
     # Glutamine check all residues for protonated one
-    t=atomsel('resname GLU or resname GLH').get('residue')
+    t=atomsel('chain %s and (resname GLU or resname GLH)'% chain).get('residue')
     for residue in t:
         if "HE1" in atomsel('residue %s' % residue).get('name') :
-            atomsel('residue %s and name HE1' % residue).set('name','HE2')
-            atomsel('residue %s and name OE1' % residue).set('name','temp')
-            atomsel('residue %s and name OE2' % residue).set('name','OE1')
-            atomsel('residue %s and name temp' % residue).set('name','OE2')
-            atomsel('residue %s').set('resname','GLUP')
-        elif "HE2" in atomsel('residue %s' % residue).get('name') :
-            atomsel('residue %s' % residue).set('resname','GLUP')
+            atomsel('chain %s and residue %s and name HE1' % (chain,residue)).set('name','HE2')
+            atomsel('chain %s and residue %s and name OE1' % (chain,residue)).set('name','temp')
+            atomsel('chain %s and residue %s and name OE2' % (chain,residue)).set('name','OE1')
+            atomsel('chain %s and residue %s and name temp' % (chain,residue)).set('name','OE2')
+            atomsel('chain %s and residue %s').set('resname','GLUP')
+        elif "HE2" in atomsel('chain %s and residue %s' % (chain,residue)).get('name') :
+            atomsel('chain %s and residue %s' % (chain,residue)).set('resname','GLUP')
         # TODO: Is this correct? Atom name messups
-        elif "HXT" in atomsel('residue %s' % residue).get('name') :
-            atomsel('residue %s' % residue).set('resname','GLUP')
-            atomsel('residue %s and name HXT' % residue).set('name','HE2')
+        elif "HXT" in atomsel('chain %s and residue %s' % (chain,residue)).get('name') :
+            atomsel('chain %s and residue %s' % (chain,residue)).set('resname','GLUP')
+            atomsel('chain %s and residue %s and name HXT' % (chain,residue)).set('name','HE2')
         else :
-            atomsel('residue %s' % residue).set('resname','GLU')
+            atomsel('chain %s and residue %s' % (chain,residue)).set('resname','GLU')
 
     # Aspartate check each residue to see if it's protonated
     t=atomsel('resname ASP or resname ASH').get('residue')
     for residue in t :
-        if "HD1" in atomsel('residue %s' % residue).get('name') :
-            atomsel('residue %s and name HD1' % residue).set('name','HD2')
-            atomsel('residue %s and name OD1' % residue).set('name','temp')
-            atomsel('residue %s and name OD2' % residue).set('name','OD1')
-            atomsel('residue %s and name temp' % residue).set('name','OD2')
-            atomsel('residue %s').set('resname','ASPP')
-        if "HD2" in atomsel('residue %s' % residue).get('name') :
-            atomsel('residue %s' % residue).set('resname','ASPP')
+        if "HD1" in atomsel('chain %s and residue %s' % (chain,residue)).get('name') :
+            atomsel('chain %s and residue %s and name HD1' % (chain,residue)).set('name','HD2')
+            atomsel('chain %s and residue %s and name OD1' % (chain,residue)).set('name','temp')
+            atomsel('chain %s and residue %s and name OD2' % (chain,residue)).set('name','OD1')
+            atomsel('chain %s and residue %s and name temp' % (chain,residue)).set('name','OD2')
+            atomsel('chain %s and residue %s').set('resname','ASPP')
+        if "HD2" in atomsel('chain %s and residue %s' % (chain,residue)).get('name') :
+            atomsel('chain %s and residue %s' % (chain,residue)).set('resname','ASPP')
         else :
-            atomsel('residue %s' % residue).set('resname','ASP')
+            atomsel('chain %s and residue %s' % (chain,residue)).set('resname','ASP')
 
-    for resid in set(atomsel('resname ASPP').get('resid')) :
+    for resid in set(atomsel('chain %s and resname ASPP' % chain).get('resid')) :
         patches += 'patch ASPP P:%d\n' % resid
     atomsel('resname ASPP').set('resname','ASP')
 
     # Hydrogens
-    atomsel('(resname ACE or protein) and name H').set('name','HN')
-    atomsel('(resname ACE or protein) and name HA2').set('name','HA1')
-    atomsel('(resname ACE or protein) and name HA3').set('name','HA2')
-    atomsel('(resname ACE or protein) and name HG2').set('name','HG1')
-    atomsel('(resname ACE or protein) and name HG3').set('name','HG2')
-    atomsel('(resname ACE or protein) and name HB2 and not resname ALA').set('name','HB1')
-    atomsel('(resname ACE or protein) and name HB3 and not resname ALA').set('name','HB2')
-    atomsel('(resname ACE or protein) and name HD2 and not (resname ILE HSP HSE HSD ASP PHE)').set('name','HD1')
-    atomsel('(resname ACE or protein) and name HD3 and not (resname ILE HIS HSE HSD ASP PHE)').set('name','HD2')
-    atomsel('(resname ACE or protein) and name HE2 and not (resname TRP HSP HSE HSD GLUP PHE)').set('name','HE1')
-    atomsel('(resname ACE or protein) and name HE3 and not (resname TRP HSP HSE HSD PHE)').set('name','HE2')
-    atomsel('(resname ACE or protein) and name HG and resname SER CYS').set('name','HG1')
+    atomsel('chain %s and (resname ACE or protein) and name H' % chain).set('name','HN')
+    atomsel('chain %s and (resname ACE or protein) and name HA2' % chain).set('name','HA1')
+    atomsel('chain %s and (resname ACE or protein) and name HA3' % chain).set('name','HA2')
+    atomsel('chain %s and (resname ACE or protein) and name HG2' % chain).set('name','HG1')
+    atomsel('chain %s and (resname ACE or protein) and name HG3' % chain).set('name','HG2')
+    atomsel('chain %s and (resname ACE or protein) and name HB2 and not resname ALA' % chain).set('name','HB1')
+    atomsel('chain %s and (resname ACE or protein) and name HB3 and not resname ALA' % chain).set('name','HB2')
+    atomsel('chain %s and (resname ACE or protein) and name HD2 and not (resname ILE HSP HSE HSD ASP PHE)' % chain).set('name','HD1')
+    atomsel('chain %s and (resname ACE or protein) and name HD3 and not (resname ILE HIS HSE HSD ASP PHE)' % chain).set('name','HD2')
+    atomsel('chain %s and (resname ACE or protein) and name HE2 and not (resname TRP HSP HSE HSD GLUP PHE)' % chain).set('name','HE1')
+    atomsel('chain %s and (resname ACE or protein) and name HE3 and not (resname TRP HSP HSE HSD PHE)' % chain).set('name','HE2')
+    atomsel('chain %s and (resname ACE or protein) and name HG and resname SER CYS' % chain).set('name','HG1')
 
     # Now protein
     temp = tempfile.mkstemp(suffix='.pdb', prefix='psf_protein_', dir=tmp_dir)[1]
     print("Writing temporary protein file...")
-    write_ordered_pdb(temp, sel='resname ACE or protein', molid=molid)
-    print("Wrote %d atoms to the protein temp file" % len(atomsel('resname ACE or protein')))
+    write_ordered_pdb(temp, sel='chain %s and (resname ACE or protein)' % chain, molid=molid)
+    print("Wrote %d atoms to the protein chain %s" % (len(atomsel('chain %s and resname ACE or protein' % chain)),chain))
     molecule.set_top(old_top)
 
     # Now write to psfgen input file
     string='''
       set protnam %s
-      segment P {
+      segment P%s {
         pdb $protnam
       } 
-    ''' % temp
+    ''' % (temp,chain)
     file.write(string)
     file.write(patches)
-    file.write('coordpdb $protnam P') 
+    file.write('coordpdb $protnam P%s' % chain) 
 
     return temp
 
@@ -271,11 +273,11 @@ def write_water_blocks(file,tmp_dir,molid=0):
     atomsel('chain W',molid=molid).set('user', 0.0)
     all=atomsel('chain W and user 0.0',molid=molid)
     num_written = len(all)/(9999*3)+1
-    print("Going to write %d files for %d water atoms" % (num_written-1, len(all)))
+    print("Going to write %d files for %d water atoms" % (num_written, len(all)))
 
     # Pull out and write 10k waters at a time
     for i in range(num_written) :
-        residues = all.get('residue')[:9999*3] # 9999 molecules, 3 atoms each
+        residues = list(set(all.get('residue')))[:9999] # 9999 unique residues
         batchtxt = 'residue ' + ' '.join(map(str,set(residues)))
         batch = atomsel(batchtxt, molid=molid)
         try :
