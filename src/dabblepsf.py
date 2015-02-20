@@ -445,6 +445,26 @@ def write_ligand_blocks(file, tmp_dir, residue, molid=0) :
 
     # Adjust residue name if known ligand
     if 'CLR' in A.get('resname') :
+        # Reassign names
+        clol_names = {'H11' : 'H1A',  'H12' : 'H1B',
+                      'H21' : 'H2A',  'H22' : 'H2B',
+                      'O1'  : 'O3',   'HO1' : 'H3\'', 
+                      'H41 ': 'H4A',  'H42' : 'H4B',
+                      'H71' : 'H7A',  'H72' : 'H7B',
+                      'H111': 'H11A', 'H112': 'H11B',
+                      'H121': 'H12A', 'H122': 'H12B',
+                      'H151': 'H15A', 'H152': 'H15B',
+                      'H161': 'H16A', 'H162': 'H16B',
+                      'H181': 'H18A', 'H182': 'H18B', 'H183': 'H18C',
+                      'H191': 'H19A', 'H192': 'H19B', 'H193': 'H19C',
+                      'H211': 'H21A', 'H212': 'H21B', 'H213': 'H21C',
+                      'H221': 'H22A', 'H222': 'H22B',
+                      'H231': 'H23A', 'H232': 'H23B',
+                      'H241': 'H24A', 'H242': 'H24B',
+                      'H261': 'H26A', 'H262': 'H26B', 'H263': 'H26C',
+                      'H271': 'H27A', 'H272': 'H27B', 'H273': 'H27C'}
+        for n in clol_names :
+            atomsel('residue %d and name %s' % (residue,n)).set('name',clol_names[n])
         A.set('resname','CLOL') # cgenff naming convention
 
     # Save in a temporary file
