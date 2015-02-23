@@ -76,9 +76,9 @@ def write_psf(psf_name, molid=0, lipid_sel="lipid"):
     # End lipid
 
     # Save the protein with correct atom names
-    chains = set( atomsel('user 1.0 and (protein or (resname ACE NMA))',molid=molid).get('chain') )
+    chains = set( atomsel('user 1.0 and (protein or (resname ACE NMA CT3))',molid=molid).get('chain') )
     for ch in chains : 
-        print("Writing protein chain %s" % ch)
+        print("\nWriting protein chain %s" % ch)
         write_protein_blocks(file,chain=ch,tmp_dir=tmp_dir,molid=molid)
     # End protein
 
@@ -112,7 +112,7 @@ def write_protein_blocks(file,tmp_dir,chain,molid=0):
     T.set('resid',[r+1 for r in T.get('residue')])
 
     # Check the protein has hydrogens
-    if len(atomsel('protein and element H')) == 0:
+    if len(atomsel('chain %s and element H'% chain)) == 0:
         print("\n\nERROR: There are no hydrogens on your protein")
         print("       You need to add them before parameterizing")
         print("       because psfgen cannot be trusted to do it correctly.\n")
@@ -129,20 +129,25 @@ def write_protein_blocks(file,tmp_dir,chain,molid=0):
     atomsel('chain %s and resname ACE and name 1H'% chain).set('name','HY1')
     atomsel('chain %s and resname ACE and name 2H'% chain).set('name','HY2')
     atomsel('chain %s and resname ACE and name 3H'% chain).set('name','HY3')
-    atomsel('chain %s and resname ACE and name C'% chain).set('name','CY')
     atomsel('chain %s and resname ACE and name O'% chain).set('name','OY')
 
     # Terminal residue NMA
     atomsel('chain %s and resname NMA and name HN'% chain).set('name','HNT')
     atomsel('chain %s and resname NMA and name H'% chain).set('name','HNT')
-    atomsel('chain %s and resname NMA and name N'% chain).set('name','NT')
     atomsel('chain %s and resname NMA and name CA'% chain).set('name','CAT')
     atomsel('chain %s and resname NMA and name HA1'% chain).set('name','HT1')
     atomsel('chain %s and resname NMA and name HA2'% chain).set('name','HT2')
     atomsel('chain %s and resname NMA and name HA3'% chain).set('name','HT3')
+    atomsel('chain %s and resname NMA and name 1HA'% chain).set('name','HT1')
+    atomsel('chain %s and resname NMA and name 2HA'% chain).set('name','HT2')
+    atomsel('chain %s and resname NMA and name 3HA'% chain).set('name','HT3')
 
     patches = ''
-    # NOTE: No patch for ACE or NMA  since this is done in the termini rtf file as a regular residue
+    # Patch ends
+    #for res in set(atomsel('chain %s and resname ACE'% chain).get('resid') ) :
+    #    patches += 'patch ACE P%s:%d\n' % (chain,res)
+    #for res in set( atomsel('chain %s and resname NMA'%chain).get('resid') ) :
+    #    patches += 'patch CT3 P%s:%d\n' % (chain,res)
 
     # Disulfide briges
     indices = set( atomsel('chain %s and name SG and resname CYX'% chain).get('index') )
@@ -224,31 +229,37 @@ def write_protein_blocks(file,tmp_dir,chain,molid=0):
         patches += 'patch ASPP P%s:%d\n' % (chain,resid)
     atomsel('resname ASPP').set('resname','ASP')
 
-    # Hydrogens
-    atomsel('chain %s and (resname ACE or protein) and name H' % chain).set('name','HN')
-    atomsel('chain %s and (resname ACE or protein) and name HA2' % chain).set('name','HA1')
-    atomsel('chain %s and (resname ACE or protein) and name HA3' % chain).set('name','HA2')
-    atomsel('chain %s and (resname ACE or protein) and name HG2' % chain).set('name','HG1')
-    atomsel('chain %s and (resname ACE or protein) and name HG3' % chain).set('name','HG2')
-    atomsel('chain %s and (resname ACE or protein) and name HB2 and not resname ALA' % chain).set('name','HB1')
-    atomsel('chain %s and (resname ACE or protein) and name HB3 and not resname ALA' % chain).set('name','HB2')
-    atomsel('chain %s and (resname ACE or protein) and name HD2 and not (resname ILE HSP HSE HSD ASP PHE)' % chain).set('name','HD1')
-    atomsel('chain %s and (resname ACE or protein) and name HD3 and not (resname ILE HIS HSE HSD ASP PHE)' % chain).set('name','HD2')
-    atomsel('chain %s and (resname ACE or protein) and name HE2 and not (resname TRP HSP HSE HSD GLUP PHE)' % chain).set('name','HE1')
-    atomsel('chain %s and (resname ACE or protein) and name HE3 and not (resname TRP HSP HSE HSD PHE)' % chain).set('name','HE2')
-    atomsel('chain %s and (resname ACE or protein) and name HG and resname SER CYS' % chain).set('name','HG1')
+    # Hydrogens can be somewhat residue-dependent
+    h_names = {'H'  : 'HN', 'HA2':'HA1',
+               'HA3':'HA2', 'HG2':'HG1',
+               'HG3':'HG2'}
+    for h in h_names :
+        atomsel('chain %s and (resname ACE CT3 NMA or protein) and name %s' % (chain,h)).set('name',h_names[h])
+
+    h_names = {'HB2':'HB1','HB3':'HB2'}
+    for h in h_names :
+        atomsel('chain %s and (resname ACE CT3 NMA or protein) and name %s and not resname ALA' % (chain,h)).set('name',h_names[h])
+
+    atomsel('chain %s and (resname ACE CT3 NMA or protein) and name HD2 and not (resname ILE HSP HSE HSD ASP PHE)' % chain).set('name','HD1')
+    atomsel('chain %s and (resname ACE CT3 NMA or protein) and name HD3 and not (resname ILE HIS HSE HSD ASP PHE)' % chain).set('name','HD2')
+    atomsel('chain %s and (resname ACE CT3 NMA or protein) and name HE2 and not (resname TRP HSP HSE HSD GLUP PHE)' % chain).set('name','HE1')
+    atomsel('chain %s and (resname ACE CT3 NMA or protein) and name HE3 and not (resname TRP HSP HSE HSD PHE)' % chain).set('name','HE2')
+    atomsel('chain %s and (resname ACE CT3 NMA or protein) and name HG and resname SER CYS' % chain).set('name','HG1')
 
     # Now protein
     temp = tempfile.mkstemp(suffix='.pdb', prefix='psf_protein_', dir=tmp_dir)[1]
     print("Writing temporary protein file...")
-    write_ordered_pdb(temp, sel='chain %s and (resname ACE NMA or protein)' % chain, molid=molid)
-    print("Wrote %d atoms to the protein chain %s" % (len(atomsel('chain %s and resname ACE or protein' % chain)),chain))
+
+    write_ordered_pdb(temp, sel='chain %s and (protein or resname ACE CT3 NMA)' % chain, molid=molid)
+    print("Wrote %d atoms to the protein chain %s" % (len(atomsel('chain %s and (resname ACE CT3 NMA or protein)' % chain)),chain))
     molecule.set_top(old_top)
 
     # Now write to psfgen input file
     string='''
       set protnam %s
       segment P%s {
+        first none
+        last none
         pdb $protnam
       } 
     ''' % (temp,chain)
@@ -295,6 +306,8 @@ def write_water_blocks(file,tmp_dir,molid=0):
       foreach watnam $waterfiles {
         segment W${i} {
           auto none
+          first none
+          last none
           pdb $watnam
         }
         coordpdb $watnam W${i}
@@ -397,6 +410,8 @@ def write_lipid_blocks(file,tmp_dir,lipid_sel="lipid",molid=0):
       set lipidfile %s
       set mid [mol new $lipidfile]
       segment L {
+        first none
+        last none
         pdb $lipidfile
       }
       coordpdb $lipidfile L
@@ -444,6 +459,7 @@ def write_ligand_blocks(file, tmp_dir, residue, molid=0) :
     A = atomsel('residue %d' % residue)
 
     # Adjust residue name if known ligand
+    warning = False
     if 'CLR' in A.get('resname') :
         # Reassign names
         clol_names = {'H11' : 'H1A',  'H12' : 'H1B',
@@ -466,6 +482,8 @@ def write_ligand_blocks(file, tmp_dir, residue, molid=0) :
         for n in clol_names :
             atomsel('residue %d and name %s' % (residue,n)).set('name',clol_names[n])
         A.set('resname','CLOL') # cgenff naming convention
+    else :
+        warning = True
 
     # Save in a temporary file
     temp = tempfile.mkstemp(suffix='.pdb', prefix='psf_extras_', dir=tmp_dir)[1]
@@ -473,14 +491,30 @@ def write_ligand_blocks(file, tmp_dir, residue, molid=0) :
     A.write('pdb',temp)
     name = A.get('resname')[0]
 
-    string = '''
-      segment %s {
-        pdb %s
-      }
-      coordpdb %s %s
-    ''' % (name, temp, temp, name)
-    file.write(string)
-    return temp
+    inp = "whatshappenin"
+    if warning:
+      print("WARNING! Residue %s isn't explicitly programmed into dabble." % name)
+      print("         Please check the atom and residue names in the temp")
+      print("         pdb file match those in the topology file before continuing")
+      print("         Temp file name: %s" % temp)
+      while True :
+          if inp in ["Yes","No"]: break
+          inp = raw_input("Type Yes to continue, No to skip this residue > ")
+
+    if inp in ["Yes","whatshappenin"] :
+        string = '''
+          segment %s {
+            first none
+            last none
+            pdb %s
+          }
+          coordpdb %s %s
+        ''' % (name, temp, temp, name)
+        file.write(string)
+    else :
+      os.remove(temp)
+
+    return
 
 
 # Writes a pdb in order of residues, renumbering the atoms
