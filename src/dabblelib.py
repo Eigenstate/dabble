@@ -46,7 +46,7 @@ def orient_solute(molid, z_move=0, z_rotation=0, opm_pdb=None, opm_align='protei
         T=atomsel('protein and backbone', molid=molid).fit(atomsel(opm_align,molid=opm))
         atomsel('all', molid=molid).move(T)
         molecule.delete(opm)
-    else :
+    elif z_move is not 0 or z_rotation is not 0 :
         import trans, math
         trans.resetview(molid) # View affect rotation matrix, now it's I
         # This is negative because we want membrane flat along the z-axis,
@@ -58,8 +58,11 @@ def orient_solute(molid, z_move=0, z_rotation=0, opm_pdb=None, opm_align='protei
                          0        ,         0,          1, 0,
                          0        ,         0,          0, 1 ]
         trans.set_rotation(molid, rotmat)
-        atomsel('all').moveby((0,0,z_move))
-    return
+        atomsel('all',molid=molid).moveby((0,0,z_move))
+    else :
+        molid=center_system(molid=molid)
+
+    return molid
 
 
 def get_net_charge(sel):
@@ -104,21 +107,14 @@ def solute_xy_diameter(solute_sel):
     return diameter(transpose([a.get('x'), a.get('y')]))
 
 # Accepts either a molecule id or file to load. 
-def get_solute_sel(molid=None, filename=None):
-    atomsel('all').set('user',1.)
-    if molid is not None:
-        #sel = 'protein or (resname ACE NMA)'
-        sel = 'resid ' + ' '.join(map(str, set(atomsel('all', molid=molid).get('resid'))))
-    elif filename is not None:
-        top = molecule.get_top()
-        tmp_top = molecule.read(-1, 'mae', input_filename)
-        #sel = 'protein or (resname ACE NMA)'
-        sel = 'resid ' + ' '.join(map(str, set(atomsel('all').get('resid'))))
-        molecule.delete(tmp_top)
-        if top != -1: molecule.set_top(top)
-    else:
-      raise Exception('Specify molid or filename to get_solute_sel')
-
+def get_solute_sel(molid=0) :
+    chains = set(atomsel('all', molid=molid).get('chain'))
+    ch = chains.pop() # have to handle first separately because of or
+    sel = '(chain %s and resid ' % ch + \
+          ' '.join(map(str,set(atomsel('chain %s'% ch, molid=molid).get('resid')))) + ')'
+    for ch in chains :
+        sel += 'or (chain %s and resid ' % ch + \
+               ' '.join(map(str,set(atomsel('chain %s'% ch, molid=molid).get('resid')))) + ')'
     return sel
 
 
@@ -309,10 +305,10 @@ def write_ct_blocks(sel, output_filename, out_fmt='mae'):
     # Option lets us specify if we should write a pdb/psf or just a mae file
     # Either way it writes a temp mae file, hacky but it works
     if out_fmt=='mae' :
-        concatenate_mae_files(output_filename, filenames)
+        concatenate_mae_files(output_filename, input_filenames=filenames)
     else :
         (h,temp_mae) = tempfile.mkstemp(suffix='.mae', prefix='dabble_final')
-        concatenate_mae_files(temp_mae, filenames)
+        concatenate_mae_files(temp_mae, input_filenames=filenames)
         id = molecule.read(-1, 'mae', temp_mae)
         molecule.write(id, 'pdb', output_filename)
         os.remove(temp_mae)
@@ -327,7 +323,7 @@ def tile_system(input_id, times_x, times_y, times_z):
     new_resid = array(atomsel('all',molid=input_id).get('residue'))
     num_residues = new_resid.max()
     atomsel('all',molid=input_id).set('user', 2.)
-    num_id_blocks = int(max(atomsel('all').get('user')))
+    num_id_blocks = int(max(atomsel('all',molid=input_id).get('user')))
     wx, wy, wz = get_system_dimensions(molid=input_id)
 
 # Move the lipids over, save that file, move them back, repeat, then stack all of those
@@ -348,7 +344,7 @@ def tile_system(input_id, times_x, times_y, times_z):
 
 # Write all of these tiles together into one large bilayer
     (h,merge_output_filename) = tempfile.mkstemp(suffix='.mae', prefix='dabble_merge_tile_tmp')
-    concatenate_mae_files(merge_output_filename, tile_filenames)
+    concatenate_mae_files(merge_output_filename, input_filenames=tile_filenames)
 
 # Read that large bilayer file in as a new molecule and write it as the output file
     output_id = molecule.load('mae', merge_output_filename)
@@ -401,11 +397,18 @@ def set_cell_to_square_prism(xy_size, z_size):
     molecule.set_periodic(-1, -1, xy_size, xy_size, z_size, 90.0, 90.0, 90.0)
 
 
-def center_membrane_system(solute_sel, lipid_sel, new_z_center=0):
-    lipid_system_sel = 'not (%s)' % str(solute_sel)
-    x, y, z = atomsel('%s' % lipid_sel).center()
-    atomsel(lipid_system_sel).moveby((-x, -y, new_z_center - z))
-    return x, y, z
+# Called on the entire lipid system to move it, then saves moved positions
+# and reloads molecule in case the file needs to be concatenated
+def center_system(molid, new_z_center=0):
+    x, y, z = atomsel('all', molid=molid).center()
+    atomsel('all', molid=molid).moveby((-x, -y, new_z_center - z))
+
+    # Save and reload the solute to record atom positions
+    temp_mae = tempfile.mkstemp(suffix='.mae', prefix='dabble_centered')[1]
+    atomsel('all',molid=molid).write('mae',temp_mae)
+    molecule.delete(molid)
+    new_id = molecule.load('mae', temp_mae)
+    return new_id
 
 
 def init_atoms():

@@ -25,13 +25,8 @@ WELCOME_SCREEN = '''
  ===============================================
 '''
 # Try/catch here to detect if we're on Sherlock w/o python module
-try:
-    import argparse
-    import os, tempfile
-except ImportError:
-    print("ERROR: Couldn't import required Python modules!")
-    print("       Are you on Sherlock?")
-    print("       Try 'module load python/2.7.5'")
+import argparse
+import os, tempfile
 
 ############################################################
 #                       PLUGIN STUFF                       #
@@ -182,13 +177,28 @@ class dabble:
         solute_id = dabblelib.load_solute(opts.solute_filename)
         opts.solute_sel = dabblelib.get_solute_sel(molid=solute_id)
         #log('Solute sel is %s'  % opts.solute_sel)
-        dabblelib.orient_solute(molid=solute_id, z_move=opts.z_move, z_rotation=opts.z_rotation, opm_pdb=opts.opm_pdb, opm_align=opts.opm_align )
+        solute_id=dabblelib.orient_solute(molid=solute_id, z_move=opts.z_move, z_rotation=opts.z_rotation, opm_pdb=opts.opm_pdb, opm_align=opts.opm_align )
         #if not opts.solute_bb_sel:
+
         #    opts.solute_bb_sel = solute_sel
     
         #log('solute_sel = "%s"\nsolute_bb_sel = "%s"\n\n' % (solute_sel, opts.solute_bb_sel))
         #if solute_sel != opts.solute_bb_sel:
         #    log('WARNING:  solute_bb_sel != solute_sel\n')
+        # Write psf file if necessary 
+# DEBUG ROBIN
+#        if (self.out_fmt=='psf') :
+#            opts.write_psf_name = opts.output_filename
+#
+#        if opts.write_psf_name is not None :
+#            # extension appended by psfgen 
+#            opts.write_psf_name = opts.write_psf_name.replace('.psf','') 
+#            log('Saving pdb and psf files to %s\n' % opts.write_psf_name)
+#            import dabblepsf
+#            dabblepsf.write_psf(opts.write_psf_name,molid=molecule.get_top(), lipid_sel=opts.lipid_sel)
+#            quit(0)
+#
+
 
         log('computing the size of the periodic cell...')
         
@@ -227,12 +237,16 @@ class dabble:
         log('done. patch dimensions are %.3f x %.3f x %.3f\n\n' % (x_mem, y_mem, z_mem))
     
         log('tiling membrane patch...')
-        #(h,tiled_membrane_filename) = tempfile.mkstemp(suffix='mae', prefix='dabble_membrane_tmp')
         tiled_membrane_id, times_x, times_y, times_z = dabblelib.tile_membrane_patch(membrane_id, xy_size, z_size)
         log('done. membrane patch tiled %d x %d x %d times.\n\n' % (times_x, times_y, times_z))
-        
-        log('combining solute and tiled membrane patch...')
-        combined_id=dabblelib.combine_molecules([solute_id, tiled_membrane_id])
+         
+        log('centering the membrane system on the origin...\n')
+        tiled_membrane_id= dabblelib.center_system(molid=tiled_membrane_id)
+        log('done.\n\n')
+
+        log('combining solute and tiled membrane patch...\n')
+        print solute_id
+        combined_id=dabblelib.combine_molecules(input_ids=[solute_id, tiled_membrane_id])
         #dabblelib.read_combined_mae_file([opts.solute_filename,tiled_membrane_filename])
         #os.remove(tiled_membrane_filename)
         log('done.\n\n')
@@ -240,15 +254,10 @@ class dabble:
         log('selecting cation %s...' % opts.cation)
         count = dabblelib.set_cations(opts.cation, opts.solute_sel)
         log('done.\n\n')
-        
-        log('centering the membrane system on the origin...')
-    
-        dabblelib.center_membrane_system(opts.solute_sel, opts.lipid_sel)    
-        log('done.\n\n')
-    
+           
         # set "keep" mask to all atoms
         dabblelib.init_atoms()    
-        log('removing molecules outside of the periodic cell...')
+        log('removing molecules outside of the periodic cell...\n')
         
         # cut away atoms in the z direction
         dabblelib.remove_z_residues(z_size, opts.solute_sel)
@@ -332,7 +341,7 @@ class dabble:
     
         log('done.\n\n')
         
-        log('writing system with %d atoms (containing %d lipid molecules and %d water molecules) to "%s"...' % (dabblelib.num_atoms_remaining(), dabblelib.num_lipids_remaining(opts.lipid_sel), dabblelib.num_waters_remaining(), opts.output_filename))
+        log('writing system with %d atoms (containing %d lipid molecules and %d water molecules) to "%s"...\n' % (dabblelib.num_atoms_remaining(), dabblelib.num_lipids_remaining(opts.lipid_sel), dabblelib.num_waters_remaining(), opts.output_filename))
         
         dabblelib.write_remaining_atoms(opts.output_filename, out_fmt=self.out_fmt)
 
@@ -341,8 +350,9 @@ class dabble:
             opts.write_psf_name = opts.output_filename
 
         if opts.write_psf_name is not None :
-            opts.write_psf_name.replace(".psf","") # extension appended by psfgen 
-            log('Saving pdb and psf files\n')
+            # extension appended by psfgen 
+            opts.write_psf_name = opts.write_psf_name.replace('.psf','') 
+            log('Saving pdb and psf files to %s\n' % opts.write_psf_name)
             import dabblepsf
             dabblepsf.write_psf(opts.write_psf_name,molid=molecule.get_top(), lipid_sel=opts.lipid_sel)
 
