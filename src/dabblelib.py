@@ -310,7 +310,7 @@ def write_ct_blocks(sel, output_filename, out_fmt='mae'):
         (h,temp_mae) = tempfile.mkstemp(suffix='.mae', prefix='dabble_final')
         concatenate_mae_files(temp_mae, input_filenames=filenames)
         id = molecule.read(-1, 'mae', temp_mae)
-        molecule.write(id, 'pdb', output_filename)
+        molecule.write(id, out_fmt, output_filename)
         os.remove(temp_mae)
 
     # Clean up
