@@ -81,17 +81,17 @@ def write_psf(psf_name, molid=0, lipid_sel="lipid"):
     # capping groups at each end it can still be listed as the same segment by Maestro
     # but since it is not strictly connected should not be the same segment as psfgen 
     # will connect together all atoms in a linear chain.
-    cap_n = set(atomsel('resname ACE').get('residue'))
-    cap_c = set(atomsel('resname NMA').get('residue'))
-    print cap_c, cap_n
+    cap_n = sorted(set(atomsel('resname ACE').get('resid')))
+    cap_c = sorted(set(atomsel('resname NMA').get('resid')))
     assert len(cap_c)==len(cap_n), "Uneven number of capping groups!"
 
     # TODO: Sanity check that internal caps are next to each other in sequence
     segnum=1
     while len(cap_c) > 0 :
-        nid = cap_n.pop()
-        cid = cap_c.pop()
-        segment = atomsel('residue >= %d and residue <= %d'% (nid,cid))
+        nid = cap_n.pop(0)
+        cid = cap_c.pop(0)
+        assert nid < cid, "N-terminal residue before C-terminal? NMA resid %d, ACE resid %d"% (nid,cid)
+        segment = atomsel('resid >= %d and resid <= %d'% (nid,cid))
         segment.set('segname','P%s' % segnum)
         segment.set('segid','P%s' % segnum)
         # This is stupid, but to fix the Maestro issue with combined capping group and regualr
@@ -540,7 +540,6 @@ def write_ligand_blocks(file, tmp_dir, resid, molid=0) :
 # accordingly, since psfgen wants each residue sequentially
 def write_ordered_pdb(filename, sel, molid=0) :
     f = open(filename, 'w') 
-    print set(atomsel(sel).get('resname'))
     resids = set( atomsel(sel).get('residue') ) # Much much faster then get resids
     idx = 1
     resnum = 1 # For renumbering residues
@@ -616,3 +615,7 @@ def check_psf_output(psf_name) :
               "       bug report to Robin.\n")
         for l in problem_lines : 
             print l
+    else :
+        print("\nINFO: Checked output pdb/psf has all atoms present.\n") 
+
+
