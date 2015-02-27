@@ -83,9 +83,19 @@ def write_psf(psf_name, molid=0, lipid_sel="lipid"):
     # will connect together all atoms in a linear chain.
     cap_n = sorted(set(atomsel('resname ACE').get('resid')))
     cap_c = sorted(set(atomsel('resname NMA').get('resid')))
-    assert len(cap_c)==len(cap_n), "Uneven number of capping groups!"
 
-    # TODO: Sanity check that internal caps are next to each other in sequence
+    # Check protein actually has caps and they are done correctly
+    if len(cap_c) != len(cap_n) :
+      print("\nERROR: There are an uneven number of capping groups on the protein.\n"
+              "       Found %d NMA residues but %d ACE residues\n"
+              "       Please check your input protein preparation.\n" %(len(cap_c),len(cap_n)) )
+      quit(1)
+    if not len(cap_c) :
+      print("\nERROR: There are no capping groups found on the protein.\n"
+              "       Please prepare your input protein with ACE and NMA on the\n"
+              "       terminal residues of each chain segment.\n")
+      quit(1);
+
     segnum=1
     while len(cap_c) > 0 :
         nid = cap_n.pop(0)
@@ -596,7 +606,7 @@ def write_ordered_pdb(filename, sel, molid=0) :
 
 
 # Scans the output psb from psfgen for atoms where the coordinate
-# could not be set, because sometimes there is no warning.
+# could not be set, because sometimes there is no warning in the output text.
 def check_psf_output(psf_name) :
     problem_lines = []
     file = open('%s.pdb'% psf_name, 'r')
@@ -615,7 +625,8 @@ def check_psf_output(psf_name) :
               "       bug report to Robin.\n")
         for l in problem_lines : 
             print l
+        quit(1)
     else :
-        print("\nINFO: Checked output pdb/psf has all atoms present.\n") 
+        print("\nINFO: Checked output pdb/psf has all atoms present and correct.\n") 
 
 
