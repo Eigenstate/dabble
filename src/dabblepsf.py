@@ -4,8 +4,12 @@ from atomsel import *
 
 # Writes a psf file with the given options
 def write_psf(psf_name, molid=0, lipid_sel="lipid"):
-    # Clean up all temp files from previous runs
-    # TODO: Move to end if successful
+    # Clean up all temp files from previous runs if present
+    try :
+        os.remove('%s.pdb'% psf_name)
+        os.remove('%s.psf'% psf_name)
+    except OSError :
+        pass
 
     #print("Removing %d old psfgen blocks" % len(glob.glob("/tmp/psf_*.pdb")))
     #for oldfile in glob.glob("/tmp/psf_*.pdb") :
@@ -24,40 +28,34 @@ def write_psf(psf_name, molid=0, lipid_sel="lipid"):
     package require psfgen
     set output "%s"
     resetpsf
-    set dabbledir $::env(DABBLEDIR)
     ''' % psf_name
     file.write(string)
 
     # Specify default parameter sets
-    string='''
-    topology ${dabbledir}/charmm_params/top_all36_caps.rtf
-    topology ${dabbledir}/charmm_params/top_all36_cgenff.rtf
-    topology ${dabbledir}/charmm_params/top_water_ions.rtf
-    topology ${dabbledir}/charmm_params/top_all36_prot.rtf
-    topology ${dabbledir}/charmm_params/top_all36_lipid.rtf
-    topology ${dabbledir}/charmm_params/top_all36_carb.rtf
-    '''
-    file.write(string)
+    topologies = [ os.environ['DABBLEDIR']+'/charmm_params/top_all36_caps.rtf',
+                   os.environ['DABBLEDIR']+'/charmm_params/top_water_ions.rtf',
+                   os.environ['DABBLEDIR']+'/charmm_params/top_all36_cgenff.rtf',
+                   os.environ['DABBLEDIR']+'/charmm_params/top_all36_prot.rtf',
+                   os.environ['DABBLEDIR']+'/charmm_params/top_all36_lipid.rtf',
+                   os.environ['DABBLEDIR']+'/charmm_params/top_all36_carb.rtf' ]
 
     # Ask the user what parameter sets they want to use
     # TODO: Only ask if a ligand or something is found
     sys.stdout.flush()
-    print("""\nWhich CHARMM topology files should I use?"
-    Currently using:
-       - top_all36_caps.rtf (capping groups by Robin)
-       - top_water_ions.rtf
-       - top_all36_cgenff.rtf
-       - top_all36_prot.rtf
-       - top_all36_lipid.rtf
-       - top_all36_carb.rtf""")
-    print("Enter the full path to the filename(s), separated by a comma, of any "
-          "other rtf files you wish to use.\n")
+    print("\nWhich CHARMM topology files should I use?\n"
+            "Currently using:")
+    for t in topologies :
+        print("  - %s" % t.split("/")[-1])
+
+    print("Enter the path to the filename(s) from the current working directory,"
+          " separated by a comma, of any other rtf files you wish to use.\n")
     sys.stdout.flush()
     inp = raw_input('> ')
-    if inp:
-        rtfs = inp.split(',')
-        for t in rtfs: 
-            file.write("topology %s\n" % t)
+    if inp :
+        topologies.extend(inp.split(','))
+
+    for t in topologies :
+        file.write('   topology %s\n' % t)
 
     # Mark all atoms as unsaved with the user field
     atomsel('all',molid=molid).set('user',1.0)
@@ -112,7 +110,7 @@ def write_psf(psf_name, molid=0, lipid_sel="lipid"):
         write_ordered_pdb(temp, sel='segname P%s'% segnum, molid=molid)
 
         prot_molid = molecule.load('pdb', temp)
-        write_protein_blocks(file, seg='P%s'% segnum, tmp_dir=tmp_dir,molid=prot_molid)
+        write_protein_blocks(file, seg='P%s'% segnum, tmp_dir=tmp_dir, molid=prot_molid, topologies=topologies)
         molecule.delete(prot_molid)
         #os.remove(temp)
         segnum += 1
@@ -123,7 +121,7 @@ def write_psf(psf_name, molid=0, lipid_sel="lipid"):
     if len(leftovers) > 0 :
         print("Found extra ligands: %s" % set(leftovers.get('resname')))
     for l in set( leftovers.get('resid') ) :
-        write_ligand_blocks(file, tmp_dir, resid=l, molid=molid)
+        write_ligand_blocks(file, tmp_dir, resid=l, topologies=topologies, molid=molid)
 
     # Write the output files and run
     string='''
@@ -138,7 +136,7 @@ def write_psf(psf_name, molid=0, lipid_sel="lipid"):
 
 # Writes the temporary protein PDB file with correct atom names for psfgen
 # This is also the worst.
-def write_protein_blocks(file,tmp_dir,seg,molid=0):
+def write_protein_blocks(file,tmp_dir,seg,molid,topologies):
     # Put molid on top to simplify atom selections
     old_top=molecule.get_top()
     molecule.set_top(molid)
@@ -175,9 +173,10 @@ def write_protein_blocks(file,tmp_dir,seg,molid=0):
 
     # Disulfide briges
     indices = set( atomsel('segname %s and name SG and resname CYX'% seg).get('index') )
+    indices.update( atomsel('segname %s and name SG and resname CYS and not same residue as name HG' %seg).get('index') )
     while len(indices) > 0 :
         idx1 = indices.pop()
-        matches = set( atomsel('segname %s and name SG and resname CYX and not index %d and within 2.5 of index %d' % (seg, idx1, idx1) ))
+        matches = set( atomsel('segname %s and name SG and (resname CYX or (resname CYS and not same residue as name HG)) and not index %d and within 2.5 of index %d' % (seg, idx1, idx1) ))
 
         # Sanity check
         if len(matches) > 1 :
@@ -216,11 +215,9 @@ def write_protein_blocks(file,tmp_dir,seg,molid=0):
     for n in iso_names :
         atomsel('segname %s and resname ILE and name %s' %(seg,n)).set('name',iso_names[n])
                   
-## TODO DEBUG bug in here for naomi's protein
-    # Glutamine check all residues for protonated one
+    # Glutamine check all residues for protonation
     # Can't use dictionary for names since two of them must be swapped
     # Must loop by resid, not residue, to get correct PATCH statement index
-# TODO: Is this correct? Atom name messups
     t = set( atomsel('segname %s and (resname GLU GLH GLUP)'% seg).get('resid') )
     for resid in t:
         atomsel('segname %s and resid %s' % (seg,resid)).set('resname','GLU')
@@ -235,7 +232,6 @@ def write_protein_blocks(file,tmp_dir,seg,molid=0):
         elif "HXT" in atomsel('segname %s and resid %s' % (seg,resid)).get('name') :
             atomsel('segname %s and resid %s and name HXT' % (seg,resid)).set('name','HE2')
             patches += 'patch GLUP %s:%d\n' % (seg, resid)
-## END BUG LOCATION
 
     # Aspartate check each residue to see if it's protonated
     # Can't use dictionary for names since two of them must be swapped
@@ -253,24 +249,46 @@ def write_protein_blocks(file,tmp_dir,seg,molid=0):
         if "HD2" in atomsel('segname %s and resid %s' % (seg,resid)).get('name') :
             patches += 'patch ASPP %s:%d\n' % (seg,resid)
 
-    # Hydrogens can be somewhat residue-dependent
+    # Methionine hydrogen names
+    atomsel('segname %s and name H2 H1 and resname MET'% seg).set('name','HN')
+
+    # Serine and cysteine hydrogen names
+    atomsel('segname %s and name HG and resname SER CYS' % seg).set('name','HG1')
+
+    # Hydrogens can be somewhat residue-dependent, but only check hydrogens on known amino acid
+    # residues so that the names on nonstandard amino acids are never changed
+    acids = 'ACE ALA ARG ASN ASP CYS GLN GLU GLY HIS HSP HSE HSD ILE LEU LYS MET NMA PHE PRO SER THR TRP TYR VAL'
     h_names = {'H'  : 'HN', 'HA2':'HA1',
                'HA3':'HA2', 'HG2':'HG1',
                'HG3':'HG2'}
     for h in h_names :
-        atomsel('segname %s and name %s' % (seg,h)).set('name',h_names[h])
+        atomsel('segname %s and resname %s and name %s' % (seg,acids,h)).set('name',h_names[h])
 
     # These two statements must execute in this specific order
-    atomsel('segname %s and name HB2 and not (resname ALA)'% seg).set('name','HB1')
-    atomsel('segname %s and name HB3 and not (resname ALA)'% seg).set('name','HB2')
+    atomsel('segname %s and resname %s and name HB2 and not resname ALA'% (seg,acids)).set('name','HB1')
+    atomsel('segname %s and resname %s and name HB3 and not resname ALA'% (seg,acids)).set('name','HB2')
 
     # Some residue-specific stuff
-    atomsel('segname %s and name H2 and resname MET'% seg).set('name','HN')
-    atomsel('segname %s and name HD2 and not (resname TYR ILE HSP HSE HSD ASP PHE)' % seg).set('name','HD1')
-    atomsel('segname %s and name HD3 and not (resname TYR ILE HIS HSE HSD ASP PHE)' % seg).set('name','HD2')
-    atomsel('segname %s and name HE2 and not (resname TYR MET TRP HSP HSE HSD GLUP PHE)' % seg).set('name','HE1')
-    atomsel('segname %s and name HE3 and not (resname TYR MET TRP HSP HSE HSD PHE)' % seg).set('name','HE2')
-    atomsel('segname %s and name HG and resname SER CYS' % seg).set('name','HG1')
+    atomsel('segname %s and resname %s and name HD2 and not (resname TYR ILE HSP HSE HSD ASP PHE)'
+            %(seg,acids)).set('name','HD1')
+    atomsel('segname %s and resname %s and name HD3 and not (resname TYR ILE HIS HSE HSD ASP PHE)' 
+            % (seg,acids)).set('name','HD2')
+    atomsel('segname %s and resname %s and name HE2 and not (resname TYR MET TRP HSP HSE HSD GLU PHE)'
+            % (seg,acids)).set('name','HE1')
+    atomsel('segname %s and resname %s and name HE3 and not (resname TYR MET TRP HSP HSE HSD PHE)' 
+            % (seg,acids)).set('name','HE2')
+
+    # Final chance to fix unrecognized atom names for non-protein residues
+    others = set( atomsel('segname %s and (not resname %s)'% (seg,acids)).get('resname') )
+    while len(others) :
+        res = others.pop()
+        # Check if this residue is not found, and offer to rename it
+        if not find_residue_in_rtf(topologies=topologies,resname=res,segname=seg,molid=molid) :
+            print("\nERROR: Residue name %s wasn't found in any input topology.\n"
+                    "       Would you like to rename it?\n" % res)
+            newname = raw_input("New residue name or CTRL+D to quit > ")
+            atomsel('segname %s and resname %s'% (seg,res)).set('resname','%s'% newname)
+            others.add(newname) # Check that new name is present
 
     # Now protein
     filename = tmp_dir + '/psf_protein_%s.pdb'% seg
@@ -480,14 +498,13 @@ def write_ion_blocks(file,tmp_dir,molid=0) :
     return temp
 
 
-def write_ligand_blocks(file, tmp_dir, resid, molid=0) :
+def write_ligand_blocks(file, tmp_dir, resid, topologies, molid=0) :
     A = atomsel('user 1.0 and resid %d' % resid)
 
     # Adjust residue name if known ligand
     warning = True
     if 'CLR' in A.get('resname') :
         print("INFO: Found a cholesterol!")
-        warning = False
         # Reassign names
         clol_names = {'H11' : 'H1A',  'H12' : 'H1B',
                       'H21' : 'H2A',  'H22' : 'H2B',
@@ -509,10 +526,19 @@ def write_ligand_blocks(file, tmp_dir, resid, molid=0) :
         for n in clol_names :
             atomsel('user 1.0 and resid %d and name %s' % (resid,n)).set('name',clol_names[n])
         A.set('resname','CLOL') # cgenff naming convention
-    elif 'BGC' in A.get('resname') :
-        print("INFO: Found a beta-glucose!")
-        warning = False
-        A.set('resname','BGLC')
+    #elif 'BGC' in A.get('resname') :
+    #    print("INFO: Found a beta-glucose!")
+    #    A.set('resname','BGLC')
+    else : # Check it's recognized, if not give the user a chance to rename
+         res = A.get('resname')[0]
+         seg = A.get('segname')[0]
+         while not find_residue_in_rtf(topologies=topologies,resname=res,segname=seg,molid=molid) :
+             print("\nERROR: Residue name %s wasn't found in any input topology.\n"
+                     "       Would you like to rename it?\n" % res)
+             newname = raw_input("New residue name or CTRL+D to quit > ")
+             atomsel('resid %s and resname %s'% (seg,res)).set('resname','%s'% newname)
+
+def find_residue_in_rtf(topologies,resname,segname,molid) :
 
     # Save in a temporary file
     temp = tempfile.mkstemp(suffix='.pdb', prefix='psf_extras_', dir=tmp_dir)[1]
@@ -520,18 +546,7 @@ def write_ligand_blocks(file, tmp_dir, resid, molid=0) :
     A.write('pdb',temp)
     name = A.get('resname')[0]
 
-    inp = "whatshappenin"
-    if warning:
-      print("WARNING! Residue %s isn't explicitly programmed into dabble." % name)
-      print("         Please check the atom and residue names in the temp")
-      print("         pdb file match those in the topology file before continuing")
-      print("         Temp file name: %s" % temp)
-      while True :
-          if inp in ["Yes","No"]: break
-          inp = raw_input("Type Yes to continue, No to skip this residue > ")
-
-    if inp in ["Yes","whatshappenin"] :
-        string = '''
+    string = '''
    segment %s {
       first none
       last none
@@ -539,9 +554,7 @@ def write_ligand_blocks(file, tmp_dir, resid, molid=0) :
    }
    coordpdb %s %s
         ''' % (name, temp, temp, name)
-        file.write(string)
-    else :
-      os.remove(temp)
+    file.write(string)
 
     return
 
@@ -608,12 +621,19 @@ def write_ordered_pdb(filename, sel, molid=0) :
 # Scans the output psb from psfgen for atoms where the coordinate
 # could not be set, because sometimes there is no warning in the output text.
 def check_psf_output(psf_name) :
+    # Check file was written at all
+    if not os.path.isfile('%s.pdb'% psf_name) :
+        print("\nERROR: psf file failed to write.\n"
+                "       Please see log above.\n")
+        quit(1)
+
     problem_lines = []
     file = open('%s.pdb'% psf_name, 'r')
     for line in iter(file) :
         # Use rsplit since some fields near beginning can mush together
+        # 3rd field from end not fourth since element name will be absent too
         words = line.rsplit()
-        if words[0] == 'ATOM' and words[-4] == '-1.00' :
+        if words[0] == 'ATOM' and words[-3] == '-1.00' :
             problem_lines.append(line[:-1])
     file.close()
 
@@ -630,3 +650,82 @@ def check_psf_output(psf_name) :
         print("\nINFO: Checked output pdb/psf has all atoms present and correct.\n") 
 
 
+# Scans the input text for the residue with the given name.
+# Once found, pulls out all atom names that comprise that residue and returns them as a set.
+# If the residue isn't present in the input text, returns an empty set.
+def get_atoms_from_rtf(text,resname) :
+    atoms = []
+    found = False
+    for i in range(len(text)) :
+        words = text[i].split()
+        if not len(words)             : continue
+        if not found and words[0]=='RESI' \
+           and words[1]==resname      : found = True
+        elif found and words[0]=='ATOM' : 
+            atoms.append(words[1])
+        elif found and words[0]=='RESI' : break
+    return set(atoms)
+
+# Scan the topology files to find this residue name
+# Pulls out the atoms involved and checks that they are all present
+# in the input coordinates. Allows name correction if not.
+# Returns False if the residue name cannot be found
+def find_residue_in_rtf(topologies,resname,segname,molid) :
+    names = ()
+    found = False
+    for t in topologies :
+        topfile = open(t, 'r')
+        topo_atoms = get_atoms_from_rtf(text=topfile.readlines(),resname=resname)
+        if len(topo_atoms) : break # Use first definition found of this residue
+        topfile.close()
+    if not len(topo_atoms) : return False
+    print("INFO: Successfully found residue %s in input topologies"% resname)
+
+    # Match up atoms with python sets
+    pdb_atoms = set(atomsel('segname %s and resname %s'% (segname,resname)).get('name'))
+    pdb_only  = pdb_atoms - topo_atoms
+    topo_only = topo_atoms - pdb_atoms
+
+    # If uneven number of atoms, there are missing or additional atoms
+    if len(pdb_atoms) > len(topo_atoms) :
+        print("\nERROR: Cannot process modified residue %s.\n"
+                "       There are %d extra atoms in the input structure that are \n"
+                "       undefined in the topology file. The following atoms could not \n"
+                "       be matched and may either be misnamed, or additional atoms.\n"
+                "       Please check your input." % (resname,len(pdb_atoms)-len(topo_atoms)))
+        print(  "       [ %s ]\n" % ' '.join(map(str,pdb_only)) )
+        print(  "       Cannot continue.\n")
+        quit(1);
+    if len(topo_atoms) > len(pdb_atoms) :
+        print("\nERROR: Cannot process modified residue %s.\n"
+                "       There are %d missing atoms in the input structure that are \n"
+                "       defined in the topology file. The following atoms could not \n"
+                "       be matched and may either be misnamed or deleted atoms.\n"
+                "       Please check your input." % (resname,len(topo_atoms)-len(pdb_atoms)))
+        print(  "       [ %s ]\n" % ' '.join(map(str,topo_only)) )
+        print(  "       Cannot continue.\n")
+        quit(1);
+
+    # Offer to rename atoms that couldn't be matched to the topology
+    if len(pdb_only) :
+        print("\nWARNING: Having some trouble with modified residue %s.\n"
+                "         The following atom names cannot be matched up to the input\n"
+                "         topologies. They are probably misnamed.\n" % resname)
+        print(  "         To help you, here are the atom names that should be present\n"
+                "         according to the topology but were not found:\n")
+        print(  "         [ %s ]\n" % ' '.join(map(str,topo_only)) )
+        print(  "         Please enter a valid name for each atom as it appears or CTRL+D to quit..\n")
+        for r in pdb_only :
+            print("Unmatched topology names: [ %s ]" % ' '.join(map(str,topo_only)) )
+            newname = raw_input("  %s  -> "% r)
+            while newname not in topo_only:
+                print("'%s' is not an available name in the topology. Please try again.\n" % newname)
+                newname = raw_input("  %s  -> "% r)
+            atomsel('segname %s and resname %s and name %s'% (segname,resname,r)).set('name',newname)
+            pdb_atoms = set(atomsel('segname %s and resname %s'% (segname,resname)).get('name'))
+            topo_only = topo_atoms-pdb_atoms
+
+        # Recurse to check that everything is assigned correctly
+        find_residue_in_rtf(topologies,resname,segname,molid)
+    print("INFO: Matched up all atom names for residue %s"% resname)
+    return True
