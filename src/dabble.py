@@ -189,16 +189,16 @@ class dabble:
         #    log('WARNING:  solute_bb_sel != solute_sel\n')
         # Write psf file if necessary 
 # DEBUG ROBIN
-        if (self.out_fmt=='psf') :
-            opts.write_psf_name = opts.output_filename
-
-        if opts.write_psf_name is not None :
-            # extension appended by psfgen 
-            opts.write_psf_name = opts.write_psf_name.replace('.psf','') 
-            log('Saving pdb and psf files to %s\n' % opts.write_psf_name)
-            import dabblepsf
-            dabblepsf.write_psf(opts.write_psf_name,molid=molecule.get_top(), lipid_sel=opts.lipid_sel)
-            quit(0)
+#        if (self.out_fmt=='psf') :
+#            opts.write_psf_name = opts.output_filename
+#
+#        if opts.write_psf_name is not None :
+#            # extension appended by psfgen 
+#            opts.write_psf_name = opts.write_psf_name.replace('.psf','') 
+#            log('Saving pdb and psf files to %s\n' % opts.write_psf_name)
+#            import dabblepsf
+#            dabblepsf.write_psf(opts.write_psf_name,molid=molecule.get_top(), lipid_sel=opts.lipid_sel)
+#            quit(0)
 #
 
 
