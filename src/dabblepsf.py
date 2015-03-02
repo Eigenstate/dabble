@@ -79,8 +79,9 @@ def write_psf(psf_name, molid=0, lipid_sel="lipid"):
     # capping groups at each end it can still be listed as the same segment by Maestro
     # but since it is not strictly connected should not be the same segment as psfgen 
     # will connect together all atoms in a linear chain.
-    cap_n = sorted(set(atomsel('resname ACE').get('resid')))
-    cap_c = sorted(set(atomsel('resname NMA').get('resid')))
+    print("Redefining capping groups")
+    cap_n = sorted(set(atomsel('resname ACE').get('residue')))
+    cap_c = sorted(set(atomsel('resname NMA').get('residue')))
 
     # Check protein actually has caps and they are done correctly
     if len(cap_c) != len(cap_n) :
@@ -99,18 +100,21 @@ def write_psf(psf_name, molid=0, lipid_sel="lipid"):
         nid = cap_n.pop(0)
         cid = cap_c.pop(0)
         assert nid < cid, "N-terminal residue before C-terminal? NMA resid %d, ACE resid %d"% (nid,cid)
-        segment = atomsel('resid >= %d and resid <= %d'% (nid,cid))
+        print("Writing protein chain from residue %d to %d"% (nid,cid))
+        sys.stdout.flush()
+        segment = atomsel('residue >= %d and residue <= %d'% (nid,cid))
         segment.set('segname','P%s' % segnum)
         segment.set('segid','P%s' % segnum)
         # This is stupid, but to fix the Maestro issue with combined capping group and regualr
         # residues, we have to renumber the residues, save, and reload so that VMD splits the 
         # combined residue into 2
-        print("Writing protein chain from residue %d to %d"% (nid,cid))
         temp = tempfile.mkstemp(suffix='_P%s.pdb' % segnum, prefix='psf_prot_', dir=tmp_dir)[1]
-        write_ordered_pdb(temp, sel='segname P%s'% segnum, molid=molid)
+        segment.write('pdb',temp)
+        #write_ordered_pdb(temp, sel='segname P%s'% segnum, molid=molid)
+        sys.stdout.flush()
 
         prot_molid = molecule.load('pdb', temp)
-        write_protein_blocks(file, seg='P%s'% segnum, tmp_dir=tmp_dir, molid=prot_molid, topologies=topologies)
+        write_protein_blocks(file, tmp_dir=tmp_dir, seg='P%s'%segnum, molid=prot_molid, topologies=topologies)
         molecule.delete(prot_molid)
         #os.remove(temp)
         segnum += 1
@@ -135,18 +139,23 @@ def write_psf(psf_name, molid=0, lipid_sel="lipid"):
     check_psf_output(psf_name)
 
 # Writes the temporary protein PDB file with correct atom names for psfgen
-# This is also the worst.
+# The molid is of a molecule containing only the protein chain to be written
 def write_protein_blocks(file,tmp_dir,seg,molid,topologies):
     # Put molid on top to simplify atom selections
     old_top=molecule.get_top()
     molecule.set_top(molid)
+    print("Writing protein file\n")
 
-    # Renumber residues starting from 1 TODO: This doesnt start from 1
-    T = atomsel('segname %s' % seg)
-    T.set('resid',[r+1 for r in T.get('residue')])
+    # Renumber residues starting from 1
+    residues = set( atomsel('all').get('residue') )
+    resnum = 1
+    while len(residues) :
+        atomsel('residue %s'% residues.pop()).set('resid',resnum)
+        resnum += 1
+    #T.set('resid',[r+1 for r in T.get('residue')])
 
     # Check the protein has hydrogens
-    if len(atomsel('segname %s and element H'% seg)) == 0:
+    if len(atomsel('element H')) == 0:
         print("\n\nERROR: There are no hydrogens on your protein")
         print("       You need to add them before parameterizing")
         print("       because psfgen cannot be trusted to do it correctly.\n")
@@ -158,7 +167,7 @@ def write_protein_blocks(file,tmp_dir,seg,molid,topologies):
                  'H1'  :'HY1', 'H2'  :'HY2', 'H3'  :'HY3',
                  '1H'  :'HY1', '2H'  :'HY2', '3H'  :'HY3' }
     for n in ace_names :
-        atomsel('segname %s and resname ACE and name %s'%(seg,n)).set('name',ace_names[n])
+        atomsel('resname ACE and name %s'% n).set('name',ace_names[n])
 
     # Terminal residue NMA
     nma_names = {'HN'  :'HNT', 'H'   :'HNT', 
@@ -167,16 +176,16 @@ def write_protein_blocks(file,tmp_dir,seg,molid,topologies):
                  '1HA' :'HT1', '2HA' :'HT2', '3HA' :'HT3', 
                  'HH31':'HT1', 'HH32':'HT2', 'HH33':'HT3' }
     for n in nma_names :
-        atomsel('segname %s and resname NMA and name %s' %(seg,n)).set('name',nma_names[n])
+        atomsel('resname NMA and name %s' % n).set('name',nma_names[n])
 
     patches = ''
 
     # Disulfide briges
-    indices = set( atomsel('segname %s and name SG and resname CYX'% seg).get('index') )
-    indices.update( atomsel('segname %s and name SG and resname CYS and not same residue as name HG' %seg).get('index') )
+    indices = set( atomsel('name SG and resname CYX').get('index') )
+    indices.update( atomsel('name SG and resname CYS and not same residue as name HG').get('index') )
     while len(indices) > 0 :
         idx1 = indices.pop()
-        matches = set( atomsel('segname %s and name SG and (resname CYX or (resname CYS and not same residue as name HG)) and not index %d and within 2.5 of index %d' % (seg, idx1, idx1) ))
+        matches = set( atomsel('name SG and (resname CYX or (resname CYS and not same residue as name HG)) and not index %d and within 2.5 of index %d' % (idx1, idx1) ))
 
         # Sanity check
         if len(matches) > 1 :
@@ -198,39 +207,39 @@ def write_protein_blocks(file,tmp_dir,seg,molid,topologies):
     # Rename CYX -> CYS for naming conventions
     atomsel('resname CYX').set('resname','CYS')
     # Histidine naming convention
-    atomsel('segname %s and resname HID'% seg).set('resname','HSD')
-    atomsel('segname %s and resname HIE'% seg).set('resname','HSE')
-    atomsel('segname %s and resname HIP'% seg).set('resname','HSP') 
+    atomsel('resname HID').set('resname','HSD')
+    atomsel('resname HIE').set('resname','HSE')
+    atomsel('resname HIP').set('resname','HSP') 
 
     # Determine protonation states of those just called HIS based on atom names
-    atomsel('segname %s and resname HIS and same residue as name HE2'% seg).set('resname','HSE')
-    atomsel('segname %s and resname HIS and same residue as name HD1'% seg).set('resname','HSD')
+    atomsel('resname HIS and same residue as name HE2').set('resname','HSE')
+    atomsel('resname HIS and same residue as name HD1').set('resname','HSD')
     # NOTE: This atomsel MUST come after the previous two!
-    atomsel('segname %s and resname HIS and same residue as name HE2 and same residue as name HD1' % seg).set('resname','HSP')
+    atomsel('resname HIS and same residue as name HE2 and same residue as name HD1').set('resname','HSP')
     
     # Isoleucine
     iso_names = { 'CD1' :  'CD',
                   'HD11': 'HD1', 'HD12':'HD2', 'HD13':'HD3',
                   'HG12':'HG11', 'HG13':'HG12' }
     for n in iso_names :
-        atomsel('segname %s and resname ILE and name %s' %(seg,n)).set('name',iso_names[n])
+        atomsel('resname ILE and name %s' %n).set('name',iso_names[n])
                   
     # Glutamine check all residues for protonation
     # Can't use dictionary for names since two of them must be swapped
     # Must loop by resid, not residue, to get correct PATCH statement index
-    t = set( atomsel('segname %s and (resname GLU GLH GLUP)'% seg).get('resid') )
+    t = set( atomsel('resname GLU GLH GLUP').get('resid') )
     for resid in t:
-        atomsel('segname %s and resid %s' % (seg,resid)).set('resname','GLU')
+        atomsel('resid %s' % resid).set('resname','GLU')
         if "HE1" in atomsel('resid %s' % resid).get('name') :
-            atomsel('segname %s and resid %s and name HE1'% (seg,resid)).set('name','HE2')
-            atomsel('segname %s and resid %s and name OE1'% (seg,resid)).set('name','temp')
-            atomsel('segname %s and resid %s and name OE2'% (seg,resid)).set('name','OE1')
-            atomsel('segname %s and resid %s and name temp'% (seg,resid)).set('name','OE2')
+            atomsel('resid %s and name HE1'% resid).set('name','HE2')
+            atomsel('resid %s and name OE1'% resid).set('name','temp')
+            atomsel('resid %s and name OE2'% resid).set('name','OE1')
+            atomsel('resid %s and name temp'% resid).set('name','OE2')
             patches += 'patch GLUP %s:%d\n' % (seg, resid)
-        elif "HE2" in atomsel('segname %s and resid %s' % (seg,resid)).get('name') :
+        elif "HE2" in atomsel('resid %s' % resid).get('name') :
             patches += 'patch GLUP %s:%d\n' % (seg, resid)
-        elif "HXT" in atomsel('segname %s and resid %s' % (seg,resid)).get('name') :
-            atomsel('segname %s and resid %s and name HXT' % (seg,resid)).set('name','HE2')
+        elif "HXT" in atomsel('resid %s' % resid).get('name') :
+            atomsel('resid %s and name HXT' % resid).set('name','HE2')
             patches += 'patch GLUP %s:%d\n' % (seg, resid)
 
     # Aspartate check each residue to see if it's protonated
@@ -238,22 +247,21 @@ def write_protein_blocks(file,tmp_dir,seg,molid,topologies):
     # Must loop by resid, not residue, to get correct PATCH statement index
     t = set( atomsel('resname ASP ASH ASPP').get('resid') )
     for resid in t :
-        atomsel('segname %s and resid %s'% (seg,resid)).set('resname','ASP')
-        if "HD1" in atomsel('segname %s and resid %s' % (seg,resid)).get('name') :
-            atomsel('segname %s and resid %s and name HD1' % (seg,resid)).set('name','HD2')
-            atomsel('segname %s and resid %s and name OD1' % (seg,resid)).set('name','temp')
-            atomsel('segname %s and resid %s and name OD2' % (seg,resid)).set('name','OD1')
-            atomsel('segname %s and resid %s and name temp' % (seg,resid)).set('name','OD2')
-            atomsel('segname %s and resid %s').set('resname','ASPP')
+        atomsel('resid %s'% resid).set('resname','ASP')
+        if "HD1" in atomsel('resid %s' % resid).get('name') :
+            atomsel('resid %s and name HD1' % resid).set('name','HD2')
+            atomsel('resid %s and name OD1' % resid).set('name','temp')
+            atomsel('resid %s and name OD2' % resid).set('name','OD1')
+            atomsel('resid %s and name temp' % resid).set('name','OD2')
             patches += 'patch ASPP %s:%d\n' % (seg,resid)
-        if "HD2" in atomsel('segname %s and resid %s' % (seg,resid)).get('name') :
+        if "HD2" in atomsel('resid %s' % resid).get('name') :
             patches += 'patch ASPP %s:%d\n' % (seg,resid)
 
     # Methionine hydrogen names
-    atomsel('segname %s and name H2 H1 and resname MET'% seg).set('name','HN')
+    atomsel('name H2 H1 and resname MET').set('name','HN')
 
     # Serine and cysteine hydrogen names
-    atomsel('segname %s and name HG and resname SER CYS' % seg).set('name','HG1')
+    atomsel('name HG and resname SER CYS').set('name','HG1')
 
     # Hydrogens can be somewhat residue-dependent, but only check hydrogens on known amino acid
     # residues so that the names on nonstandard amino acids are never changed
@@ -262,24 +270,24 @@ def write_protein_blocks(file,tmp_dir,seg,molid,topologies):
                'HA3':'HA2', 'HG2':'HG1',
                'HG3':'HG2'}
     for h in h_names :
-        atomsel('segname %s and resname %s and name %s' % (seg,acids,h)).set('name',h_names[h])
+        atomsel('resname %s and name %s' % (acids,h)).set('name',h_names[h])
 
     # These two statements must execute in this specific order
-    atomsel('segname %s and resname %s and name HB2 and not resname ALA'% (seg,acids)).set('name','HB1')
-    atomsel('segname %s and resname %s and name HB3 and not resname ALA'% (seg,acids)).set('name','HB2')
+    atomsel('resname %s and name HB2 and not resname ALA'% acids).set('name','HB1')
+    atomsel('resname %s and name HB3 and not resname ALA'% acids).set('name','HB2')
 
     # Some residue-specific stuff
-    atomsel('segname %s and resname %s and name HD2 and not (resname TYR ILE HSP HSE HSD ASP PHE)'
-            %(seg,acids)).set('name','HD1')
-    atomsel('segname %s and resname %s and name HD3 and not (resname TYR ILE HIS HSE HSD ASP PHE)' 
-            % (seg,acids)).set('name','HD2')
-    atomsel('segname %s and resname %s and name HE2 and not (resname TYR MET TRP HSP HSE HSD GLU PHE)'
-            % (seg,acids)).set('name','HE1')
-    atomsel('segname %s and resname %s and name HE3 and not (resname TYR MET TRP HSP HSE HSD PHE)' 
-            % (seg,acids)).set('name','HE2')
+    atomsel('resname %s and name HD2 and not (resname TYR ILE HSP HSE HSD ASP PHE)'
+            % acids).set('name','HD1')
+    atomsel('resname %s and name HD3 and not (resname TYR ILE HIS HSE HSD ASP PHE)' 
+            % acids).set('name','HD2')
+    atomsel('resname %s and name HE2 and not (resname TYR MET TRP HSP HSE HSD GLU PHE)'
+            % acids).set('name','HE1')
+    atomsel('resname %s and name HE3 and not (resname TYR MET TRP HSP HSE HSD PHE)' 
+            % acids).set('name','HE2')
 
     # Final chance to fix unrecognized atom names for non-protein residues
-    others = set( atomsel('segname %s and (not resname %s)'% (seg,acids)).get('resname') )
+    others = set( atomsel('not resname %s'% acids).get('resname') )
     while len(others) :
         res = others.pop()
         # Check if this residue is not found, and offer to rename it
@@ -287,13 +295,13 @@ def write_protein_blocks(file,tmp_dir,seg,molid,topologies):
             print("\nERROR: Residue name %s wasn't found in any input topology.\n"
                     "       Would you like to rename it?\n" % res)
             newname = raw_input("New residue name or CTRL+D to quit > ")
-            atomsel('segname %s and resname %s'% (seg,res)).set('resname','%s'% newname)
+            atomsel('resname %s'% res).set('resname','%s'% newname)
             others.add(newname) # Check that new name is present
 
     # Now protein
     filename = tmp_dir + '/psf_protein_%s.pdb'% seg
-    write_ordered_pdb(filename, sel='segname %s' % seg, molid=molid)
-    print("Wrote %d atoms to the protein segment %s" % (len(atomsel('segname %s' % seg)),seg))
+    write_ordered_pdb(filename, sel='all', molid=molid)
+    print("Wrote %d atoms to the protein segment %s" % (len(atomsel('all' )),seg))
     molecule.set_top(old_top)
 
     # Now write to psfgen input file
@@ -363,13 +371,10 @@ def write_water_blocks(file,tmp_dir,molid=0):
 
 # Gotta renumber the lipid residues too because some can have **** instead of resid
 def write_lipid_blocks(file,tmp_dir,lipid_sel="lipid",molid=0):
-    # Set the user field of all lipids, we'll use it to keep track of which
-    # were written
-    atomsel(lipid_sel,molid=molid).set('user',0.0)
-    all = atomsel('(%s) and user 0.0' % lipid_sel)
 
     # Detect what lipid kind this is. HACK for now, it really should figure it out,
     # but this is what works
+    all = atomsel('(%s) and user 1.0' % lipid_sel, molid=molid)
     lipid_types = set( all.get('resname') )
     atoms_per_lip = 0
     lip_type = lipid_types.pop() # Should remove only element in this list
@@ -412,41 +417,29 @@ def write_lipid_blocks(file,tmp_dir,lipid_sel="lipid",molid=0):
 
     # Rename atoms. Wow, this is really the worst
     # Carbons and hydrogen above nitrogen in head group
+    # These selections must be done in order because there is a swap
     atomsel('(%s) and name C11' % lipid_sel).set('name','t12')
     atomsel('(%s) and name C15' % lipid_sel).set('name','C11')
     atomsel('(%s) and name C14' % lipid_sel).set('name','C15')
     atomsel('(%s) and name C12' % lipid_sel).set('name','C14')
     atomsel('(%s) and name t12' % lipid_sel).set('name','C12')
 
-    atomsel('(%s) and name H31' % lipid_sel).set('name','H13A')
-    atomsel('(%s) and name H32' % lipid_sel).set('name','H13B')
-    atomsel('(%s) and name H33' % lipid_sel).set('name','H13C')
-    atomsel('(%s) and name H41' % lipid_sel).set('name','H15A')
-    atomsel('(%s) and name H42' % lipid_sel).set('name','H15B')
-    atomsel('(%s) and name H43' % lipid_sel).set('name','H15C')
-    atomsel('(%s) and name H21' % lipid_sel).set('name','H14A')
-    atomsel('(%s) and name H22' % lipid_sel).set('name','H14B')
-    atomsel('(%s) and name H23' % lipid_sel).set('name','H14C')
-
-    atomsel('(%s) and name H51' % lipid_sel).set('name','H11A')
-    atomsel('(%s) and name H52' % lipid_sel).set('name','H11B')
-    atomsel('(%s) and name H11' % lipid_sel).set('name','H12A')
-    atomsel('(%s) and name H12' % lipid_sel).set('name','H12B')
-
-    # Phosphate and its oxygens
-    atomsel('(%s) and name P1' % lipid_sel).set('name','P')
-    atomsel('(%s) and name O1' % lipid_sel).set('name','O12')
-    atomsel('(%s) and name O2' % lipid_sel).set('name','O11')
-    atomsel('(%s) and name O3' % lipid_sel).set('name','O13')
-    atomsel('(%s) and name O4' % lipid_sel).set('name','O14')
-
+    popc_names = {'H31':'H13A', 'H32':'H13B', 'H33':'H13C',
+                  'H41':'H15A', 'H42':'H15B', 'H43':'H15C',
+                                'H22':'H14B', 'H23':'H14C',
+                  'H51':'H11A', 'H52':'H11B',
+                  'H11':'H12A', 'H12':'H12B',
+                 # Phosphate and its oxygens
+                  'P1' :'P'   , 'O1' :'O12' , 'O2' :'O11',
+                  'O3' :'O13' , 'O4' :'O14' }
     # Fortunately all the other atom names are correct.
-    # TODO: This will probably be different for non-POPC lipids...
+    for n in popc_names :
+        atomsel('(%s) and resname %s' % (lipid_sel,n).set('resname',popc_names[n]))
 
     # Write temporary lipid pdb
     temp = tempfile.mkstemp(suffix='.pdb', prefix='psf_lipid_', dir=tmp_dir)[1]
-    atomsel(lipid_sel,molid=molid).set('user', 0.0)
-    atomsel(lipid_sel,molid=molid).write('pdb',temp)
+    all.set('user',0.0)
+    all.write('pdb',temp)
 
     # Write to file
     string='''
@@ -537,27 +530,6 @@ def write_ligand_blocks(file, tmp_dir, resid, topologies, molid=0) :
                      "       Would you like to rename it?\n" % res)
              newname = raw_input("New residue name or CTRL+D to quit > ")
              atomsel('resid %s and resname %s'% (seg,res)).set('resname','%s'% newname)
-
-def find_residue_in_rtf(topologies,resname,segname,molid) :
-
-    # Save in a temporary file
-    temp = tempfile.mkstemp(suffix='.pdb', prefix='psf_extras_', dir=tmp_dir)[1]
-    A.set('user', 0.0)
-    A.write('pdb',temp)
-    name = A.get('resname')[0]
-
-    string = '''
-   segment %s {
-      first none
-      last none
-      pdb %s
-   }
-   coordpdb %s %s
-        ''' % (name, temp, temp, name)
-    file.write(string)
-
-    return
-
 
 # Writes a pdb in order of residues, renumbering the atoms
 # accordingly, since psfgen wants each residue sequentially
