@@ -114,6 +114,7 @@ def write_psf(psf_name, molid=0, lipid_sel="lipid"):
         sys.stdout.flush()
 
         prot_molid = molecule.load('pdb', temp)
+        segment.set('user', 0.0)
         write_protein_blocks(file, tmp_dir=tmp_dir, seg='P%s'%segnum, molid=prot_molid, topologies=topologies)
         molecule.delete(prot_molid)
         #os.remove(temp)
@@ -426,7 +427,7 @@ def write_lipid_blocks(file,tmp_dir,lipid_sel="lipid",molid=0):
 
     popc_names = {'H31':'H13A', 'H32':'H13B', 'H33':'H13C',
                   'H41':'H15A', 'H42':'H15B', 'H43':'H15C',
-                                'H22':'H14B', 'H23':'H14C',
+                  'H21':'H14A', 'H22':'H14B', 'H23':'H14C',
                   'H51':'H11A', 'H52':'H11B',
                   'H11':'H12A', 'H12':'H12B',
                  # Phosphate and its oxygens
@@ -434,7 +435,7 @@ def write_lipid_blocks(file,tmp_dir,lipid_sel="lipid",molid=0):
                   'O3' :'O13' , 'O4' :'O14' }
     # Fortunately all the other atom names are correct.
     for n in popc_names :
-        atomsel('(%s) and resname %s' % (lipid_sel,n).set('resname',popc_names[n]))
+        atomsel('(%s) and name %s' % (lipid_sel,n)).set('name',popc_names[n])
 
     # Write temporary lipid pdb
     temp = tempfile.mkstemp(suffix='.pdb', prefix='psf_lipid_', dir=tmp_dir)[1]
