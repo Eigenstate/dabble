@@ -66,12 +66,12 @@ def write_psf(psf_name, molid=0, lipid_sel="lipid"):
     # End ions
 
     # Save water 10k molecules at a time
-    if len(atomsel('water',molid=molid)) > 0:
+    if len(atomsel('water',molid=molid)) :
         write_water_blocks(file,tmp_dir,molid=molid)
     # End water
 
     # Now lipid
-    if len(atomsel(lipid_sel)) > 0:
+    if len(atomsel(lipid_sel)) :
         temp=write_lipid_blocks(file,tmp_dir,lipid_sel=lipid_sel,molid=molid)
     # End lipid
 
@@ -79,46 +79,49 @@ def write_psf(psf_name, molid=0, lipid_sel="lipid"):
     # capping groups at each end it can still be listed as the same segment by Maestro
     # but since it is not strictly connected should not be the same segment as psfgen 
     # will connect together all atoms in a linear chain.
-    print("Redefining capping groups")
-    cap_n = sorted(set(atomsel('resname ACE').get('residue')))
-    cap_c = sorted(set(atomsel('resname NMA').get('residue')))
+    if len(atomsel('protein or resname ACE NMA')) :
+        print("Redefining capping groups")
+        cap_n = sorted(set(atomsel('resname ACE').get('residue')))
+        cap_c = sorted(set(atomsel('resname NMA').get('residue')))
 
-    # Check protein actually has caps and they are done correctly
-    if len(cap_c) != len(cap_n) :
-      print("\nERROR: There are an uneven number of capping groups on the protein.\n"
-              "       Found %d NMA residues but %d ACE residues\n"
-              "       Please check your input protein preparation.\n" %(len(cap_c),len(cap_n)) )
-      quit(1)
-    if not len(cap_c) :
-      print("\nERROR: There are no capping groups found on the protein.\n"
-              "       Please prepare your input protein with ACE and NMA on the\n"
-              "       terminal residues of each chain segment.\n")
-      quit(1);
+        # Check protein actually has caps and they are done correctly
+        if len(cap_c) != len(cap_n) :
+          print("\nERROR: There are an uneven number of capping groups on the protein.\n"
+                  "       Found %d NMA residues but %d ACE residues\n"
+                  "       Please check your input protein preparation.\n" %(len(cap_c),len(cap_n)) )
+          quit(1)
+        if not len(cap_c) :
+          print("\nERROR: There are no capping groups found on the protein.\n"
+                  "       Please prepare your input protein with ACE and NMA on the\n"
+                  "       terminal residues of each chain segment.\n")
+          quit(1);
 
-    segnum=1
-    while len(cap_c) > 0 :
-        nid = cap_n.pop(0)
-        cid = cap_c.pop(0)
-        assert nid < cid, "N-terminal residue before C-terminal? NMA resid %d, ACE resid %d"% (nid,cid)
-        print("Writing protein chain from residue %d to %d"% (nid,cid))
-        sys.stdout.flush()
-        segment = atomsel('residue >= %d and residue <= %d'% (nid,cid))
-        segment.set('segname','P%s' % segnum)
-        segment.set('segid','P%s' % segnum)
-        # This is stupid, but to fix the Maestro issue with combined capping group and regualr
-        # residues, we have to renumber the residues, save, and reload so that VMD splits the 
-        # combined residue into 2
-        temp = tempfile.mkstemp(suffix='_P%s.pdb' % segnum, prefix='psf_prot_', dir=tmp_dir)[1]
-        segment.write('pdb',temp)
-        #write_ordered_pdb(temp, sel='segname P%s'% segnum, molid=molid)
-        sys.stdout.flush()
+        segnum=1
+        while len(cap_c) > 0 :
+            nid = cap_n.pop(0)
+            cid = cap_c.pop(0)
+            assert nid < cid, "N-terminal residue before C-terminal? NMA resid %d, ACE resid %d"% (nid,cid)
+            print("Writing protein chain from residue %d to %d"% (nid,cid))
+            sys.stdout.flush()
+            segment = atomsel('residue >= %d and residue <= %d'% (nid,cid))
+            segment.set('segname','P%s' % segnum)
+            segment.set('segid','P%s' % segnum)
+            # This is stupid, but to fix the Maestro issue with combined capping group and regualr
+            # residues, we have to renumber the residues, save, and reload so that VMD splits the 
+            # combined residue into 2
+            temp = tempfile.mkstemp(suffix='_P%s.pdb' % segnum, prefix='psf_prot_', dir=tmp_dir)[1]
+            segment.write('pdb',temp)
+            #write_ordered_pdb(temp, sel='segname P%s'% segnum, molid=molid)
+            sys.stdout.flush()
 
-        prot_molid = molecule.load('pdb', temp)
-        segment.set('user', 0.0)
-        write_protein_blocks(file, tmp_dir=tmp_dir, seg='P%s'%segnum, molid=prot_molid, topologies=topologies)
-        molecule.delete(prot_molid)
-        #os.remove(temp)
-        segnum += 1
+            prot_molid = molecule.load('pdb', temp)
+            segment.set('user', 0.0)
+            write_protein_blocks(file, tmp_dir=tmp_dir, seg='P%s'%segnum, molid=prot_molid, topologies=topologies)
+            molecule.delete(prot_molid)
+            #os.remove(temp)
+            segnum += 1
+    else :
+      print("\nINFO: Didn't find any protein.\n")
     # End protein
 
     # Check if there is anything else and let the user know about it
