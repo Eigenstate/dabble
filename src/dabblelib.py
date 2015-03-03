@@ -540,8 +540,11 @@ def add_salt_ion(element):
 
 
 def write_remaining_atoms(output_filename, out_fmt='mae'):
-    # PSF output written later
-    if out_fmt=='psf': return
+    # PSF output written later, but write a mae to reload
+    if out_fmt=='psf': 
+        temp_mae = tempfile.mkstemp(suffix='.mae', prefix='dabble_final')[1]
+        write_ct_blocks('beta 1', temp_mae, 'mae')
+        return temp_mae
 
     write_ct_blocks('beta 1', output_filename, out_fmt)
-    return num_atoms_remaining()
+    return output_filename

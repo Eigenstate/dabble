@@ -345,18 +345,21 @@ class dabble:
         
         log('writing system with %d atoms (containing %d lipid molecules and %d water molecules) to "%s"...\n' % (dabblelib.num_atoms_remaining(), dabblelib.num_lipids_remaining(opts.lipid_sel), dabblelib.num_waters_remaining(), opts.output_filename))
         
-        dabblelib.write_remaining_atoms(opts.output_filename, out_fmt=self.out_fmt)
+        final_filename = dabblelib.write_remaining_atoms(opts.output_filename, out_fmt=self.out_fmt)
 
         # Write psf file if necessary 
         if (self.out_fmt=='psf') :
             opts.write_psf_name = opts.output_filename
 
         if opts.write_psf_name is not None :
+            # need to reload final saved file so deleted atoms are no longer there... grr vmd
+            molid = molecule.load('mae', final_filename)
+
             # extension appended by psfgen 
             opts.write_psf_name = opts.write_psf_name.replace('.psf','') 
             log('Saving pdb and psf files to %s\n' % opts.write_psf_name)
             import dabblepsf
-            dabblepsf.write_psf(opts.write_psf_name,molid=molecule.get_top(), lipid_sel=opts.lipid_sel)
+            dabblepsf.write_psf(opts.write_psf_name,molid=molid, lipid_sel=opts.lipid_sel)
 
         log('done.\n\n')
     
