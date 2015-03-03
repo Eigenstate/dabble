@@ -54,6 +54,7 @@ def write_psf(psf_name, molid=0, lipid_sel="lipid"):
     if inp :
         topologies.extend(inp.split(','))
 
+    file.write('\n')
     for t in topologies :
         file.write('   topology %s\n' % t)
 
@@ -79,10 +80,13 @@ def write_psf(psf_name, molid=0, lipid_sel="lipid"):
     # capping groups at each end it can still be listed as the same segment by Maestro
     # but since it is not strictly connected should not be the same segment as psfgen 
     # will connect together all atoms in a linear chain.
+    # We pick this by resid not residue since sometimes it gets mixed up parsing residues
+    # it doesn't know and will split them into multiple residues
     if len(atomsel('protein or resname ACE NMA')) :
         print("Redefining capping groups")
-        cap_n = sorted(set(atomsel('resname ACE').get('residue')))
-        cap_c = sorted(set(atomsel('resname NMA').get('residue')))
+        cap_n = sorted(set(atomsel('resname ACE').get('resid')))
+        cap_c = sorted(set(atomsel('resname NMA').get('resid')))
+        print cap_n, cap_c
 
         # Check protein actually has caps and they are done correctly
         if len(cap_c) != len(cap_n) :
@@ -101,9 +105,9 @@ def write_psf(psf_name, molid=0, lipid_sel="lipid"):
             nid = cap_n.pop(0)
             cid = cap_c.pop(0)
             assert nid < cid, "N-terminal residue before C-terminal? NMA resid %d, ACE resid %d"% (nid,cid)
-            print("Writing protein chain from residue %d to %d"% (nid,cid))
+            print("Writing protein chain from resid %d to %d"% (nid,cid))
             sys.stdout.flush()
-            segment = atomsel('residue >= %d and residue <= %d'% (nid,cid))
+            segment = atomsel('resid >= %d and resid <= %d and user 1.0'% (nid,cid))
             segment.set('segname','P%s' % segnum)
             segment.set('segid','P%s' % segnum)
             # This is stupid, but to fix the Maestro issue with combined capping group and regualr
@@ -564,7 +568,6 @@ def write_ordered_pdb(filename, sel, molid=0) :
               atoms.extend( atomsel('residue %d and not resname ACE'% r).get('index') )
 
           elif 'NMA' in names :
-              print("HI ITS A NMA")
               names.remove('NMA')
               atomsel('residue %d and resname %s'% (r,names.pop())).set('resid',resnum)
               atomsel('residue %d and resname NMA'% r).set('resid',resnum+1)
@@ -703,5 +706,5 @@ def find_residue_in_rtf(topologies,resname,segname,molid) :
 
         # Recurse to check that everything is assigned correctly
         find_residue_in_rtf(topologies,resname,segname,molid)
-    print("INFO: Matched up all atom names for residue %s"% resname)
+    print("INFO: Matched up all atom names for residue %s\n"% resname)
     return True
