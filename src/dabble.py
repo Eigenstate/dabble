@@ -38,9 +38,23 @@ class dabble:
 
 # Checks the file format of the output file is valid
     def check_out_type(self,value):
+        """
+        Checks the file format of the requiested output is supported, and sets
+        internal variables as necessary.
+
+        Args:
+          value (str): Filename requested
+
+        Returns:
+          The string, if valid
+
+        Raises:
+          ArgumentTypeError : if the output format requested is currently unsupported
+        """
+
         if len(value) < 3 :
               raise argparse.ArgumentTypeError("%s is too short to determine output filetype" % value)
-        ext = value[-3:]
+        ext = value.rsplit('.')[-1]
         if ext=='mae' :
             self.out_fmt='mae'
         elif ext=='pdb' :
@@ -48,14 +62,16 @@ class dabble:
         elif ext=='dms' :
             self.out_fmt='dms'
         elif ext=='psf' :
-            self.out_fmt='psf'
+            self.out_fmt='charmm'
+        elif ext=='prmtop' :
+            self.out_fmt='amber'
         else :
-            raise argparse.ArgumentTypeError("%s is invalid format. Currently only pdb and mae supported" % value)
+            raise argparse.ArgumentTypeError("%s is an unsupported format" % value)
         return value
      
 
     def __init__(self, args):
-        # Redirect stdout
+        # Redirect stdout TODO: necessary?
         self.out = sys.stderr
         self.dabble_main(args[1:])
     
@@ -156,10 +172,6 @@ class dabble:
                           help='Membrane rotation relative to Z axis of protein, in    '
                                'degrees. Use the number from OPM if you have it.       '
                                '[default: 0]')
-        # Can also parameterize
-        parser.add_argument('--write-psf', dest='write_psf_name',
-                            default=None, help="Write a pdb and psf file"
-                            "with this prefix, using charmm parameters")
  
         print(WELCOME_SCREEN)
         opts = parser.parse_args(args)
@@ -181,6 +193,7 @@ class dabble:
         #log('Solute sel is %s'  % opts.solute_sel)
         solute_id=dabblelib.orient_solute(molid=solute_id, z_move=opts.z_move, z_rotation=opts.z_rotation, opm_pdb=opts.opm_pdb, opm_align=opts.opm_align )
         #if not opts.solute_bb_sel:
+
 
         #    opts.solute_bb_sel = solute_sel
     
@@ -345,21 +358,7 @@ class dabble:
         
         log('writing system with %d atoms (containing %d lipid molecules and %d water molecules) to "%s"...\n' % (dabblelib.num_atoms_remaining(), dabblelib.num_lipids_remaining(opts.lipid_sel), dabblelib.num_waters_remaining(), opts.output_filename))
         
-        final_filename = dabblelib.write_remaining_atoms(opts.output_filename, out_fmt=self.out_fmt)
-
-        # Write psf file if necessary 
-        if (self.out_fmt=='psf') :
-            opts.write_psf_name = opts.output_filename
-
-        if opts.write_psf_name is not None :
-            # need to reload final saved file so deleted atoms are no longer there... grr vmd
-            molid = molecule.load('mae', final_filename)
-
-            # extension appended by psfgen 
-            opts.write_psf_name = opts.write_psf_name.replace('.psf','') 
-            log('Saving pdb and psf files to %s\n' % opts.write_psf_name)
-            import dabblepsf
-            dabblepsf.write_psf(opts.write_psf_name,molid=molid, lipid_sel=opts.lipid_sel)
+        final_filename = dabblelib.write_final_system(opts, self.out_fmt, molid=molecule.get_top())
 
         log('done.\n\n')
     

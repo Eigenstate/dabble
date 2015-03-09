@@ -4,6 +4,24 @@ from atomsel import *
 
 # Writes a psf file with the given options
 def write_psf(psf_name, molid=0, lipid_sel="lipid"):
+    """
+    Writes a pdb/psf file pair from the current molecule using the CHARMM36
+    topology and atom names/types. Interfaces with psfgen by dynamically generating
+    the .tcl file that psfgen takes as input. Prompts the user for additional
+    topology files and helps with matching atom names that cannot be automatically
+    translated to the charmm naming conventions.
+    TODO: Someday replace this with ParmEd charmm topology parsing to eliminate
+    psfgen
+
+    Args:
+      psf_name (str): Prefix for the pdb/psf output files, extension will be appended
+      molid (str): the VMD molecule id to write
+      lipid_sel (str): atomselect string describing what should count as "lipid"
+
+    Returns:
+      topologies (list of str): Topology files that were used in creating the psf
+    """
+
     # Clean up all temp files from previous runs if present
     try :
         os.remove('%s.pdb'% psf_name)
@@ -11,12 +29,6 @@ def write_psf(psf_name, molid=0, lipid_sel="lipid"):
     except OSError :
         pass
 
-    #print("Removing %d old psfgen blocks" % len(glob.glob("/tmp/psf_*.pdb")))
-    #for oldfile in glob.glob("/tmp/psf_*.pdb") :
-    #    os.remove(oldfile)
-    #for oldfile in glob.glob("/tmp/dabble_psfgen*.tcl") :
-    #    os.remove(oldfile)
-    
     tmp_dir = tempfile.mkdtemp(prefix='dabble_psfgen')
     filename = tempfile.mkstemp(suffix='.tcl', prefix='dabble_psfgen', dir=tmp_dir)[1]
     file = open(filename,'w')
@@ -39,8 +51,7 @@ def write_psf(psf_name, molid=0, lipid_sel="lipid"):
                    os.environ['DABBLEDIR']+'/charmm_params/top_all36_lipid.rtf',
                    os.environ['DABBLEDIR']+'/charmm_params/top_all36_carb.rtf' ]
 
-    # Ask the user what parameter sets they want to use
-    # TODO: Only ask if a ligand or something is found
+    # Ask the user for additional topology files
     sys.stdout.flush()
     print("\nWhich CHARMM topology files should I use?\n"
             "Currently using:")
@@ -145,6 +156,8 @@ def write_psf(psf_name, molid=0, lipid_sel="lipid"):
     from VMD import evaltcl
     evaltcl('play %s' % filename)
     check_psf_output(psf_name)
+
+    return topologies
 
 # Writes the temporary protein PDB file with correct atom names for psfgen
 # The molid is of a molecule containing only the protein chain to be written
@@ -709,3 +722,67 @@ def find_residue_in_rtf(topologies,resname,segname,molid) :
         find_residue_in_rtf(topologies,resname,segname,molid)
     print("INFO: Matched up all atom names for residue %s\n"% resname)
     return True
+
+
+def write_amber(psf_name, prmtop_name, topologies, final_molid) :
+    """
+    Runs the chamber command of ParmEd to produce AMBER format input files.
+
+    Args:
+      psf_name (str): The file name of the psf and pdb files to convert. Should
+          just include the prefix, not the .psf or .pdb extension.
+      prmtop_name (str): The prefix for the output .prmtop and .inpcrd files.
+          The extension will be appended.
+      topologies (list of str): CHARMM format topology files that define the system,
+          including default list and any user-defined ones.
+      final_molid (int): VMD molid of loaded molecule containing the final system.
+          Used for box information as it is not written by psfgen to the pdb/psf.
+
+    Returns:
+      I dunno yet
+    """ 
+
+    # Ask the user for additional parameter files
+    parameters = [ os.environ['DABBLEDIR']+'/charmm_params/toppar_water_ions.str',
+                   os.environ['DABBLEDIR']+'/charmm_params/par_all36_cgenff.prm',
+                   os.environ['DABBLEDIR']+'/charmm_params/par_all36_prot.prm',
+                   os.environ['DABBLEDIR']+'/charmm_params/par_all36_lipid.prm',
+                   os.environ['DABBLEDIR']+'/charmm_params/par_all36_carb.prm' ]
+
+    sys.stdout.flush()
+    print("\nWhich CHARMM parameter files should I use?\n"
+            "Currently using:")
+    for p in parameters:
+        print("  - %s" % p.split("/")[-1])
+    print("Enter the path to the filename(s) from the current working directory,"
+          " separated by a comma, of any other rtf files you wish to use.\n")
+    sys.stdout.flush()
+    inp = raw_input('> ')
+    if inp :
+        parameters.extend(inp.split(','))
+
+    # Begin assembling chamber input string
+    args = "-crd %s.pdb -psf %s.psf" % (psf_name,psf_name)
+
+    # Add topology and parameter arguments
+    for t in topologies :
+      args += ' -top %s' % t
+    for p in parameters :
+      if 'toppar' in p : args += ' -toppar %s' %p
+      else :             args += ' -param %s' % p
+
+
+    # Add box information since it is not in the pdb
+    box = molecule.get_periodic(molid=final_molid)
+    args += " -box %f,%f,%f" % (box['a'],box['b'],box['c']) 
+
+    print args
+
+    from ParmedTools import chamber, parmout
+    from chemistry.amber import AmberParm
+    parm = AmberParm(prm_name='%s.prmtop'%prmtop_name, rst7_name='%s.inpcrd'%prmtop_name)
+    action = chamber(parm,args)
+    action.execute()
+
+
+

@@ -265,6 +265,26 @@ def get_system_dimensions(molid=None, filename=None):
 
 
 def concatenate_mae_files(output_filename, input_filenames=None, input_ids=None):
+    """
+    Concatenates several mae files together into one. Since this file format
+    allows concatenation, the new file is a combined system of all
+    the input molecules superimposed.
+    Either takes a list of files to concatenate, or a list of VMD molecule
+    ids. If molecule ids are given, VMD's interface is used to get the filename
+    corresponding to each id.
+
+    Args:
+      output_filename (str): Filename to write
+      input_filenames (list of str): List of input mae files to combine, OR:
+      input_ids (list of int): List of input molecules to combine
+
+    Returns:
+      True if successful
+
+    Raises:
+      AssertionError : if there are no input files
+    """
+
     if input_ids is not None:
       input_filenames = [ (molecule.get_filenames(id))[0] for id in input_ids ]
     assert len(input_filenames) > 0, 'need at least one input filename'
@@ -291,7 +311,17 @@ def combine_molecules(input_ids) :
     for i in input_ids: molecule.delete(i)
     return output_id
 
-def write_ct_blocks(sel, output_filename, out_fmt='mae'):
+def write_ct_blocks(sel, output_filename):
+    """
+    Writes a mae format file containing the specified selection.
+
+    Args:
+      sel (str): the selection to write
+      output_filename (str): the file to write to, including .mae extension
+
+    Returns :
+      length (int): the number of CT blocks written
+    """
     users = sorted(set(atomsel(sel).get('user')))
     filenames = [(tempfile.mkstemp(suffix='.mae', prefix='dabble_tmp_user'))[1] for id in users]
     length = len(users)
@@ -304,14 +334,7 @@ def write_ct_blocks(sel, output_filename, out_fmt='mae'):
 
     # Option lets us specify if we should write a pdb/psf or just a mae file
     # Either way it writes a temp mae file, hacky but it works
-    if out_fmt=='mae' :
-        concatenate_mae_files(output_filename, input_filenames=filenames)
-    else :
-        (h,temp_mae) = tempfile.mkstemp(suffix='.mae', prefix='dabble_final')
-        concatenate_mae_files(temp_mae, input_filenames=filenames)
-        id = molecule.read(-1, 'mae', temp_mae)
-        molecule.write(id, out_fmt, output_filename)
-        os.remove(temp_mae)
+    concatenate_mae_files(output_filename, input_filenames=filenames)
 
     # Clean up
     for filename in filenames:
@@ -539,12 +562,45 @@ def add_salt_ion(element):
     return gid
 
 
-def write_remaining_atoms(output_filename, out_fmt='mae'):
-    # PSF output written later, but write a mae to reload
-    if out_fmt=='psf': 
-        temp_mae = tempfile.mkstemp(suffix='.mae', prefix='dabble_final')[1]
-        write_ct_blocks('beta 1', temp_mae, 'mae')
-        return temp_mae
+def write_final_system(opts, out_fmt, molid):
+    """
+    Writes the final output in whatever format(s) are requested.
+    Always writes a mae format file
 
-    write_ct_blocks('beta 1', output_filename, out_fmt)
-    return output_filename
+    Args:
+      opts (argparse) : options passed to dabble
+      out_fmt (str): format to write the output to
+      molid (int): VMD molecule_id to write
+
+    Returns:
+      (str) main final filename written
+    """
+
+    # Write a mae file always, removing the prefix from the output file
+    mae_name = '.'.join(map(str,opts.output_filename.rsplit('.')[:-1])) + '.mae'
+    write_ct_blocks(sel='beta 1', output_filename=mae_name)
+
+    # If a converted output format (pdb or dms) desired, write that here
+    # and the mae is a temp file that can be deleted
+    if out_fmt=='dms' or out_fmt=='pdb' :
+        temp_mol = molecule.load('mae',mae_name)
+        atomsel('all',molid=temp_mol).write(out_fmt, opts.output_filename)
+        molecule.delete(temp_mol)
+        os.remove(mae_name)
+
+    # If we want a parameterized format like amber or charmm, a psf must
+    # first be written which does the atom typing, etc
+    if out_fmt=='charmm' or out_fmt=='amber' :
+        import dabbleparam
+        temp_mol = molecule.load('mae', mae_name)
+        write_psf_name = mae_name.replace('.mae','')
+        topos = dabbleparam.write_psf(write_psf_name, molid=temp_mol, lipid_sel=opts.lipid_sel)
+
+    # For amber format files, invoke the parmed chamber routine
+    if out_fmt=='amber' :
+        dabbleparam.write_amber(write_psf_name, write_psf_name, topos, molid) 
+        #os.remove('%s.pdb' % write_psf_name)
+        #os.remove('%s.psf' % write_psf_name)
+
+    return opts.output_filename
+
