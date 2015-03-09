@@ -598,6 +598,7 @@ def write_final_system(opts, out_fmt, molid):
 
     # For amber format files, invoke the parmed chamber routine
     if out_fmt=='amber' :
+        print("\nINFO: Writing AMBER format files. This may take a moment...\n")
         dabbleparam.write_amber(write_psf_name, write_psf_name, topos, molid) 
         #os.remove('%s.pdb' % write_psf_name)
         #os.remove('%s.psf' % write_psf_name)
