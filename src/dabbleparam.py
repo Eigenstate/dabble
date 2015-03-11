@@ -739,7 +739,7 @@ def write_amber(psf_name, prmtop_name, topologies, final_molid) :
           Used for box information as it is not written by psfgen to the pdb/psf.
 
     Returns:
-      I dunno yet
+      True if successful
     """ 
 
     # Ask the user for additional parameter files
@@ -776,13 +776,19 @@ def write_amber(psf_name, prmtop_name, topologies, final_molid) :
     box = molecule.get_periodic(molid=final_molid)
     args += " -box %f,%f,%f" % (box['a'],box['b'],box['c']) 
 
-    print args
-
     from ParmedTools import chamber, parmout
     from chemistry.amber import AmberParm
-    parm = AmberParm(prm_name='%s.prmtop'%prmtop_name, rst7_name='%s.inpcrd'%prmtop_name)
+    print("\nINFO: Running chamber. This may take a while...")
+    sys.stdout.flush()
+    parm = AmberParm()
     action = chamber(parm,args)
+    print action
     action.execute()
+    print("\nINFO: Ran chamber")
+    write = parmout(action.parm, "%s.prmtop %s.inpcrd"%(prmtop_name,prmtop_name))
+    write.execute()
+    print("\nINFO: Wrote output prmtop and inpcrd")
+    return True
 
 
 
