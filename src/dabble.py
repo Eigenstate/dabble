@@ -119,7 +119,7 @@ class dabble:
                           type=float,
                           help='buffer distance in the membrane normal direction.      '
                                '[default 20.0 angstroms]')
-        parser.add_argument('-m', '--membrane-buffer-dist', dest='xy_buf', default=45.0,
+        parser.add_argument('-m', '--membrane-buffer-dist', dest='xy_buf', default=25.0,
                           type=float,
                           help='buffer distance through the membrane.                  '
                                '[default: 45.0 angstroms]')
