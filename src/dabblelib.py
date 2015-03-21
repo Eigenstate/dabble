@@ -65,19 +65,48 @@ def orient_solute(molid, z_move=0, z_rotation=0, opm_pdb=None, opm_align='protei
     return molid
 
 
-def get_net_charge(sel):
+def get_net_charge(sel,molid):
+    """
+    Gets the net charge of an atom selection, using the charge
+    field of the data.
+
+    Args:
+      sel (str): VMD atom selection to compute the charge of
+      molid (int): VMD molecule id to select within
+
+    Returns:
+      (int): The rounded net charge of the selection
+
+    Throws:
+      AssertionException: If all charges are zero
+    """
+
     charge = array(atomsel(sel).get('charge'))
     if charge.size == 0:
         return 0
-    if any (charge != 0) : print "WARNING: No charges found in input file!"
-    #assert any (charge != 0), 'All charges are zero! Check your input file has charges'
+    if all(charge == 0) :
+        print("\nWARNING: All charges in selection are zero. Check the input file has formal charges defined!\nSelection was:\n%s\n"%sel)
+        print set(charge)
+    #assert all (charge == 0.), 'All charges in selection "%s" are zero! Check your input file has charges'%sel
     net_charge = sum(charge)
     rslt = round(net_charge)
     assert abs(rslt - net_charge) < .01, 'Total charge is not integral (within a tolerance of .01). Check your input file.'
     return int(rslt)
 
-def get_system_net_charge():
-    return get_net_charge('beta 1')
+def get_system_net_charge(molid):
+    """
+    Gets the net charge of the entire system.
+    What is in the system is defined by the beta field, as atoms that won't
+    be written have beta 0.
+
+    Args:
+      molid (int): VMD molecule id to compute the charge of
+
+    Returns:
+      (int): The net charge of the molecule
+    """
+
+    return get_net_charge(sel='beta 1', molid=molid)
 
 
 def diameter(v, chunkmem=30e6):
@@ -157,8 +186,9 @@ def get_num_salt_ions_needed(conc,
     anions = atomsel_remaining('element %s' % anion)
     num_cations = len(cations)
     num_anions = len(anions)
+    molid = molecule.get_top()
     try:
-        abs(get_net_charge(str(cations))-num_cations) > 0.01
+        abs(get_net_charge(str(cations),molid)-num_cations) > 0.01
     except:
         # Check for bonded cations
         nonbonded_cation_index=[atomsel('index %d' %x).get('index')[0] for x in nonzero(array(map(len,atomsel('element %s' %cation).bonds)) == 0)[0]]
@@ -167,9 +197,9 @@ def get_num_salt_ions_needed(conc,
         else:
             cations=atomsel_remaining('index %s' %' '.join(map(str,nonbonded_cation_index)))
         num_cations = len(cations)
-        assert abs(get_net_charge(str(cations))-num_cations) < 0.01, 'num cations and net cation charge are not equal'
+        assert abs(get_net_charge(str(cations),molid)-num_cations) < 0.01, 'num cations and net cation charge are not equal'
     try:
-        abs(get_net_charge(str(anions))+num_anions) > 0.01
+        abs(get_net_charge(str(anions),molid)+num_anions) > 0.01
     except:
         # Check for bonded anions
         non_bonded_anion_index=[atomsel('index %d' %x).get('index')[0] for x in nonzero(array(map(len,atomsel_remaining('element %s' %anion).bonds)) == 0)[0]]
@@ -178,12 +208,12 @@ def get_num_salt_ions_needed(conc,
         else:
             anions=atomsel_remaining('index %s' %' '.join(map(str,nonbonded_anion_index)))
         num_anions = len(anions)
-        assert abs(get_net_charge(str(anions))+num_anions) < 0.01, 'num anions and abs anion charge are not equal'
+        assert abs(get_net_charge(str(anions),molid)+num_anions) < 0.01, 'num anions and abs anion charge are not equal'
     num_waters = num_atoms_remaining(water_sel)
     num_for_conc = int(round(__1M_SALT_IONS_PER_WATER * num_waters * conc))
     pos_ions_needed = num_for_conc - num_cations
     neg_ions_needed = num_for_conc - num_anions
-    system_charge = get_system_net_charge()
+    system_charge = get_system_net_charge(molid)
 
     new_system_charge = system_charge + num_anions - num_cations
     to_neutralize = abs(new_system_charge)
@@ -556,6 +586,18 @@ def convert_water_molecule_to_ion(gid, element):
     
 
 def add_salt_ion(element):
+    """
+    Changes a water molecule to a salt ion.
+
+    Args:
+      element (str) : ion to add
+
+    Raises:
+      AssertionException : if element is not supported
+
+    Returns:
+      (int) the index of the water molecule that was replaced
+    """
     assert element in ['Na', 'K', 'Cl'], 'element must be "Na", "K", or "Cl"'
     gid = find_convertible_water_molecule()
     convert_water_molecule_to_ion(gid, element)
@@ -582,11 +624,20 @@ def write_final_system(opts, out_fmt, molid):
 
     # If a converted output format (pdb or dms) desired, write that here
     # and the mae is a temp file that can be deleted
-    if out_fmt=='dms' or out_fmt=='pdb' :
+    if out_fmt=='dms' :
         temp_mol = molecule.load('mae',mae_name)
         atomsel('all',molid=temp_mol).write(out_fmt, opts.output_filename)
         molecule.delete(temp_mol)
         os.remove(mae_name)
+
+    # For pdb, write an AMBER leap compatible pdb, don't trust the VMD
+    # pdb writing routine
+    if out_fmt=='pdb' : 
+        #import dabbleparam
+        temp_mol = molecule.load('mae', mae_name)
+        atomsel('all',molid=temp_mol).write(out_fmt, opts.out_filename)
+        #dabbleparam.write_amber_pdb(opts.output_filename, molid=temp_mol)
+        molecule.delete(temp_mol)
 
     # If we want a parameterized format like amber or charmm, a psf must
     # first be written which does the atom typing, etc
@@ -598,8 +649,8 @@ def write_final_system(opts, out_fmt, molid):
 
     # For amber format files, invoke the parmed chamber routine
     if out_fmt=='amber' :
-        print("\nINFO: Writing AMBER format files. This may take a moment...\n")
-        dabbleparam.write_amber(write_psf_name, write_psf_name, topos, molid) 
+        print("\nINFO: Writing AMBER format files with CHARMM parameters. This may take a moment...\n")
+        dabbleparam.psf_to_amber(write_psf_name, write_psf_name, topos, molid) 
         #os.remove('%s.pdb' % write_psf_name)
         #os.remove('%s.psf' % write_psf_name)
 

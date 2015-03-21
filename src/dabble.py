@@ -338,7 +338,7 @@ class dabble:
             
     
         log('************************************************************\n')
-        log('solute net charge is %+d and system net charge is %+d\n' % (dabblelib.get_net_charge(opts.solute_sel), dabblelib.get_system_net_charge()))
+        log('solute net charge is %+d and system net charge is %+d\n' % (dabblelib.get_net_charge(sel=opts.solute_sel,molid=molecule.get_top()), dabblelib.get_system_net_charge(molecule.get_top())))
         log('************************************************************\n')
         log('\n')
         

@@ -724,7 +724,7 @@ def find_residue_in_rtf(topologies,resname,segname,molid) :
     return True
 
 
-def write_amber(psf_name, prmtop_name, topologies, final_molid) :
+def psf_to_amber(psf_name, prmtop_name, topologies, final_molid) :
     """
     Runs the chamber command of ParmEd to produce AMBER format input files.
 
@@ -791,4 +791,20 @@ def write_amber(psf_name, prmtop_name, topologies, final_molid) :
     return True
 
 
+def write_amber_pdb(output_filename, molid) :
+    """
+    Writes a pdb file of the selected molecule that's compatible with leap
+
+    Args :
+      output_filename (str) : Name of file to save, including .pdb extension
+      molid (int) : VMD index of the molecule to save
+
+    Returns :
+      True if successful
+    """
+#    import charmmlipid2amber.py
+
+#    oh hi write pdb here pls
+#    TODO do atom names need to be changed? - no not from charmm names
+#    Looks like I can save pdb/psf and then call charmmlipid2amber.py on the pdb?
 
