@@ -287,7 +287,7 @@ def write_protein_blocks(file,tmp_dir,seg,molid,topologies):
     # Hydrogens can be somewhat residue-dependent, but only check hydrogens on known amino acid
     # residues so that the names on nonstandard amino acids are never changed
     acids = 'ACE ALA ARG ASN ASP CYS GLN GLU GLY HIS HSP HSE HSD ILE LEU LYS MET NMA PHE PRO SER THR TRP TYR VAL'
-    h_names = {'H'  : 'HN', 'H2' :'HN',
+    h_names = {'H'  : 'HN', 'H2' :'HN', 'H1' : 'HN',
                'HA2':'HA1',
                'HA3':'HA2', 'HG2':'HG1',
                'HG3':'HG2'}
