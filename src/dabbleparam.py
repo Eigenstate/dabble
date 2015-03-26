@@ -785,7 +785,7 @@ def psf_to_amber(psf_name, prmtop_name, topologies, final_molid) :
     print action
     action.execute()
     print("\nINFO: Ran chamber")
-    write = parmout(action.parm, "%s.prmtop %s.inpcrd"%(prmtop_name,prmtop_name))
+    write = parmout(action.parm, "%s.prmtop %s.inpcrd vmd"%(prmtop_name,prmtop_name))
     write.execute()
     print("\nINFO: Wrote output prmtop and inpcrd")
     return True
