@@ -72,7 +72,7 @@ class dabble:
 
     def __init__(self, args):
         # Redirect stdout TODO: necessary?
-        self.out = sys.stderr
+        self.out = sys.stdout
         self.dabble_main(args[1:])
     
 
