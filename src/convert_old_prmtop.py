@@ -1,4 +1,4 @@
-#!/usr/bin/env python
+#!/share/PI/rondror/software/miniconda/bin/python
 
 # Converts a CHARMM format prmtop to a vmd compatible one
 import sys
