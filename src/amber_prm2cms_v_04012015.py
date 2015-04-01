@@ -397,6 +397,11 @@ def convertCrd2Mae(ifname, ofname):
     format = re.compile(r'(\d+)?[edf](\d+)\.(\d+)%', re.I)
     coor =  [ s[i:i+12].strip() for s in lines[2:-1] for i in range(0, len(s), 12) ]
     coor = filter(None, coor)
+    # Sanity check
+    if len(coor)/6 != natom :
+        print("ERROR: Read coordinates and velocities for %f atoms, but have %d atoms" % (len(coor)/6.,natom))
+        print("       Check the format of your restart file. It should be 6F12.7 on each line")
+        quit(1)
     row = len(coor)/3
     coor = numpy.array(coor)
     coor = coor.reshape(row, 3)
