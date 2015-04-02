@@ -553,6 +553,21 @@ def write_ligand_blocks(file, tmp_dir, resid, topologies, molid=0) :
              newname = raw_input("New residue name or CTRL+D to quit > ")
              atomsel('resid %s and resname %s'% (seg,res)).set('resname','%s'% newname)
 
+    temp = tempfile.mkstemp(suffix='.pdb', prefix='psf_ligand_', dir=tmp_dir)[1]
+    string= '''
+     set ligfile %s
+   segment %s {
+      pdb $ligfile 
+      first none
+      last none
+   }
+   coordpdb $ligfile %s
+    ''' % (temp, A.get('resname')[0], A.get('resname')[0])
+    A.write('pdb',temp)
+    A.set('user',0.0)
+    file.write(string)
+
+
 # Writes a pdb in order of residues, renumbering the atoms
 # accordingly, since psfgen wants each residue sequentially
 def write_ordered_pdb(filename, sel, molid=0) :
