@@ -112,7 +112,7 @@ def parsePrmtop(ifname):
             continue
         else:
             if not (flag_name and flag_size and flag_length):
-                print 'cannot recognize flag'
+                print 'cannot recognize flag.'
             for i in range(flag_size):
                 start = i*flag_length
                 end = start + flag_length
@@ -594,7 +594,7 @@ if __name__ == '__main__':
     s1 = convertCrd2Mae(opts.prmcrd_fname, opts.mae_fname)
     print("Converting top")
     s2 = convertTop2Ffio(opts.mae_fname)
-    print("Building constraings")
+    print("Building constraints")
     s3 = buildConstraints()
     
     f = open(opts.mae_fname, 'w')
