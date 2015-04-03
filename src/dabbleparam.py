@@ -732,6 +732,7 @@ def find_residue_in_rtf(topologies,resname,segname,molid) :
             atomsel('segname %s and resname %s and name %s'% (segname,resname,r)).set('name',newname)
             pdb_atoms = set(atomsel('segname %s and resname %s'% (segname,resname)).get('name'))
             topo_only = topo_atoms-pdb_atoms
+            resname = newname
 
         # Recurse to check that everything is assigned correctly
         find_residue_in_rtf(topologies,resname,segname,molid)
