@@ -309,16 +309,13 @@ def write_protein_blocks(file,tmp_dir,seg,molid,topologies):
             % acids).set('name','HE2')
 
     # Final chance to fix unrecognized atom names for non-protein residues
-    others = set( atomsel('not resname %s'% acids).get('resname') )
-    while len(others) :
-        res = others.pop()
-        # Check if this residue is not found, and offer to rename it
-        if not find_residue_in_rtf(topologies=topologies,resname=res,segname=seg,molid=molid) :
+    others = set( atomsel('not resname %s'% acids).get('resid') )
+    for resid in others :
+        while not find_residue_in_rtf(topologies=topologies, resid=resid, molid=molid) :
             print("\nERROR: Residue name %s wasn't found in any input topology.\n"
-                    "       Would you like to rename it?\n" % res)
+                  "       Would you like to rename it?\n" % res)
             newname = raw_input("New residue name or CTRL+D to quit > ")
-            atomsel('resname %s'% res).set('resname','%s'% newname)
-            others.add(newname) # Check that new name is present
+            atomsel('resid %s and segname %s'% (resid, seg)).set('resname',newname)
 
     # Now protein
     filename = tmp_dir + '/psf_protein_%s.pdb'% seg
@@ -514,63 +511,76 @@ def write_ion_blocks(file,tmp_dir,molid=0) :
 
 
 def write_ligand_blocks(file, tmp_dir, resid, topologies, molid=0) :
-    A = atomsel('user 1.0 and resid %d' % resid)
+    """
+    Matches ligands to available topology file, renames atoms, and then
+    writes temporary files for the ligands
 
-    # Adjust residue name if known ligand
-    warning = True
+    Args:
+      file (file handle) : Handle for the tcl command file that's being written
+      tmp_dir (str) : Directory where temporary pdb files are stored this run
+      resid (int) : Resid of the ligand that will be written
+      topologies (list of str) : CHARMM topology files to search for matching residue names
+      molid (int) : VMD molecule ID 
+
+    Returns:
+      True if successful
+    """
+
+    A = atomsel('user 1.0 and resid %d' % resid)
+    # Get a residue name charmm knows about, either through
+    # manual translation or prompting the user
     if 'CLR' in A.get('resname') :
-        print("INFO: Found a cholesterol!")
-        # Reassign names
-        clol_names = {'H11' : 'H1A',  'H12' : 'H1B',
-                      'H21' : 'H2A',  'H22' : 'H2B',
-                      'O1'  : 'O3',   'HO1' : 'H3\'', 
-                      'H41 ': 'H4A',  'H42' : 'H4B',
-                      'H71' : 'H7A',  'H72' : 'H7B',
-                      'H111': 'H11A', 'H112': 'H11B',
-                      'H121': 'H12A', 'H122': 'H12B',
-                      'H151': 'H15A', 'H152': 'H15B',
-                      'H161': 'H16A', 'H162': 'H16B',
-                      'H181': 'H18A', 'H182': 'H18B', 'H183': 'H18C',
-                      'H191': 'H19A', 'H192': 'H19B', 'H193': 'H19C',
-                      'H211': 'H21A', 'H212': 'H21B', 'H213': 'H21C',
-                      'H221': 'H22A', 'H222': 'H22B',
-                      'H231': 'H23A', 'H232': 'H23B',
-                      'H241': 'H24A', 'H242': 'H24B',
-                      'H261': 'H26A', 'H262': 'H26B', 'H263': 'H26C',
-                      'H271': 'H27A', 'H272': 'H27B', 'H273': 'H27C'}
-        for n in clol_names :
-            atomsel('user 1.0 and resid %d and name %s' % (resid,n)).set('name',clol_names[n])
-        A.set('resname','CLOL') # cgenff naming convention
-    #elif 'BGC' in A.get('resname') :
-    #    print("INFO: Found a beta-glucose!")
-    #    A.set('resname','BGLC')
+         A.set('resname','CLOL') #cgenff naming convention
+         res = 'CLOL'
+         print("INFO: Found a cholesterol!\n")
+    elif 'BGC' in A.get('resname') :
+         A.set('resname', 'BGLC')
+         res = 'BGLC'
+         print("INFO: Found a beta-glucose!\n")
     else : # Check it's recognized, if not give the user a chance to rename
          res = A.get('resname')[0]
          seg = A.get('segname')[0]
-         while not find_residue_in_rtf(topologies=topologies,resname=res,segname=seg,molid=molid) :
+         while not find_residue_in_rtf(topologies=topologies,resid=resid,molid=molid) :
              print("\nERROR: Residue name %s wasn't found in any input topology.\n"
                      "       Would you like to rename it?\n" % res)
              newname = raw_input("New residue name or CTRL+D to quit > ")
-             atomsel('resid %s and resname %s'% (seg,res)).set('resname','%s'% newname)
+             A.set('resname', newname)
+             res = newname
 
+    # Write temporary file containg the ligand and update tcl commands
     temp = tempfile.mkstemp(suffix='.pdb', prefix='psf_ligand_', dir=tmp_dir)[1]
     string= '''
-     set ligfile %s
+   set ligfile %s
    segment %s {
-      pdb $ligfile 
-      first none
-      last none
+     pdb $ligfile 
+     first none
+     last none
    }
    coordpdb $ligfile %s
     ''' % (temp, A.get('resname')[0], A.get('resname')[0])
     A.write('pdb',temp)
     A.set('user',0.0)
     file.write(string)
+    return True
 
 
 # Writes a pdb in order of residues, renumbering the atoms
 # accordingly, since psfgen wants each residue sequentially
 def write_ordered_pdb(filename, sel, molid=0) :
+    """
+    Writes a pdb file in order of residues, renumbering the atoms
+    accordingly, since psfgen wants each residue sequentially while
+    VMD will write them in the same order as input, which from Maestro-created
+    files has some guessed atoms at the end.
+
+    Args:
+      filename (str) : Name of the pdb file to write
+      sel (str) : VMD atomsel string for atoms that will be written
+      molid (int) : VMD molecule ID to write from
+
+    Returns:
+      Nothing
+    """
     f = open(filename, 'w') 
     resids = set( atomsel(sel).get('residue') ) # Much much faster then get resids
     idx = 1
@@ -678,9 +688,28 @@ def get_atoms_from_rtf(text,resname) :
 # Pulls out the atoms involved and checks that they are all present
 # in the input coordinates. Allows name correction if not.
 # Returns False if the residue name cannot be found
-def find_residue_in_rtf(topologies,resname,segname,molid) :
-    names = ()
-    found = False
+def find_residue_in_rtf(topologies,resid,molid) :
+    """
+    Scans the input topology files to find a name match for the given residue ID, 
+    then pulls out the atoms involved and checks that they are all present in the
+    input coordinates, prompting the user to correct the names of atoms that could not
+    be matched.
+
+    Residue ID is used because there can be multiple copies of a residue with the 
+    same name, but only one has missing or extra atoms.
+
+    Args:
+      topologies (list of str) : Filenames of topologies to search for residues
+      resid (int) : Residue ID to search for
+      molid (int) : VMD molecule ID
+
+    Returns:
+      True if all matching was successful
+      False if the residue name cannot be found
+    """
+
+    resname = atomsel('resid %s and user 1.0' % resid).get('resname')[0]
+    print("Finding residue name %s" % resname)
     for t in topologies :
         topfile = open(t, 'r')
         topo_atoms = get_atoms_from_rtf(text=topfile.readlines(),resname=resname)
@@ -689,8 +718,11 @@ def find_residue_in_rtf(topologies,resname,segname,molid) :
     if not len(topo_atoms) : return False
     print("INFO: Successfully found residue %s in input topologies"% resname)
 
+    # Rename atoms if it's a hardcoded residue
+    rename_atoms_manual(resid=resid, molid=molid)
+
     # Match up atoms with python sets
-    pdb_atoms = set(atomsel('segname %s and resname %s'% (segname,resname)).get('name'))
+    pdb_atoms = set(atomsel('resid %s and user 1.0' % resid).get('name'))
     pdb_only  = pdb_atoms - topo_atoms
     topo_only = topo_atoms - pdb_atoms
 
@@ -712,6 +744,7 @@ def find_residue_in_rtf(topologies,resname,segname,molid) :
                 "       Please check your input." % (resname,len(topo_atoms)-len(pdb_atoms)))
         print(  "       [ %s ]\n" % ' '.join(map(str,topo_only)) )
         print(  "       Cannot continue.\n")
+        print("Found is %s\n" % pdb_atoms)
         quit(1);
 
     # Offer to rename atoms that couldn't be matched to the topology
@@ -729,13 +762,13 @@ def find_residue_in_rtf(topologies,resname,segname,molid) :
             while newname not in topo_only:
                 print("'%s' is not an available name in the topology. Please try again.\n" % newname)
                 newname = raw_input("  %s  -> "% r)
-            atomsel('segname %s and resname %s and name %s'% (segname,resname,r)).set('name',newname)
-            pdb_atoms = set(atomsel('segname %s and resname %s'% (segname,resname)).get('name'))
+            atomsel('resid %s and user 1.0 and name %s' % (resid,r)).set('name',newname)
+            pdb_atoms = set(atomsel('resid %s and user 1.0' % resid).get('name'))
             topo_only = topo_atoms-pdb_atoms
             resname = newname
 
         # Recurse to check that everything is assigned correctly
-        find_residue_in_rtf(topologies,resname,segname,molid)
+        find_residue_in_rtf(topologies,resid,molid)
     print("INFO: Matched up all atom names for residue %s\n"% resname)
     return True
 
@@ -801,7 +834,7 @@ def psf_to_amber(psf_name, prmtop_name, topologies, final_molid) :
     print action
     action.execute()
     print("\nINFO: Ran chamber")
-    write = parmout(action.parm, "%s.prmtop %s.inpcrd vmd"%(prmtop_name,prmtop_name))
+    write = parmout(action.parm, "%s.prmtop %s.inpcrd"%(prmtop_name,prmtop_name))
     write.execute()
     print("\nINFO: Wrote output prmtop and inpcrd")
     return True
@@ -823,4 +856,44 @@ def write_amber_pdb(output_filename, molid) :
 #    oh hi write pdb here pls
 #    TODO do atom names need to be changed? - no not from charmm names
 #    Looks like I can save pdb/psf and then call charmmlipid2amber.py on the pdb?
+
+
+def rename_atoms_manual(resid, molid) :
+    """
+    Reassigns atom names for a few known residues that are common
+    enough to be hardcoded. Currently this is just cholesterol.
+
+    Args:
+      resid (int) : VMD residue ID to check
+      molid (int) : VMD molecule to look at
+
+    Returns:
+      True if atoms were renamed
+    """
+    # Reassign atom names for known residues
+    clol_names = {'H11' : 'H1A',  'H12' : 'H1B',
+                  'H21' : 'H2A',  'H22' : 'H2B',
+                  'O1'  : 'O3',   'HO1' : 'H3\'', 
+                  'H41 ': 'H4A',  'H42' : 'H4B',
+                  'H71' : 'H7A',  'H72' : 'H7B',
+                  'H111': 'H11A', 'H112': 'H11B',
+                  'H121': 'H12A', 'H122': 'H12B',
+                  'H151': 'H15A', 'H152': 'H15B',
+                  'H161': 'H16A', 'H162': 'H16B',
+                  'H181': 'H18A', 'H182': 'H18B', 'H183': 'H18C',
+                  'H191': 'H19A', 'H192': 'H19B', 'H193': 'H19C',
+                  'H211': 'H21A', 'H212': 'H21B', 'H213': 'H21C',
+                  'H221': 'H22A', 'H222': 'H22B',
+                  'H231': 'H23A', 'H232': 'H23B',
+                  'H241': 'H24A', 'H242': 'H24B',
+                  'H261': 'H26A', 'H262': 'H26B', 'H263': 'H26C',
+                  'H271': 'H27A', 'H272': 'H27B', 'H273': 'H27C'}
+    if 'CLOL' in atomsel('resid %s' % resid, molid=molid).get('resname') :
+        print("RENAMING CLOL\n")
+        for n in clol_names :
+            atomsel('user 1.0 and resid %d and name %s' % (resid,n)).set('name',clol_names[n])
+        return True
+    return False
+
+
 
