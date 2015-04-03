@@ -15,3 +15,7 @@ new_prmtop = sys.argv[2];
 parm = AmberParm(old_prmtop)
 write = parmout(parm, "%s /dev/null vmd" % new_prmtop)
 write.execute()
+
+print("\nWARNING: This prmtop is for VISUALIZATION ONLY.\n")
+print(  "         Don't simulate with it! Its parameters may no longer be parsed correctly!\n")
+
