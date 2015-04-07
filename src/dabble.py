@@ -71,7 +71,6 @@ class dabble:
      
 
     def __init__(self, args):
-        # Redirect stdout TODO: necessary?
         self.out = sys.stdout
         self.dabble_main(args[1:])
     
@@ -95,6 +94,8 @@ class dabble:
         parser.add_argument('-o', '--output', dest='output_filename',
                             type=self.check_out_type, required=True,
                             help='Name of output file (including pdb extension)')
+        parser.add_argument('-O', '--overwrite', dest='overwrite', action='store_true',
+                            help='overwrite output files, if found')
         parser.add_argument('-M', '--membrane-system', dest='membrane_system',
                           type=str,
                           default='%s/lipid_membranes/popc/equilibrated_POPC_membrane_with_TIP3P.mae' % os.environ['DABBLEDIR'],
@@ -179,6 +180,7 @@ class dabble:
         log = self.make_logger(opts.quiet)
         
         log('\n\n')
+
     
         log('launching VMD...')
         
@@ -186,6 +188,10 @@ class dabble:
         import dabblelib
         
         log('done.\n\n')
+
+        log('checking for existing output files...\n')
+        # Check files won't be overwritten with current settings
+        dabblelib.check_write_ok(opts.output_filename, self.out_fmt, opts.overwrite)
     
         log('analyzing solute...\n')
         solute_id = dabblelib.load_solute(opts.solute_filename)
@@ -358,7 +364,7 @@ class dabble:
         
         log('writing system with %d atoms (containing %d lipid molecules and %d water molecules) to "%s"...\n' % (dabblelib.num_atoms_remaining(), dabblelib.num_lipids_remaining(opts.lipid_sel), dabblelib.num_waters_remaining(), opts.output_filename))
         
-        final_filename = dabblelib.write_final_system(opts, self.out_fmt, molid=molecule.get_top())
+        final_filename = dabblelib.write_final_system(opts, self.out_fmt, molid=molecule.get_top(), overwrite=opts.overwrite)
 
         log('done.\n\n')
     

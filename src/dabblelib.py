@@ -651,8 +651,52 @@ def write_final_system(opts, out_fmt, molid):
     if out_fmt=='amber' :
         print("\nINFO: Writing AMBER format files with CHARMM parameters. This may take a moment...\n")
         dabbleparam.psf_to_amber(write_psf_name, write_psf_name, topos, molid) 
-        #os.remove('%s.pdb' % write_psf_name)
-        #os.remove('%s.psf' % write_psf_name)
 
     return opts.output_filename
 
+
+def check_write_ok(filename, out_fmt, overwrite=False):
+    """
+    Checks if the output files for the requested format exists,
+    and prints out an error message if the current options
+    don't allow overwriting them.
+
+    Args:
+      filename (str) : Output filename requested
+      out_fmt (str) : Output format requested. All intermediate
+      files involved in writing to this format will be checked for
+      existence.
+      overwrite (bool) : True if overwriting is allowed
+
+    Returns:
+      True if it okay to overwrite
+      Quits the program otherwise
+    """
+    if overwrite is True :
+        return True
+    
+    # Generate file suffixes to search for
+    prefix = '.'.join(filename.split('.')[:-1])
+    suffixes = ['mae']
+    if out_fmt=='dms':
+        suffixes.append('dms')
+    elif out_fmt=='pdb':
+        suffixes.append('pdb')
+    elif out_fmt=='charmm':
+        suffixes.extend(['psf','pdb'])
+    elif out_fmt=='amber':
+        suffixes.extend(['psf','pdb','prmtop','inpcrd'])
+            
+    exists = []
+    for s in suffixes:
+        if os.path.isfile('%s.%s'%(prefix,s)):
+            exists.append('%s.%s'%(prefix,s))
+
+    if len(exists):
+        print("\nERROR: The following files exist and would be overwritten:\n")
+        print(  "       %s\n" % ' '.join(exists))
+        print(  "       Won't overwrite, exiting.")
+        print(  "       Run with -O to overwrite files next time.")
+        quit(1)
+
+    return False
