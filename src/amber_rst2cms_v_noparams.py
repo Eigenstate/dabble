@@ -475,13 +475,10 @@ def convertCrd2Mae(ifname, ofname):
     st.property['r_chorus_box_cy'] = 0.0
     st.property['r_chorus_box_cz'] = cz
 
-    st.property['s_ffio_ct_type'] = 'full_system'
+    st.property['s_ffio_ct_type'] = 'solute'
     print("Writing system")
     st.write(ofname)
-
-    #st.property['s_ffio_ct_type'] = 'solute'
     amber_st = st
-    #st.append(ofname)
     return ''.join(open(ofname).readlines())
 
 def buildConstraints():
