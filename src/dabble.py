@@ -364,7 +364,7 @@ class dabble:
         
         log('writing system with %d atoms (containing %d lipid molecules and %d water molecules) to "%s"...\n' % (dabblelib.num_atoms_remaining(), dabblelib.num_lipids_remaining(opts.lipid_sel), dabblelib.num_waters_remaining(), opts.output_filename))
         
-        final_filename = dabblelib.write_final_system(opts, self.out_fmt, molid=molecule.get_top(), overwrite=opts.overwrite)
+        final_filename = dabblelib.write_final_system(opts, self.out_fmt, molid=molecule.get_top())
 
         log('done.\n\n')
     
