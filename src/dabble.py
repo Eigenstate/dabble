@@ -116,10 +116,15 @@ class dabble:
                           help='specify cation "Na" or "K"                             '
                                '[default: "Na"]')
    # Edit: defaults for z_buf and xy_buf are set in main code, so that we can tell if a stupid user specifies both a buffer and absolute dimensions.
-        parser.add_argument('-z', '--z-buffer-dist', dest='z_buf', default=20.0,
-                          type=float,
-                          help='buffer distance in the membrane normal direction.      '
-                               '[default 20.0 angstroms]')
+        z_buffer_opts = parser.add_mutually_exclusive_group()
+        z_buffer_opts.add_argument('-z', '--z-buffer-dist', dest='z_buf', default=20.0,
+                                   type=float,
+                                   help='buffer distance in the membrane normal direction.      '
+                                   '[default 20.0 angstroms]')
+        z_buffer_opts.add_argument('-w', '--water-buffer', dest='wat_buffer', default=None,
+                                   type=float,
+                                   help='water padding from each side of protein [default 10.0 A]')
+
         parser.add_argument('-m', '--membrane-buffer-dist', dest='xy_buf', default=35.0,
                           type=float,
                           help='buffer distance through the membrane.                  '
@@ -281,7 +286,10 @@ class dabble:
         log('removing molecules outside of the periodic cell...\n')
         
         # cut away atoms in the z direction
-        dabblelib.remove_z_residues(z_size, opts.solute_sel)
+        if opts.wat_buffer is not None:
+            dabblelib.trim_water(opts.wat_buffer, opts.solute_sel)
+        else:
+            dabblelib.remove_z_residues(z_size, opts.solute_sel)
         
         # cut away atoms outside of the cell
         dabblelib.remove_xy_residues(xy_size, opts.solute_sel, opts.lipid_sel)

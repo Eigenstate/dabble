@@ -493,6 +493,10 @@ def remove_residues(sel):
 #    print 'DEBUG: remove_residues(%s) (%d atoms)' % (sel, len(atomsel(sel)))
     return remove_atoms('same residue as (%s)' % sel) # residue is guaranteed unique across insertions
 
+def trim_water(wat_buffer, solute_sel):
+    zcoord = atomsel(solute_sel).get('z')
+    remove_residues('(not (%s)) and noh and z > %f' % (solute_sel, max(zcoord) + wat_buffer))
+    remove_residues('(not (%s)) and noh and z < %f' % (solute_sel, min(zcoord) - wat_buffer))
 
 def remove_z_residues(z_size, solute_sel):
     return remove_residues('(not (%s)) and noh and abs(z) > %f' % (solute_sel, z_size / 2.0))
