@@ -170,11 +170,11 @@ class dabble:
                           help='atomsel for OPM backbone atoms to align to             '
                                '[default: protein and backbone]')
         parser.add_argument('--move-solute', dest='z_move',
-                          default=0, type=float,
+                          type=float,
                           help='value added to solute z coordinates                    '
                                '[default: 0]')
         parser.add_argument('--membrane-rotation', dest='z_rotation',
-                          default=0, type=float,
+                          type=float,
                           help='Membrane rotation relative to Z axis of protein, in    '
                                'degrees. Use the number from OPM if you have it.       '
                                '[default: 0]')
@@ -267,7 +267,7 @@ class dabble:
         log('done. membrane patch tiled %d x %d x %d times.\n\n' % (times_x, times_y, times_z))
          
         log('centering the membrane system on the origin...\n')
-        tiled_membrane_id= dabblelib.center_system(molid=tiled_membrane_id)
+        tiled_membrane_id= dabblelib.center_system(molid=tiled_membrane_id, center_z=True)
         log('done.\n\n')
 
         log('combining solute and tiled membrane patch...\n')

@@ -34,7 +34,7 @@ random.seed(2015)
 #             STRUCTURE ANALYSIS FUNCTIONS                 #
 ############################################################
 
-def orient_solute(molid, z_move=0, z_rotation=0, opm_pdb=None, opm_align='protein and backbone'):
+def orient_solute(molid, z_move, z_rotation, opm_pdb=None, opm_align='protein and backbone'):
 
     # Check that OPM and alignment aren't both specified
     if opm_pdb is not None and (z_move is not 0 or z_rotation is not 0) :
@@ -46,8 +46,17 @@ def orient_solute(molid, z_move=0, z_rotation=0, opm_pdb=None, opm_align='protei
         T=atomsel('protein and backbone', molid=molid).fit(atomsel(opm_align,molid=opm))
         atomsel('all', molid=molid).move(T)
         molecule.delete(opm)
-    elif z_move is not 0 or z_rotation is not 0 :
-        import trans, math
+        return molid
+
+    import trans, math
+    if z_move is not None :
+        print("Moving z!")
+        atomsel('all',molid=molid).moveby((0,0,z_move))
+        if z_rotation is None:
+          return molid
+
+    if z_rotation is not None:
+        print("Rotating!")
         trans.resetview(molid) # View affect rotation matrix, now it's I
         # This is negative because we want membrane flat along the z-axis,
         # and OPM lists the membrane rotation relative to the protein
@@ -58,9 +67,9 @@ def orient_solute(molid, z_move=0, z_rotation=0, opm_pdb=None, opm_align='protei
                          0        ,         0,          1, 0,
                          0        ,         0,          0, 1 ]
         trans.set_rotation(molid, rotmat)
-        atomsel('all',molid=molid).moveby((0,0,z_move))
-    else :
-        molid=center_system(molid=molid)
+        return molid
+
+    molid=center_system(molid=molid, center_z=False)
 
     return molid
 
@@ -452,9 +461,14 @@ def set_cell_to_square_prism(xy_size, z_size):
 
 # Called on the entire lipid system to move it, then saves moved positions
 # and reloads molecule in case the file needs to be concatenated
-def center_system(molid, new_z_center=0):
+def center_system(molid, center_z=False):
     x, y, z = atomsel('all', molid=molid).center()
-    atomsel('all', molid=molid).moveby((-x, -y, new_z_center - z))
+
+    # Move system so center is at origin or just xy plane?
+    if center_z is True:
+        atomsel('all', molid=molid).moveby((-x, -y, -z))
+    else:
+        atomsel('all', molid=molid).moveby((-x, -y, 0))
 
     # Save and reload the solute to record atom positions
     temp_mae = tempfile.mkstemp(suffix='.mae', prefix='dabble_centered')[1]
