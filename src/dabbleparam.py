@@ -244,6 +244,9 @@ def write_protein_blocks(file,tmp_dir,seg,molid,topologies):
                   'HG12':'HG11', 'HG13':'HG12' }
     for n in iso_names :
         atomsel('resname ILE and name %s' %n).set('name',iso_names[n])
+
+    # Lysine last atom
+    atomsel('resname LYS and name HZ').set('name','HZ3')
                   
     # Glutamine check all residues for protonation
     # Can't use dictionary for names since two of them must be swapped
