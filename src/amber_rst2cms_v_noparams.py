@@ -428,7 +428,7 @@ def convertCrd2Mae(ifname, ofname):
         st.atom[i+1].x = float(coor[i][0])
         st.atom[i+1].y = float(coor[i][1])
         st.atom[i+1].z = float(coor[i][2])
-	st.atom[i+1].property['r_ffio_x_vel'] = float(coor[natom+i][0])*20.4550
+        st.atom[i+1].property['r_ffio_x_vel'] = float(coor[natom+i][0])*20.4550
         st.atom[i+1].property['r_ffio_y_vel'] = float(coor[natom+i][1])*20.4550
         st.atom[i+1].property['r_ffio_z_vel'] = float(coor[natom+i][2])*20.4550
 
@@ -595,7 +595,7 @@ if __name__ == '__main__':
     
     f = open(opts.mae_fname, 'w')
     f.write(s1[:-4])
-    f.write('  }\n}\n')
+    f.write('  }\n')
     f.close()
 
     
