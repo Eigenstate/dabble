@@ -197,7 +197,7 @@ class dabble:
         log('checking for existing output files...\n')
         # Check files won't be overwritten with current settings
         dabblelib.check_write_ok(opts.output_filename, self.out_fmt, opts.overwrite)
-    
+
         log('analyzing solute...\n')
         solute_id = dabblelib.load_solute(opts.solute_filename)
         opts.solute_sel = dabblelib.get_solute_sel(molid=solute_id)
@@ -296,18 +296,21 @@ class dabble:
         dabblelib.set_cell_to_square_prism(xy_size, z_size)
         
         log('done.\n\n')
-    
-        inner, outer = dabblelib.lipid_composition(opts.lipid_sel)
-        log('Initial membrane composition:\ninner leaflet:')
-        for r, n in sorted(inner.items()):
-            log('  %d %s' % (n, r))
-        log('\nouter leaflet:')
-        for r, n in sorted(outer.items()):
-            log('  %d %s' % (n, r))
-        log('\n\n')
-        
-        
-        log('removing water and lipids that clash with the protein...')
+
+        if opts.lipid_sel is '': 
+            log('No membrane used.\n')
+        else:
+            inner, outer = dabblelib.lipid_composition(opts.lipid_sel)
+            log('Initial membrane composition:\ninner leaflet:')
+            for r, n in sorted(inner.items()):
+                log('  %d %s' % (n, r))
+            log('\nouter leaflet:')
+            for r, n in sorted(outer.items()):
+                log('  %d %s' % (n, r))
+            log('\n\n')
+          
+         
+        log('removing water and/or lipids that clash with the protein...')
         
         if opts.lipid_friendly_sel:
            dabblelib.remove_overlapping_residues(opts.solute_sel,
@@ -320,36 +323,37 @@ class dabble:
                                                 lipid_dist=opts.lipid_dist)
         
         log('done.\n\n')
-        
-        log('removing lipid molecules that could possibly stick through aromatic rings...')
-        
-        dangerous_lipids_removed = dabblelib.remove_lipids_near_rings(opts.solute_sel, opts.lipid_sel)
-        dangerous_lipids2lipids_removed=0
-        lipid_stuck_on_protein=0
-    
-        if opts.clash_lipids:   
-           edge_dim=xy_size*0.5*0.9
-           pointy_lipid_type='((' + opts.lipid_sel  + ') and not (' + opts.clash_lipids + ')) and (abs(x)> %f or  abs(y) > %f)' % (edge_dim, edge_dim)
-           ring_lipid_type=opts.clash_lipids + ' and (abs(x)> %f or  abs(y) > %f)'  % (edge_dim, edge_dim)
-           dangerous_lipids2lipids_removed = dabblelib.remove_lipid_boundary_clash(pointy_lipid_type,ring_lipid_type)
-           lipid_stuck_on_protein = dabblelib.remove_lipids_near_rings(opts.solute_sel, opts.clash_lipids, ring_sel='noh and protein and not backbone',dist=1.25)
-        
-        lipids_removed=dangerous_lipids_removed+dangerous_lipids2lipids_removed+lipid_stuck_on_protein
-        
-        log('done. removed %d atoms.\n' % lipids_removed)
-        log('      %d atoms from lipids going through HIS,PHE,TYR,TRP. \n' % dangerous_lipids_removed)
-        log('      %d atoms from one lipid going through another. \n' % dangerous_lipids2lipids_removed)
-        log('      %d atoms from lipid getting stuck by a sidechain. \n' % lipid_stuck_on_protein)
-        
-        inner, outer = dabblelib.lipid_composition(opts.lipid_sel)
-        log('Final membrane composition:\ninner leaflet:')
-        for r, n in sorted(inner.items()):
-            log('  %d %s' % (n, r))
-        log('\nouter leaflet:')
-        for r, n in sorted(outer.items()):
-            log('  %d %s' % (n, r))
-        log('\n\n')
+       
+        if len(opts.lipid_sel):
+            log('checking for lipid molecules that could possibly stick through aromatic rings...')
             
+            dangerous_lipids_removed = dabblelib.remove_lipids_near_rings(opts.solute_sel, opts.lipid_sel)
+            dangerous_lipids2lipids_removed=0
+            lipid_stuck_on_protein=0
+        
+            if opts.clash_lipids:
+               edge_dim=xy_size*0.5*0.9
+               pointy_lipid_type='((' + opts.lipid_sel  + ') and not (' + opts.clash_lipids + ')) and (abs(x)> %f or  abs(y) > %f)' % (edge_dim, edge_dim)
+               ring_lipid_type=opts.clash_lipids + ' and (abs(x)> %f or  abs(y) > %f)'  % (edge_dim, edge_dim)
+               dangerous_lipids2lipids_removed = dabblelib.remove_lipid_boundary_clash(pointy_lipid_type,ring_lipid_type)
+               lipid_stuck_on_protein = dabblelib.remove_lipids_near_rings(opts.solute_sel, opts.clash_lipids, ring_sel='noh and protein and not backbone',dist=1.25)
+           
+            lipids_removed=dangerous_lipids_removed+dangerous_lipids2lipids_removed+lipid_stuck_on_protein
+            
+            log('done. removed %d atoms.\n' % lipids_removed)
+            log('      %d atoms from lipids going through HIS,PHE,TYR,TRP. \n' % dangerous_lipids_removed)
+            log('      %d atoms from one lipid going through another. \n' % dangerous_lipids2lipids_removed)
+            log('      %d atoms from lipid getting stuck by a sidechain. \n' % lipid_stuck_on_protein)
+            
+            inner, outer = dabblelib.lipid_composition(opts.lipid_sel)
+            log('Final membrane composition:\ninner leaflet:')
+            for r, n in sorted(inner.items()):
+                log('  %d %s' % (n, r))
+            log('\nouter leaflet:')
+            for r, n in sorted(outer.items()):
+                log('  %d %s' % (n, r))
+            log('\n\n')
+              
     
         log('************************************************************\n')
         log('solute net charge is %+d and system net charge is %+d\n' % (dabblelib.get_net_charge(sel=opts.solute_sel,molid=molecule.get_top()), dabblelib.get_system_net_charge(molecule.get_top())))

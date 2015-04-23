@@ -254,7 +254,9 @@ def get_num_salt_ions_needed(conc,
             anion_conc)
 
 
-def lipid_composition(lipid_sel):
+def lipid_composition(lipid_sel=None):
+    if lipid_sel is None: return
+
     def leaflet(leaflet_sel):
         sel = atomsel_remaining('not element H C and (%s) and (%s)' % (lipid_sel, leaflet_sel))
         resnames = set(sel.get('resname'))
@@ -493,6 +495,8 @@ def num_waters_remaining(water_sel = 'water and element O'):
     return len(atomsel_remaining(water_sel))
 
 def num_lipids_remaining(lipid_sel):
+    if not len(lipid_sel):
+        return 0
     from numpy import unique
     return unique(atomsel_remaining(lipid_sel).get('fragment')).size
 
@@ -518,15 +522,19 @@ def remove_z_residues(z_size, solute_sel):
 def remove_xy_residues(xy_size, solute_sel, lipid_sel):
     half_xy_size = xy_size / 2.0
     box_sel_str = 'abs(x) > %f or abs(y) > %f' % (half_xy_size, half_xy_size)
-    suspicious_lipid_residues=list(set(atomsel('(%s) and (%s)' % (lipid_sel, box_sel_str)).get('residue')))
-    bad_lipids=list()
-    for i in suspicious_lipid_residues:
-       lipid_center=atomsel('noh and residue ' + str(i)).center()
-       if abs(lipid_center[0]) > half_xy_size or abs(lipid_center[1]) > half_xy_size:
-          bad_lipids.append(i)
-    lipid_headgroup_sel='residue ' + ' '.join(map(str,bad_lipids))
-    removal_sel_str = '(%s) or not (%s)' % (lipid_headgroup_sel, lipid_sel)
-    total = remove_residues('noh and (%s) and (%s) and not (%s)' % (box_sel_str, removal_sel_str, solute_sel)) 
+
+    if len(lipid_sel) :
+        suspicious_lipid_residues=list(set(atomsel('(%s) and (%s)' % (lipid_sel, box_sel_str)).get('residue')))
+        bad_lipids=list()
+        for i in suspicious_lipid_residues:
+           lipid_center=atomsel('noh and residue ' + str(i)).center()
+           if abs(lipid_center[0]) > half_xy_size or abs(lipid_center[1]) > half_xy_size:
+              bad_lipids.append(i)
+        lipid_headgroup_sel='residue ' + ' '.join(map(str,bad_lipids))
+        removal_sel_str = '(%s) or not (%s)' % (lipid_headgroup_sel, lipid_sel)
+        total = remove_residues('noh and (%s) and (%s) and not (%s)' % (box_sel_str, removal_sel_str, solute_sel)) 
+    else:
+        total = remove_residues('noh and (%s) and not (%s)' % (box_sel_str, solute_sel))
     return total
 
 
@@ -536,16 +544,19 @@ def remove_overlapping_residues(solute_sel,
                                 dist=1.75,
                                 lipid_dist=1.0, 
                                 zh_mem_hyd=__MEMBRANE_HYDROPHOBIC_THICKNESS/2.0):
-    clashing_sel = 'not (%s) and noh and not (%s) and (pbwithin %f of (noh and (%s)))' % (lipid_sel, solute_sel, dist, solute_sel)
-    total = remove_residues(clashing_sel)
-#    clashing_sel2 = '(%s) and noh and not (%s) and (pbwithin %f of (backbone and (%s)))' % (lipid_sel, solute_sel, dist, solute_sel)
-#    total += remove_residues(clashing_sel2)
-#    total += remove_residues('(%s) and not (%s)' % (clashing_sel, lipid_sel))
-    if lipid_friendly_sel:
-       clashing_sel_lipid = '(%s) and noh and not (%s) and pbwithin %f of (noh and (%s) and not (%s))' % (lipid_sel,solute_sel, dist, solute_sel,lipid_friendly_sel)
+    if not len(lipid_sel):
+        clashing_sel = 'noh and not (%s) and (pbwithin %f of (noh and (%s)))' % (solute_sel, dist, solute_sel)
+        total = remove_residues(clashing_sel)
+
     else:
-       clashing_sel_lipid = '(%s) and noh and not (%s) and pbwithin %f of (noh and (%s))' % (lipid_sel,solute_sel, dist, solute_sel)
-    total += remove_residues(clashing_sel_lipid)
+        clashing_sel = 'not (%s) and noh and not (%s) and (pbwithin %f of (noh and (%s)))' % (lipid_sel, solute_sel, dist, solute_sel)
+        total = remove_residues(clashing_sel)
+        if lipid_friendly_sel:
+           clashing_sel_lipid = '(%s) and noh and not (%s) and pbwithin %f of (noh and (%s) and not (%s))' % (lipid_sel,solute_sel, dist, solute_sel,lipid_friendly_sel)
+        else:
+           clashing_sel_lipid = '(%s) and noh and not (%s) and pbwithin %f of (noh and (%s))' % (lipid_sel,solute_sel, dist, solute_sel)
+        total += remove_residues(clashing_sel_lipid)
+
     return total
 
 
@@ -553,6 +564,9 @@ def remove_lipids_near_rings(solute_sel,
                              lipid_sel,
                              ring_sel='noh and resname HID HIE HIP HIS PHE TRP TYR and not backbone',
                              dist=1.75):
+    if not len(lipid_sel):
+      return
+
     total = 0
     solute_ring_sel = '(%s) and (%s)' % (solute_sel, ring_sel)
     total = remove_residues('noh and (%s) and not (%s) and pbwithin %f of (noh and (%s))' % (lipid_sel, solute_sel, dist, solute_ring_sel))
@@ -653,7 +667,7 @@ def write_final_system(opts, out_fmt, molid):
     if out_fmt=='pdb' : 
         #import dabbleparam
         temp_mol = molecule.load('mae', mae_name)
-        atomsel('all',molid=temp_mol).write(out_fmt, opts.out_filename)
+        atomsel('all',molid=temp_mol).write(out_fmt, opts.output_filename)
         #dabbleparam.write_amber_pdb(opts.output_filename, molid=temp_mol)
         molecule.delete(temp_mol)
 
