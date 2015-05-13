@@ -317,6 +317,7 @@ def write_protein_blocks(file,tmp_dir,seg,molid,topologies):
         while not find_residue_in_rtf(topologies=topologies, resid=resid, molid=molid) :
             print("\nERROR: Residue name %s wasn't found in any input topology.\n"
                   "       Would you like to rename it?\n" % res)
+            sys.stdout.flush()
             newname = raw_input("New residue name or CTRL+D to quit > ")
             atomsel('resid %s and segname %s'% (resid, seg)).set('resname',newname)
 
@@ -547,6 +548,7 @@ def write_ligand_blocks(file, tmp_dir, resid, topologies, molid=0) :
              print("\nERROR: Residue name %s wasn't found in any input topology.\n"
                      "       Would you like to rename it?\n" % res)
              newname = raw_input("New residue name or CTRL+D to quit > ")
+             sys.stdout.flush()
              A.set('resname', newname)
              res = newname
 
