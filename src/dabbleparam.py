@@ -168,6 +168,7 @@ def write_protein_blocks(file,tmp_dir,seg,molid,topologies):
     print("Writing protein file\n")
 
     # Renumber residues starting from 1
+    atomsel('all').set('user',1.0)
     residues = set( atomsel('all').get('residue') )
     resnum = 1
     while len(residues) :
