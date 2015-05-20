@@ -630,8 +630,6 @@ def write_ordered_pdb(filename, sel, molid=0) :
           resnum +=2
 
        else :
-           if 'LYS' in atomsel('residue %d' % r).get('resname'):
-               print("Setting residue %d to resid %d" % (r, resnum))
            atomsel('residue %d'% r).set('resid',resnum)
            resnum += 1
            atoms = atomsel('residue %d' % r).get('index')
