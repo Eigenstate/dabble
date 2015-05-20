@@ -125,11 +125,11 @@ def write_psf(psf_name, molid=0, lipid_sel="lipid"):
             # residues, we have to renumber the residues, save, and reload so that VMD splits the 
             # combined residue into 2
             temp = tempfile.mkstemp(suffix='_P%s.pdb' % segnum, prefix='psf_prot_', dir=tmp_dir)[1]
-            segment.write('pdb',temp)
+            segment.write('mae',temp)
             #write_ordered_pdb(temp, sel='segname P%s'% segnum, molid=molid)
             sys.stdout.flush()
 
-            prot_molid = molecule.load('pdb', temp)
+            prot_molid = molecule.load('mae', temp)
             segment.set('user', 0.0)
             write_protein_blocks(file, tmp_dir=tmp_dir, seg='P%s'%segnum, molid=prot_molid, topologies=topologies)
             molecule.delete(prot_molid)
@@ -605,6 +605,7 @@ def write_ordered_pdb(filename, sel, molid=0) :
               quit(1)
 
           if 'ACE' in names :
+              print("Found ACE + extra\n")
               names.remove('ACE')
               atomsel('residue %d and resname ACE'% r).set('resid',resnum)
               atomsel('residue %d and resname %s'% (r,names.pop())).set('resid',resnum+1)
@@ -613,15 +614,24 @@ def write_ordered_pdb(filename, sel, molid=0) :
               atoms.extend( atomsel('residue %d and not resname ACE'% r).get('index') )
 
           elif 'NMA' in names :
+              print("Found extra + NMA!\n")
               names.remove('NMA')
               atomsel('residue %d and resname %s'% (r,names.pop())).set('resid',resnum)
               atomsel('residue %d and resname NMA'% r).set('resid',resnum+1)
               # Handle all the NMA atoms after the others
               atoms = atomsel('residue %d and not resname NMA'% r).get('index')
               atoms.extend( atomsel('residue %d and resname NMA'% r).get('index') )
+
+          else:
+              print("\nWEIRD case: 2 in a row in names")
+              print(names)
+              quit(1)
+
           resnum +=2
 
        else :
+           if 'LYS' in atomsel('residue %d' % r).get('resname'):
+               print("Setting residue %d to resid %d" % (r, resnum))
            atomsel('residue %d'% r).set('resid',resnum)
            resnum += 1
            atoms = atomsel('residue %d' % r).get('index')
