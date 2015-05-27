@@ -326,7 +326,7 @@ class CharmmWriter(object):
         atomsel('resname LYS and name HZ').set('name', 'HZ3')
 
         # Alias cysteines in disulfide bonds so they can be detected later
-        patches = 'pdbalias residue CYX CYS\n'
+        patches = ''
 
         # Histidine naming convention
         atomsel('resname HID').set('resname', 'HSD')
@@ -424,6 +424,7 @@ class CharmmWriter(object):
 
         # Now write to psfgen input file
         string = '''
+        pdbalias residue CYX CYS
         set protnam %s
         segment %s {
           first none
