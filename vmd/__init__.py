@@ -18,9 +18,7 @@ import sys
 from pkg_resources import resource_filename
 
 # Need to set VMDDIR environment variable for vmd.so to import
-#os.environ['VMDDIR'] = resource_filename(__name__, "vmd.so").replace("/vmd.so","")
-os.environ['VMDDIR'] = "/opt/anaconda/envs/vmdtest/lib/python2.7/site-packages/vmd"
-print(resource_filename(__name__, "vmd.so"))
+os.environ['VMDDIR'] = resource_filename(__name__, "vmd.so").replace("/vmd.so","")
 print("VMDDIR = %s" % os.environ['VMDDIR'])
 
 # Need VMD python scripts accessible (for import molecule, etc)
