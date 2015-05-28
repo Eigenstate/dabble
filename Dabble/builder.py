@@ -349,7 +349,6 @@ class DabbleBuilder(object):
         """
 
         chains = set(atomsel('all', molid=molid).get('chain'))
-        print(chains)
         sel = ""
         while len(chains):
             chn = chains.pop() # have to handle first separately because of or
@@ -359,7 +358,6 @@ class DabbleBuilder(object):
                    ")" 
             if len(chains):
                 sel += " or "
-            print(chains)
         self.solute_sel = sel
         return sel
 
