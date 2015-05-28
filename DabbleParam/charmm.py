@@ -169,55 +169,10 @@ class CharmmWriter(object):
         if len(atomsel(self.lipid_sel)):
             self._write_lipid_blocks()
 
-#        # Here we redefine the protein segments. If there are breaks in it with
-#        # capping groups at each end it can still be listed as the same segment
-#        # by Maestro # but since it is not strictly connected should not be
-#        # the same segment as psfgen # will connect together all atoms in a
-#        # linear chain.
-#        # We pick this by resid not residue since sometimes it gets mixed
-#        # up parsing residues it doesn't know and will split them.
-#
         if not len(atomsel('resname %s' % _acids, molid=self.molid)):
             print("\nINFO: Didn't find any protein.\n")
-#            print("Redefining capping groups")
-#            cap_n = sorted(set(atomsel('resname ACE',
-#                                       molid=self.molid).get('resid')))
-#            cap_c = sorted(set(atomsel('resname NMA',
-#                                       molid=self.molid).get('resid')))
-#            print(cap_n, cap_c)
-#
-#            # Check protein actually has caps and they are done correctly
-#            if len(cap_c) != len(cap_n):
-#                print("\nERROR: There are an uneven number of capping groups "
-#                      "on the protein.\n"
-#                      "       Found %d NMA residues but %d ACE residues\n"
-#                      "       Please check your input protein preparation.\n"
-#                      % (len(cap_c), len(cap_n)))
-#                quit(1)
-#            if not len(cap_c):
-#                print("\nERROR: There are no capping groups found "
-#                      "on the protein.\n"
-#                      "       Please prepare your input protein with ACE and "
-#                      " NMA on the terminal residues of each chain segment.\n")
-#                quit(1)
-#
-#            segnum = 1
-#            while len(cap_c) > 0:
-#                nid = cap_n.pop(0)
-#                cid = cap_c.pop(0)
-#                assert nid < cid, ("N-terminal residue before C-terminal? "
-#                                   "NMA resid %d, ACE resid %d"% (nid, cid))
-#                print("Writing protein chain from resid %d to %d"% (nid, cid))
-#                sys.stdout.flush()
-#                segment = atomsel('resid >= %d and resid <= %d and user 1.0 '
-#                                  % (nid, cid),
-#                                  molid=self.molid)
-#                segment.set('segname', 'P%s' % segnum)
-#                segment.set('segid', 'P%s' % segnum)
-#                # This is stupid, but to fix the Maestro issue with combined
-#                # capping group and regular # residues, we have to renumber
-#                # the residues, save, and reload so that VMD splits the
-#                # combined residue into two
+
+        # Pull out the protein, one fragment at a time
         for frag in set(atomsel('resname %s' % _acids).get('fragment')):
             temp = tempfile.mkstemp(suffix='_P%s.mae' % frag,
                                     prefix='psf_prot_', dir=self.tmp_dir)[1]
@@ -229,7 +184,6 @@ class CharmmWriter(object):
                                            prot_molid=prot_molid)
             molecule.delete(prot_molid)
             fragment.set('user', 0.0)
-#            segnum += 1
         # Detect disulfide bridges
         self._set_disulfide_bridges()
         # End protein
@@ -1015,13 +969,15 @@ class CharmmWriter(object):
         """
         patches = ""
         indices = set(atomsel('name SG and resname CYX').get('index'))
+        print("SG = %s" % indices)
         indices.update(atomsel('name SG and resname CYS '
-                               'and not same residue as name HG').get('index'))
+                               'and not same residue as name HG1').get('index'))
+        print("SG CYS = %s" % indices)
         print(indices)
         while len(indices) > 0:
             idx1 = indices.pop()
             matches = set(atomsel('name SG and (resname CYX or (resname CYS '
-                                  'and not same residue as name HG)) '
+                                  'and not same residue as name HG1)) '
                                   'and not index %d and within 2.5 of index %d'
                                   % (idx1, idx1)))
 

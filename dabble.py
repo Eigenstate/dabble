@@ -164,6 +164,7 @@ group.add_argument('--membrane-rotation', dest='z_rotation',
                         '[default: 0]')
 
 print(WELCOME_SCREEN)
+print("\nCommand was:\n  %s\n" % " ".join([i for i in sys.argv]))
 opts = parser.parse_args(sys.argv[1:])
 log = _make_logger(sys.stdout, opts.quiet)
 log('\n\n')
