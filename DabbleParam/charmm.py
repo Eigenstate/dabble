@@ -73,7 +73,7 @@ class CharmmWriter(object):
 
     #==========================================================================
 
-    def __init__(self, tmp_dir, molid=0, lipid_sel="lipid", extra_topos=None):
+    def __init__(self, tmp_dir, molid, lipid_sel="lipid", extra_topos=None):
         # Create TCL temp file and directory
         self.tmp_dir = tmp_dir 
         self.filename = tempfile.mkstemp(suffix='.tcl', prefix='dabble_psfgen',
@@ -130,6 +130,10 @@ class CharmmWriter(object):
         ''' % self.psf_name
         self.file.write(string)
 
+        # Put our molecule on top
+        old_top = molecule.get_top()
+        molecule.set_top(self.molid)
+
         # Ask the user for additional topology files
         if self.prompt_topos:
             sys.stdout.flush()
@@ -184,7 +188,8 @@ class CharmmWriter(object):
                                            prot_molid=prot_molid)
             molecule.delete(prot_molid)
             fragment.set('user', 0.0)
-        # Detect disulfide bridges
+
+        # Detect disulfide bridges and add appropriate patch lines
         self._set_disulfide_bridges()
         # End protein
 
@@ -205,6 +210,9 @@ class CharmmWriter(object):
         from VMD import evaltcl
         evaltcl('play %s' % self.filename)
         self._check_psf_output()
+
+        # Reset top molecule
+        molecule.set_top(old_top)
 
         return self.topologies
 
@@ -365,7 +373,9 @@ class CharmmWriter(object):
                               % (resid, seg)).get('resname')
                 print("\nERROR: Residue name %s wasn't found in any input "
                       "topology. Would you like to rename it?\n" % res)
+                sys.stdout.flush()
                 newname = raw_input("New residue name or CTRL+D to quit > ")
+                sys.stdout.flush()
                 atomsel('resid %s and segname %s'
                         % (resid, seg)).set('resname', newname)
 
@@ -405,13 +415,14 @@ class CharmmWriter(object):
 
         # Set consistent residue and atom names, crystal waters
         # can be named HOH, etc
-        atomsel('water not name CLA SOD POT').set('resname', 'TIP3')
-        atomsel('water not name CLA SOD POT').set('chain', 'W')
-        atomsel('chain W and name O').set('name', 'OH2')
+        atomsel('water').set('resname', 'TIP3')
+        atomsel('resname TIP3').set('chain', 'W')
+        atomsel('resname TIP3 and element O').set('name', 'OH2')
 
         # Select all the waters. We'll use the user field to track which
         # ones have been written
-        allw = atomsel('chain W and user 1.0')
+        allw = atomsel('water and user 1.0')
+        print("Found %d water residues" % len(set(atomsel('water and user 1.0').get('residue'))))
         num_written = len(allw)/(9999*3)+1
         print("Going to write %d files for %d water atoms"
               % (num_written, len(allw)))
@@ -636,7 +647,9 @@ class CharmmWriter(object):
             while not self._find_residue_in_rtf(residue=residue, molid=self.molid):
                 print("\nERROR: Residue name %s wasn't found in any input "
                       "topology.\nWould you like to rename it?\n" % res)
+                sys.stdout.flush()
                 newname = raw_input("New residue name or CTRL+D to quit > ")
+                sys.stdout.flush()
                 alig.set('resname', newname)
                 res = newname
 
@@ -967,17 +980,19 @@ class CharmmWriter(object):
         """
         Adds PATCH lines corresponding to disulfide bridges.
         """
+
+        # Simplify atom selection by putting relevant molecule on top
+        old_top = molecule.get_top()
+        molecule.set_top(self.molid)
+
         patches = ""
         indices = set(atomsel('name SG and resname CYX').get('index'))
-        print("SG = %s" % indices)
         indices.update(atomsel('name SG and resname CYS '
-                               'and not same residue as name HG1').get('index'))
-        print("SG CYS = %s" % indices)
-        print(indices)
+                               'and not same residue as name HG').get('index'))
         while len(indices) > 0:
             idx1 = indices.pop()
             matches = set(atomsel('name SG and (resname CYX or (resname CYS '
-                                  'and not same residue as name HG1)) '
+                                  'and not same residue as name HG)) '
                                   'and not index %d and within 2.5 of index %d'
                                   % (idx1, idx1)))
 
@@ -1005,5 +1020,6 @@ class CharmmWriter(object):
             patches += 'patch DISU P%s:%d P%s:%d\n' % (seg1, res1, seg2, res2)
 
         self.file.write(patches)
+        molecule.set_top(old_top)
 
 #++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
