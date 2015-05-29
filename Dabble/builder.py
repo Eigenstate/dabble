@@ -132,6 +132,7 @@ class DabbleBuilder(object):
                                     self.xy_size, self.z_size,
                                     tmp_dir=self.tmp_dir)
         print("Membrane tiled %d x %d x %d times" % (times[0], times[1], times[2]))
+        self.remove_molecule('membrane')
 
         print("Centering membrane...")
         self.molids['tiled_membrane'] = \
@@ -144,6 +145,8 @@ class DabbleBuilder(object):
                 molutils.combine_molecules(input_ids=[self.molids['solute'],
                                                       self.molids['tiled_membrane']],
                                            tmp_dir=self.tmp_dir)
+        self.remove_molecule('tiled_membrane')
+        self.remove_molecule('solute')
 
         # Remove atoms outside the final system cell
         if self.opts.wat_buffer is not None:
@@ -201,6 +204,7 @@ class DabbleBuilder(object):
                  molutils.num_waters_remaining(molid=final_id)))
         fileutils.write_final_system(self.opts, self.out_fmt, final_id,
                                      tmp_dir=self.tmp_dir)
+        molecule.delete(final_id)
 
     #==========================================================================
 
@@ -220,6 +224,30 @@ class DabbleBuilder(object):
         self.molids[desc] = molid
         atomsel('all', molid=molid).set('beta', 1)
         return True
+
+    #==========================================================================
+
+    def remove_molecule(self, desc):
+        """
+        Removes a molecule file from the system.
+
+        Args:
+          desc (str): Key for molecule to remove
+
+        Returns:
+          true if a molecule was deleted, false otherwise
+
+        Raises:
+          KeyError if there is no molecule with that key string
+        """
+        
+        molid = self.molids[desc]
+        try:
+            molecule.delete(molid)
+            return True
+        except ValueError:
+            return False
+        return False
 
     #==========================================================================
 
