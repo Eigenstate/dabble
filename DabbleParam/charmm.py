@@ -137,14 +137,13 @@ class CharmmWriter(object):
         # Ask the user for additional topology files
         if self.prompt_topos:
             sys.stdout.flush()
-            print("\nWhich CHARMM topology files should I use?\n"
-                  "Currently using:")
+            print("\nCurrently using the following topology files:")
             for top in self.topologies:
                 print("  - %s" % top.split("/")[-1])
 
             print("Enter the path to the filename(s) from the current working "
-                  "directory, separated by a comma, of any other rtf files you "
-                  "wish to use.\n")
+                  "directory, separated by a comma, of any additional rtf files "
+                  "you wish to use.\n")
             sys.stdout.flush()
             inp = raw_input('> ')
             if inp:
