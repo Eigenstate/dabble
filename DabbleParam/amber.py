@@ -56,7 +56,7 @@ class AmberWriter(object):
             raise ValueError("Unsupported forcefield: %s" % forcefield)
         self.forcefield = forcefield
         self.topologies = ''
-        if self.forcefield is 'amber':
+        if self.forcefield is 'charmm':
             self.parameters = [
                 resource_filename(__name__, "charmm_parameters/toppar_water_ions.str"),
                 resource_filename(__name__, "charmm_parameters/par_all36_cgenff.prm"),
