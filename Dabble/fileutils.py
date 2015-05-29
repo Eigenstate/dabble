@@ -191,7 +191,7 @@ def write_final_system(opts, out_fmt, molid, tmp_dir,
 
     # If we want a parameterized format like amber or charmm, a psf must
     # first be written which does the atom typing, etc
-#TODO this is broken
+#TODO this is broken from an OOP standpoint
     if out_fmt == 'charmm':
         temp_mol = molecule.load('mae', mae_name)
         write_psf_name = mae_name.replace('.mae', '')
@@ -207,7 +207,7 @@ def write_final_system(opts, out_fmt, molid, tmp_dir,
               "This may take a moment...\n")
         temp_mol = molecule.load('mae', mae_name)
         write_psf_name = mae_name.replace('.mae', '')
-        writer = AmberWriter(molid=molid,
+        writer = AmberWriter(molid=temp_mol,
                              tmp_dir=tmp_dir,
                              lipid_sel=opts.lipid_sel,
                              extra_params=extra_params)
