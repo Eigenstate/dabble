@@ -53,6 +53,8 @@ def load_solute(filename, tmp_dir):
     ext = filename[-3:]
     if ext == 'mae':
         molid = molecule.load('mae', filename)
+    elif ext == 'dms':
+        molid = molecule.load('dms', filename)
     elif ext == 'pdb':
         # Need to convert to MAE so concatenation will work later
         temp_mae = tempfile.mkstemp(suffix='.mae', prefix='dabble_input',
