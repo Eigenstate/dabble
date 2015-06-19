@@ -467,6 +467,9 @@ class DabbleBuilder(object):
 
         Returns:
           (int) number of atoms deleted
+
+        Raises:
+          ValueError if the 'lipid' only contains hydrogens
         """
 
         # Select residues that are outside the box
@@ -482,6 +485,11 @@ class DabbleBuilder(object):
         for i in suspicious_lipid_residues:
             lipid_center = atomsel('noh and residue %s' % str(i),
                                    molid=molid).center()
+            # Sanity check
+            if not len(lipid_center):
+                raise ValueError("No heavy atoms found in suspicious residue %s"
+                                 "Check your input file." % str(i))
+
             if abs(lipid_center[0]) > half_xy_size or \
                abs(lipid_center[1]) > half_xy_size:
                 bad_lipids.append(i)
