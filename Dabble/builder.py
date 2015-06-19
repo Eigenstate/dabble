@@ -132,7 +132,9 @@ class DabbleBuilder(object):
                                     self.xy_size, self.z_size,
                                     tmp_dir=self.tmp_dir)
         print("Membrane tiled %d x %d x %d times" % (times[0], times[1], times[2]))
-        self.remove_molecule('membrane')
+        # Only delete if a new molecule was created (if tiling occured)
+        if self.molids['tiled_membrane'] != self.molids['membrane']:
+            self.remove_molecule('membrane')
 
         print("Centering membrane...")
         self.molids['tiled_membrane'] = \
