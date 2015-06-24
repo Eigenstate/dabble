@@ -118,10 +118,7 @@ group.add_argument('-s', '--salt-concentration', dest='salt_conc',
 
 group = parser.add_argument_group('System Size Options')
 z_buffer_opts = group.add_mutually_exclusive_group()
-z_buffer_opts.add_argument('-z', '--z-buffer-dist', dest='z_buf', default=20.0,
-                           type=float, help='buffer distance in the membrane normal '
-                          'direction. [default 20.0 angstroms]')
-z_buffer_opts.add_argument('-w', '--water-buffer', dest='wat_buffer', default=None,
+z_buffer_opts.add_argument('-w', '--water-buffer', dest='wat_buffer', default=20.0,
                            type=float, help='water padding from each side of '
                            'protein [default 10.0 angstroms]')
 
