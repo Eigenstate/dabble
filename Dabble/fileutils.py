@@ -279,11 +279,11 @@ def check_out_type(value):
       The requested output format
 
     Raises:
-      ArgumentTypeError : if the output format requested is currently unsupported
+      ValueError: if the output format requested is currently unsupported
     """
 
     if len(value) < 3 :
-          raise argparse.ArgumentTypeError("%s is too short to determine output filetype" % value)
+          raise ValueError("%s is too short to determine output filetype" % value)
     ext = value.rsplit('.')[-1]
     if ext=='mae' :
         out_fmt='mae'
@@ -296,7 +296,7 @@ def check_out_type(value):
     elif ext=='prmtop' :
         out_fmt='amber'
     else :
-        raise argparse.ArgumentTypeError("%s is an unsupported format" % value)
+        raise ValueError("%s is an unsupported format" % value)
     return out_fmt 
 
 #++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
