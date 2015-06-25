@@ -3,7 +3,7 @@ from distutils.core import setup
 import os
 import sys
 
-packages = ['Dabble', 'DabbleParam', 'vmd']
+packages = ['Dabble', 'DabbleParam']
 scripts = ['dabble.py']
 package_data = {
         'Dabble' : ['lipid_membranes/*.mae'],
