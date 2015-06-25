@@ -8,11 +8,6 @@ scripts = ['dabble.py']
 package_data = {
         'Dabble' : ['lipid_membranes/*.mae'],
         'DabbleParam' : ['charmm_parameters/*'],
-        'vmd' : ['vmd.so',
-                 'scripts/python/*', 'scripts/vmd/*',
-                 'plugins/LINUXAMD64/molfile/*', 
-                 'plugins/LINUXAMD64/tcl/psfgen1.6/*',
-                 'LICENSE']
         }
 
 setup(name='dabble',
