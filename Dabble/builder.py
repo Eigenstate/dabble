@@ -395,7 +395,10 @@ class DabbleBuilder(object):
         Returns:
           (str) : VMD atom selection for these residues
         """
-
+        # Temporary fix for chain W in input file
+        if len(atomsel('chain W')):
+            print("WARNING: Renaming crystal water chain to X, temporary bugfix")
+            atomsel('chain W').set('chain','X')
         chains = set(atomsel('all', molid=molid).get('chain'))
         sel = ""
         while len(chains):
