@@ -1012,7 +1012,7 @@ class CharmmWriter(object):
             res1 = atomsel('index %d' % idx1).get('resid')[0]
             res2 = atomsel('index %d' % idx2).get('resid')[0]
             seg1 = atomsel('index %d' % idx1).get('fragment')[0]
-            seg2 = atomsel('index %d' % idx1).get('fragment')[0]
+            seg2 = atomsel('index %d' % idx2).get('fragment')[0]
 
             print("\nINFO: Disulfide bond between residues %d and %d"
                   % (res1, res2))
