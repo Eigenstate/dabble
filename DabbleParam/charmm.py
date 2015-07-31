@@ -581,13 +581,22 @@ class CharmmWriter(object):
         old_top = molecule.get_top()
         molecule.set_top(self.molid)
 
+        # Get ion resids that aren't associated w other molecules
+        # because some ligands have Na, Cl, K
+        total = set(atomsel('element Na Cl K').get('resid'))
+        not_ions = set(atomsel('same fragment as element Na Cl K').get('resid'))
+        ions = total - not_ions
+
+        if not len(ions): return
+        ionstr = "residue " + " ".join([str(s) for s in ions])
+
         # Fix the names
-        atomsel('name NA').set('name', 'SOD')
-        atomsel('name CL').set('name', 'CLA')
-        atomsel('name K').set('name', 'POT')
-        atomsel('name NA').set('resname', 'SOD')
-        atomsel('name CL').set('resname', 'CLA')
-        atomsel('name K').set('resname', 'POT')
+        atomsel('%s and name NA' % ionstr).set('name', 'SOD')
+        atomsel('%s and name CL' % ionstr).set('name', 'CLA')
+        atomsel('%s and name K' % ionstr).set('name', 'POT')
+        atomsel('%s and name NA' % ionstr).set('resname', 'SOD')
+        atomsel('%s and name CL' % ionstr).set('resname', 'CLA')
+        atomsel('%s and name K' % ionstr).set('resname', 'POT')
 
         # Renumber the residues since some may be above 10k
         residues = atomsel('name SOD CLA POT').get('residue')
