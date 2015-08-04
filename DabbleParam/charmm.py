@@ -286,14 +286,12 @@ class CharmmWriter(object):
         # Lysine last atom
         atomsel('resname LYS and name HZ').set('name', 'HZ3')
 
-        # Alias cysteines in disulfide bonds so they can be detected later
         patches = ''
 
         # Histidine naming convention
         atomsel('resname HID').set('resname', 'HSD')
         atomsel('resname HIE').set('resname', 'HSE')
         atomsel('resname HIP').set('resname', 'HSP')
-
 
         # Glutamine check all residues for protonation
         # Can't use dictionary for names since two of them must be swapped
@@ -327,6 +325,18 @@ class CharmmWriter(object):
                 patches += 'patch ASPP %s:%d\n' % (seg, resid)
             if "HD2" in atomsel('resid %s' % resid).get('name'):
                 patches += 'patch ASPP %s:%d\n' % (seg, resid)
+
+        # N terminal patches
+        nters = set(atomsel('name N and numbonds > 3').get('resid'))
+        for resid in nters:
+            print("INFO: Found N-terminal resid %d" % resid)
+            patches += 'patch NTER %s:%d\n' % (seg, resid)
+
+        # C terminal patches
+        cters = set(atomsel('name NT and same residue as name N').get('resid'))
+        for resid in cters:
+            print("INFO: Found amidated C-terminal resid %d" % resid)
+            patches += 'patch CT2 %s:%d\n' % (seg, resid)
 
         # Methionine hydrogen names
         atomsel('name H2 H1 and resname MET').set('name', 'HN')
@@ -581,9 +591,10 @@ class CharmmWriter(object):
 
         # Get ion resids that aren't associated w other molecules
         # because some ligands have Na, Cl, K
-        total = set(atomsel('element Na Cl K').get('resid'))
-        not_ions = set(atomsel('same fragment as element Na Cl K').get('resid'))
-        ions = total - not_ions
+        total = atomsel('element Na Cl K')
+        not_ions = atomsel('(same fragment as element Na Cl K)' \
+                           ' and (not index %s)' % ' '.join([str(s) for s in set(total.get('index'))]))
+        ions = set(total.get('residue')) - set(not_ions.get('residue'))
 
         if not len(ions): return
         ionstr = "residue " + " ".join([str(s) for s in ions])
@@ -598,8 +609,7 @@ class CharmmWriter(object):
 
         # Renumber the residues since some may be above 10k
         residues = atomsel('name SOD CLA POT').get('residue')
-        batch = atomsel('residue ' + \
-                        ' '.join([str(s) for s in set(residues)]))
+        batch = atomsel('residue %s' % ' '.join([str(s) for s in set(residues)]))
         batch.set('resid', [k for k in range(1, len(batch)+1)])
 
         # Save the temporary ions file
