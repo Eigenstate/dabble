@@ -368,15 +368,13 @@ class CharmmWriter(object):
 
         for residue in others:
             while not self._find_residue_in_rtf(residue=residue, molid=prot_molid):
-                res = atomsel('resid %s and segname %s'
-                              % (resid, seg)).get('resname')
+                res = atomsel('residue %s' % residue).get('resname')[0]
                 print("\nERROR: Residue name %s wasn't found in any input "
                       "topology. Would you like to rename it?\n" % res)
                 sys.stdout.flush()
                 newname = raw_input("New residue name or CTRL+D to quit > ")
                 sys.stdout.flush()
-                atomsel('resid %s and segname %s'
-                        % (resid, seg)).set('resname', newname)
+                atomsel('residue %s' % residue).set('resname', newname)
 
         # Now protein
         filename = self.tmp_dir + '/psf_protein_%s.pdb'% seg
