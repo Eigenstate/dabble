@@ -326,17 +326,28 @@ class CharmmWriter(object):
             if "HD2" in atomsel('resid %s' % resid).get('name'):
                 patches += 'patch ASPP %s:%d\n' % (seg, resid)
 
-        # N terminal patches
-        nters = set(atomsel('name N and numbonds > 3').get('resid'))
-        for resid in nters:
-            print("INFO: Found N-terminal resid %d" % resid)
-            patches += 'patch NTER %s:%d\n' % (seg, resid)
+        # Check if an N terminal patch is needed
+        if "ACE" not in atomsel().get('resname'):
+            resid = min(atomsel().get('resid'))
+            index = atomsel('name N and resid %s' % resid).get('index')[0]
+            v = self._get_bonded_atoms(prot_molid, index)
+            v.sort()
+            if cmp(v, ["C","H","H","H"]) == 0:
+                print("INFO: Found N-terminal resid %d" % resid)
+                patches += 'patch NTER %s:%d\n' % (seg, resid)
 
-        # C terminal patches
-        cters = set(atomsel('name NT and same residue as name N').get('resid'))
-        for resid in cters:
-            print("INFO: Found amidated C-terminal resid %d" % resid)
-            patches += 'patch CT2 %s:%d\n' % (seg, resid)
+        # Check if a C terminal patch is needed
+        if "NMA" not in atomsel().get('resname'):
+            resid = max(atomsel().get('resid'))
+            index = atomsel('name N and resid %s' % resid).get('index')[0]
+            v = self._get_bonded_atoms(prot_molid, index)
+            v.sort()
+            if cmp(v, ["C","O","N"]):
+                print("INFO: Found amidated C-terminal resid %d" % resid)
+                patches += 'patch CT2 %s:%d\n' % (seg, resid)
+            elif cmp(v, ["C","O","O"]):
+                print("INFO: Found C-terminal resid %d" % resid)
+                patches += 'patch CTER %s:%d\n' % (seg,resid)
 
         # Methionine hydrogen names
         atomsel('name H2 H1 and resname MET').set('name', 'HN')
@@ -1037,5 +1048,25 @@ class CharmmWriter(object):
 
         self.file.write(patches)
         molecule.set_top(old_top)
+
+    #========================================================================== 
+
+    def _get_bonded_atoms(self, molid, index):
+        """
+        Returns the element of all atoms bonded to the current atom.
+
+        Args:
+           molid (int): VMD molecule ID to consider
+           index (int): Atom index to look at bonded atoms
+
+        Returns:
+          (list of str) elements of atoms bound to the current atom
+        """
+
+        a = atomsel('index %d' % index, molid=molid)
+        bound = []
+        for atom in a.bonds[0]:
+            bound.append(atomsel('index %d' % atom).get('element')[0])
+        return bound
 
 #++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
