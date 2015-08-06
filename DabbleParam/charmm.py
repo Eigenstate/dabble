@@ -64,7 +64,7 @@ class CharmmWriter(object):
           be appended
       molid (str,optional): the VMD molecule id to write. Defaults to 0.
       lipid_sel (str,optional): atomselect string describing what should count
-          as "lipid".  Defaults to "lipid".
+          as "lipid".  Defaults to "lipid"
       topologies (list of str): Topology files that were used in creating the
           psf
       prompt_topos (bool): Whether to ask for more topology files
@@ -493,77 +493,66 @@ class CharmmWriter(object):
         psfgen. Renumbers the lipid residues because some can have **** instead
         of an integer for resid in large systems, which will crash psfgen. Also
         sets atom names for some common lipids (currently POPC)
+
+        Raises:
+            NotImplementedError if more than 10,000 lipids are present since it
+              doesn't support feeding multiple lipid blocks to psfgen currently
+            NotImplementedError if lipid other than POPC,POPE,POPG is found
         """
         # Put current molecule on top to simplify atom selection
         old_top = molecule.get_top()
         molecule.set_top(self.molid)
 
-        # Detect what lipid kind this is. HACK for now
+        # Collect lipid residues up
         alll = atomsel('(%s) and user 1.0' % self.lipid_sel)
-        lipid_types = set(alll.get('resname'))
-        atoms_per_lip = 0
-        lip_type = lipid_types.pop() # Should remove only element in this list
+        residues = list(set(alll.get('residue')))
+        residues.sort()
 
-        if len(lipid_types) > 0:
-            print("\nERROR: Found more than one type of lipid in your "
-                  "membrane. This currently isn't supported in psfgen")
-            quit(1)
-        elif lip_type == 'POPC':
-            atoms_per_lip = 134
-        else:
-            print("\nERROR: Unsupported lipid type %s" % lipid_types[0])
-            print("       Get Robin to put it in the code, it's quick.")
-            quit(1)
+        # Sanity check for < 10k lipids
+        if len(residues) >= 10000:
+            raise NotImplementedError("More than 10k lipids found")
 
-        # Sanity check for correct number of atoms
-        if len(alll) % atoms_per_lip != 0:
-            print("\nERROR: Incorrect number of atoms for these lipids\n"
-                  "       Have %d lipid atoms / %d atoms per lipid, "
-                  "       which results in %f lipids!"
-                  % (len(alll), atoms_per_lip, len(alll)/atoms_per_lip))
-            quit(1)
+        # Loop through all residues and renumber and correctly name them
+        counter = 1
+        for res in residues:
+            # Renumber residue
+            atomsel('residue %d' % res).set('resid', counter)
+            counter = counter + 1 
 
-        # Sanity check for <10k lipids
-        num_written = len(alll)/(atoms_per_lip)+1
-        if num_written >= 10000:
-            print("\nERROR: Have more than 10k lipids\n"
-                  "       Support not implemented. Ask Robin to fix it.")
-            quit(1)
+            # Pick which naming dictionary to use
+            resname = set(atomsel('residue %d' % res).get('resname'))
+            if len(resname) != 1:
+                raise ValueError("More than one name for residue %d" % res)
+            resname = resname.pop()
+            names = {}
+            if resname == "POPC":
+                # Carbons and hydrogen above nitrogen in head group
+                # These selections must be done in order because there is a swap
+                atomsel('(%s) and name C11' % self.lipid_sel).set('name', 't12')
+                atomsel('(%s) and name C15' % self.lipid_sel).set('name', 'C11')
+                atomsel('(%s) and name C14' % self.lipid_sel).set('name', 'C15')
+                atomsel('(%s) and name C12' % self.lipid_sel).set('name', 'C14')
+                atomsel('(%s) and name t12' % self.lipid_sel).set('name', 'C12')
 
-        # Renumber resids starting from 0
-        for i in range(num_written):
-            residues = alll.get('residue')
-            batch = atomsel('residue ' + \
-                            ' '.join([str(s) for s in set(residues)]))
-            try:
-                batch.set('resid',
-                          [k for k in range(1, len(batch)/atoms_per_lip+1)
-                           for _ in range(atoms_per_lip)])
-            except ValueError:
-                print("\nERROR! Something went wrong renumbering the lipids!")
-                quit(1)
+                popc_names = {'H31':'H13A', 'H32':'H13B', 'H33':'H13C',
+                              'H41':'H15A', 'H42':'H15B', 'H43':'H15C',
+                              'H21':'H14A', 'H22':'H14B', 'H23':'H14C',
+                              'H51':'H11A', 'H52':'H11B',
+                              'H11':'H12A', 'H12':'H12B',
+                              # Phosphate and its oxygens
+                              'P1' :  'P', 'O1' :'O12', 'O2' :'O11',
+                              'O3' :'O13', 'O4' :'O14'}
+                names = popc_names
+            elif resname == "POPE":
+                pass
+            elif resname == "POPG":
+                pass
+            else:
+                raise NotImplementedError("Lipid %s unsupported" % resname)
 
-        # Rename atoms. Wow, this is really the worst
-        # Carbons and hydrogen above nitrogen in head group
-        # These selections must be done in order because there is a swap
-        atomsel('(%s) and name C11' % self.lipid_sel).set('name', 't12')
-        atomsel('(%s) and name C15' % self.lipid_sel).set('name', 'C11')
-        atomsel('(%s) and name C14' % self.lipid_sel).set('name', 'C15')
-        atomsel('(%s) and name C12' % self.lipid_sel).set('name', 'C14')
-        atomsel('(%s) and name t12' % self.lipid_sel).set('name', 'C12')
-
-        popc_names = {'H31':'H13A', 'H32':'H13B', 'H33':'H13C',
-                      'H41':'H15A', 'H42':'H15B', 'H43':'H15C',
-                      'H21':'H14A', 'H22':'H14B', 'H23':'H14C',
-                      'H51':'H11A', 'H52':'H11B',
-                      'H11':'H12A', 'H12':'H12B',
-                      # Phosphate and its oxygens
-                      'P1' :  'P', 'O1' :'O12', 'O2' :'O11',
-                      'O3' :'O13', 'O4' :'O14'}
-        # Fortunately all the other atom names are correct.
-        for name in popc_names:
-            atomsel('(%s) and name %s'
-                    % (self.lipid_sel, name)).set('name', popc_names[name])
+            for name in names:
+                atomsel('residue %d and name %s' 
+                        % (res, name)).set('name', names[name])
 
         # Write temporary lipid pdb
         temp = tempfile.mkstemp(suffix='.pdb', prefix='psf_lipid_',

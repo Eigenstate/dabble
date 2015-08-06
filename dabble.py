@@ -93,7 +93,7 @@ group.add_argument('-q', '--quiet', dest='quiet',
 # TODO detect automatically
 group = parser.add_argument_group('Lipid Membrane Options')
 group.add_argument('-L', '--lipid-selection', dest='lipid_sel',
-                   default='lipid or resname POPS', type=str,
+                   default='lipid or resname POPS POPG', type=str,
                    help='atomsel for the lipids in the membrane [default: '
                    '"lipid or resname POPS"]')
 group.add_argument('-C', '--lipid-clash-check', dest='clash_lipids',
