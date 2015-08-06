@@ -120,7 +120,7 @@ group = parser.add_argument_group('System Size Options')
 z_buffer_opts = group.add_mutually_exclusive_group()
 z_buffer_opts.add_argument('-w', '--water-buffer', dest='wat_buffer', default=20.0,
                            type=float, help='water padding from each side of '
-                           'protein [default 10.0 angstroms]')
+                           'protein [default 20.0 angstroms]')
 
 group.add_argument('-m', '--membrane-buffer-dist', dest='xy_buf', default=35.0,
                    type=float, help='buffer distance through the membrane.'
@@ -166,6 +166,15 @@ opts = parser.parse_args(sys.argv[1:])
 log = _make_logger(sys.stdout, opts.quiet)
 log('\n\n')
 
+# Hack to move vmdrc before vmd is imported
+vmdrc = os.path.expanduser("~/.vmdrc")
+if os.path.isfile(vmdrc):
+    os.rename(vmdrc, vmdrc + "dabbleold")
+
 builder = DabbleBuilder(opts)
 builder.write(opts.output_filename)
+
+# Now restore vmdrc lol
+if os.path.isfile(vmdrc + "dabbleold"):
+    os.rename(vmdrc + "dabbleold", vmdrc)
 
