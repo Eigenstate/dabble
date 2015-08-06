@@ -21,14 +21,16 @@ Boston, MA 02111-1307, USA.
 """
 
 from __future__ import print_function
-import numpy as np
 from pkg_resources import resource_filename
+import numpy as np
+import math
 import random
 import os
 import tempfile
 
 import vmd
 import molecule
+import trans
 from atomsel import atomsel
 
 from Dabble import fileutils
@@ -72,14 +74,12 @@ class DabbleBuilder(object):
         self.tmp_dir = tempfile.mkdtemp(prefix='dabble', dir=os.getcwd())
 
         # Check for default lipid membrane
-        print(self.opts.membrane_system)
         if self.opts.membrane_system == 'DEFAULT':
             self.opts.membrane_system = resource_filename(__name__, \
                     "lipid_membranes/popc.mae")
         elif self.opts.membrane_system == 'TIP3':
             self.opts.membrane_system = resource_filename(__name__, \
                     "lipid_membranes/tip3pbox.mae")
-        print(self.opts.membrane_system)
 
         # Check the file output format is supported
         self.out_fmt = fileutils.check_out_type(opts.output_filename)
@@ -154,15 +154,19 @@ class DabbleBuilder(object):
 
         # Combine tiled membrane with solute
         print("Combining solute and tiled solvent patch...")
-        self.molids['combined'] = \
+        self.molids['inserted'] = \
                 molutils.combine_molecules(input_ids=[self.molids['solute'],
                                                       self.molids['tiled_membrane']],
                                            tmp_dir=self.tmp_dir)
         self.remove_molecule('tiled_membrane')
         self.remove_molecule('solute')
 
+        # Add more waters if necessary 
+        self.molids['combined'] = self._add_water(self.molids['inserted'])
+        self.remove_molecule('inserted')
+
         # Remove atoms outside the final system cell
-        wat_del=self._trim_water(self.molids['combined'])
+        wat_del = self._trim_water(self.molids['combined'])
         print("Removed %d extra waters" % wat_del)
         if not self.water_only:
             self._remove_xy_residues(self.molids['combined'])
@@ -351,7 +355,6 @@ class DabbleBuilder(object):
         if self.water_only:
             solute_z = atomsel(self.solute_sel, molid=molid).get('z')
             dxy_tm = 0.0
-            print("WATERO NLY")
         else:
             # Add dummy to the membrane boundaries in case protein is peripheral
             solute_z = atomsel(self.solute_sel, molid=molid).get('z') + \
@@ -448,6 +451,76 @@ class DabbleBuilder(object):
 
     #==========================================================================
 
+    def _add_water(self, molid):
+        """
+        Adds water residues in the +- Z direction in the system. Used if there
+        are not enough waters in the initial membrane system. Creates a new
+        molecule with waters added.
+
+        Args:
+            molid (int): VMD molecule id to use
+
+        Returns:
+            (int) VMD molecule id with water added
+
+        Raises:
+            ValueError if water buffer is None
+        """
+
+        if self.opts.wat_buffer is None:
+            raise ValueError("Water buffer undefined")
+
+        # Check the +Z direction
+        zup = max(atomsel(self.solute_sel).get('z')) - \
+           max(atomsel("not (%s or %s)" % (self.solute_sel, self.opts.lipid_sel)).get('z'))
+        # Check the -Z direction
+        zdo = min(atomsel("not (%s or %s)" % (self.solute_sel, self.opts.lipid_sel)).get('z')) \
+              - min(atomsel(self.solute_sel).get('z'))
+
+        # Load water
+        wat_path = self.opts.membrane_system = resource_filename(__name__, \
+                "lipid_membranes/tip3pbox.mae")
+        self.add_molecule(wat_path, 'water')
+        to_combine = [ molid ]
+
+        # Handle adding water above the protein
+        # When moving add a 0.5 less so there isn't a gap
+        if zup > 0: 
+            print("Adding %f A water above the solute..." % zup)
+            self.molids['wtmp'], times = \
+                    tile_membrane_patch(self.molids['water'], self.xy_size, zup,
+                    self.tmp_dir, allow_z_tile=True)
+            move = max(atomsel("not (%s)" % self.solute_sel, molid=molid).get('z')) - \
+                    min(atomsel(molid=self.molids['wtmp']).get('z')) - 0.5
+            atomsel(molid=self.molids['wtmp']).moveby((0,0,move))
+            self.molids['wats_up'] = molutils.center_system(molid=self.molids['wtmp'],
+                    tmp_dir=self.tmp_dir, center_z=False)
+            self.remove_molecule('wtmp')
+            to_combine.append(self.molids['wats_up'])
+
+        # Handle adding water below the protein
+        # When moving add a 0.5 less so there isn't a gap
+        if zdo > 0:
+            print("Adding %f A water below the solute..." % zdo)
+            self.molids['wtmp'], times = \
+                    tile_membrane_patch(self.molids['water'], self.xy_size, zdo,
+                    self.tmp_dir, allow_z_tile=True)
+            move = min(atomsel("not (%s)" % self.solute_sel, molid=molid).get('z')) - \
+                    max(atomsel(molid=self.molids['wtmp']).get('z')) + 0.5
+            atomsel(molid=self.molids['wtmp']).moveby((0,0,move))
+            self.molids['wats_down'] = molutils.center_system(molid=self.molids['wtmp'],
+                    tmp_dir=self.tmp_dir, center_z=False)
+            self.remove_molecule('wtmp')
+            to_combine.append(self.molids['wats_down'])
+
+        # Combine and return a new molecule
+        newid = molutils.combine_molecules(input_ids=to_combine,
+                                           tmp_dir=self.tmp_dir)
+        self.remove_molecule('water')
+        return newid
+
+    #==========================================================================
+
     def _trim_water(self, molid):
         """
         Removes water residues in the +- Z direction in the system. Used
@@ -466,6 +539,8 @@ class DabbleBuilder(object):
 
         if self.opts.wat_buffer is None:
             raise ValueError("Water buffer undefined")
+
+        # Remove waters in the Z direction
         total = 0
         zcoord = atomsel(self.solute_sel).get('z')
         total = _remove_residues('(not (%s)) and noh and z > %f' % \
@@ -825,7 +900,6 @@ def orient_solute(molid, z_move, z_rotation,
         molecule.delete(opm)
         return molid
 
-    import trans, math
     if z_move is not None :
         print("Moving z!")
         atomsel('all',molid=molid).moveby((0,0,z_move))
