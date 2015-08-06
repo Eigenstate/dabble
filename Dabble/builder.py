@@ -964,9 +964,6 @@ def tile_membrane_patch(input_id, min_xy_size, min_z_size, tmp_dir,
     Returns:
       (int) output molecule id
       (int 3x) number of times tiled in x, y, z direction
-
-    Raises:
-      NotImplementedError if tiling in the Z direction is required and disallowed
     """
 
     sys_dimensions = np.array([min_xy_size, min_xy_size, min_z_size])
@@ -974,10 +971,8 @@ def tile_membrane_patch(input_id, min_xy_size, min_z_size, tmp_dir,
     times_x, times_y, times_z = [int(times) for times in \
             np.ceil(sys_dimensions / mem_dimensions)]
 
-    if times_z >= 2 and not allow_z_tile:
-        raise NotImplementedError("Solvent Z dimension too small")
+    # If there is not enough water in the Z direction, it will be added later
 
-    # TODO add support for tiling in the z direction?
     if times_x == 1 and times_y == 1 and times_z == 1:
         output_id = input_id
     else:
