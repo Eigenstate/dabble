@@ -144,10 +144,11 @@ the provided membrane is too small. Continue to the next step in CHARMM-GUI.
 in order to correctly tile it. The script will prompt you for the directory in which the psf and
 crd are saved, and will output a step5_assembly_dabble.mae file.
     
-    convert_step5_to_dabble.py 
+    `convert_step5_to_dabble.py`
 
 5. Rename your converted membrane so you don't forget what it is 
-    mv step5_assembly_dabble.mae POPC_POPE_1-1.mae
+
+    `mv step5_assembly_dabble.mae POPC_POPE_1-1.mae`
 
 5. Check the membrane looks and tiles correctly by visualizing it in VMD. If not, adjust the
 periodic box as necessary.
@@ -156,7 +157,7 @@ periodic box as necessary.
 To make sure that your lipids are recognized correctly, you will probably have to provide an
 atom selection for the correct residues.
 
-    dabble.py -M POPC_POPE_1-1.mae --lipid-selection "resname POPC POPE" ...
+    `dabble.py -M POPC_POPE_1-1.mae --lipid-selection "resname POPC POPE" ...`
 
 ## Salt concentrations ##
 
