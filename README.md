@@ -115,8 +115,10 @@ file instead of the prmtop to check the final structure.
 
 ## More advanced usage, by example ##
 
-## Custom membranes, or no membranes *NEW* ##
+## *NEW* Custom membranes, or no membranes ##
+
 *"I want a system with just water, no membrane*
+
 Lucky for you, there is new functionality to support this for TIP3 waters.
 
     -M TIP3
@@ -125,6 +127,7 @@ will use Dabble's pre-equilibrated box of TIP3 water as a solvent, with no
 membrane. Note that this box is pretty small, so you will see some tiling effects.
 
 *"I want to provide my own membrane*
+
 There are a few steps to get a membrane in the correct format for dabbling.
 The easiest way to get a membrane is to use [CHARMM-GUI.](http://www.charmm-gui.org/?doc=input/membrane)
 
@@ -143,8 +146,7 @@ crd are saved, and will output a step5_assembly_dabble.mae file.
     
     convert_step5_to_dabble.py 
 
-5. Rename your converted membrane so you don't forget what it is
-    
+5. Rename your converted membrane so you don't forget what it is 
     mv step5_assembly_dabble.mae POPC_POPE_1-1.mae
 
 5. Check the membrane looks and tiles correctly by visualizing it in VMD. If not, adjust the
