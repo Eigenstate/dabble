@@ -471,11 +471,16 @@ class DabbleBuilder(object):
             raise ValueError("Water buffer undefined")
 
         # Check the +Z direction
-        zup = max(atomsel(self.solute_sel).get('z')) - \
-           max(atomsel("not (%s or %s)" % (self.solute_sel, self.opts.lipid_sel)).get('z'))
+        zup = self.opts.wat_buffer + \
+              max(atomsel(self.solute_sel).get('z')) - \
+              max(atomsel("not (%s or %s)" % (self.solute_sel, self.opts.lipid_sel)).get('z'))
         # Check the -Z direction
-        zdo = min(atomsel("not (%s or %s)" % (self.solute_sel, self.opts.lipid_sel)).get('z')) \
+        zdo = self.opts.wat_buffer + \
+              min(atomsel("not (%s or %s)" % (self.solute_sel, self.opts.lipid_sel)).get('z')) \
               - min(atomsel(self.solute_sel).get('z'))
+
+        print("NEED TO ADD: %f %f" % (zup, zdo))
+        raw_input()
 
         # Load water
         wat_path = self.opts.membrane_system = resource_filename(__name__, \
@@ -970,6 +975,10 @@ def tile_membrane_patch(input_id, min_xy_size, min_z_size, tmp_dir,
     mem_dimensions = np.array(molutils.get_system_dimensions(molid=input_id))
     times_x, times_y, times_z = [int(times) for times in \
             np.ceil(sys_dimensions / mem_dimensions)]
+
+    # Disallow tiling in Z direction
+    if not allow_z_tile:
+        times_z = 1
 
     # If there is not enough water in the Z direction, it will be added later
 

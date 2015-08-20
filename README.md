@@ -115,7 +115,48 @@ file instead of the prmtop to check the final structure.
 
 ## More advanced usage, by example ##
 
-## Salt concentrations ###
+## Custom membranes, or no membranes *NEW* ##
+*"I want a system with just water, no membrane*
+Lucky for you, there is new functionality to support this for TIP3 waters.
+
+    -M TIP3
+
+will use Dabble's pre-equilibrated box of TIP3 water as a solvent, with no
+membrane. Note that this box is pretty small, so you will see some tiling effects.
+
+*"I want to provide my own membrane*
+There are a few steps to get a membrane in the correct format for dabbling.
+The easiest way to get a membrane is to use [CHARMM-GUI.](http://www.charmm-gui.org/?doc=input/membrane)
+
+1. Specify "membrane-only" system. Then build a membrane of desired composition. An
+XY dimension of 30-50 will produce good results, although dabble can tile as necessary if
+the provided membrane is too small. Continue to the next step in CHARMM-GUI.
+
+2. No need to place ions as dabble will do this for you. Continue to the next step in CHARMM-GUI.
+
+3. Stop following the "Assemble Components" step. Download the assembled psf and crd. NOT the pdb!
+(step5_assembly).
+
+4. Use the provided script to set a periodic box on the system. Dabble needs to know this informatoin
+in order to correctly tile it. The script will prompt you for the directory in which the psf and
+crd are saved, and will output a step5_assembly_dabble.mae file.
+    
+    convert_step5_to_dabble.py 
+
+5. Rename your converted membrane so you don't forget what it is
+    
+    mv step5_assembly_dabble.mae POPC_POPE_1-1.mae
+
+5. Check the membrane looks and tiles correctly by visualizing it in VMD. If not, adjust the
+periodic box as necessary.
+
+6. You can now dabble it. Extra water will be added as necessary to accomodate your protein.
+To make sure that your lipids are recognized correctly, you will probably have to provide an
+atom selection for the correct residues.
+
+    dabble.py -M POPC_POPE_1-1.mae --lipid-selection "resname POPC POPE" ...
+
+## Salt concentrations ##
 
 *"It added salt! I don't want salt!"*
 
@@ -193,8 +234,26 @@ Or you can specify the entire size of the system:
     --absolute-dim 20.0,30.0
 
 
-## Atom selection tips ##
+## Troubleshooting ##
 
-Don't select atoms by resid or residue, as this can change when the protein is combined with
-the lipid or water. Yes, I know, resid should not change but VMD saves things however it wants.
+*"I asked for a membrane system, but my protein ended up being just in water?'*
+
+Short answer: Your initial protein is oriented wrong. Align it to the OPM 
+structure and re-dabble.
+
+Long answer: Dabble treats the Z coordinate of the protein as "truth", and will
+only center it in the XY plane. Following insertion into the membrane, which
+is centered at (0,0,0), extra atoms far from the protein are removed. If the Z
+dimension of the protein is wrong, it can end up in the water away from the membrane,
+which is then trimmed away.
+
+*"I'm seeing waters with and without the TIP3 fake bond in my mae/pdb/dms. What's happening?"*
+
+If you're simulating with TIP3 waters, this isn't a problem for simulation, as the
+bond will be added in during parameterization steps (psf, prmtop generation, etc). 
+What happened is your input membrane had waters with the bond explicitly defined, but
+there was not enough water to solvate your protein with the desired buffer. More waters
+are added, and dabble's reference water does not have the bond explicitly defined in
+the mae topology. 
+
 

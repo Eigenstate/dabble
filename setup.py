@@ -4,7 +4,7 @@ import os
 import sys
 
 packages = ['Dabble', 'DabbleParam']
-scripts = ['dabble.py', 'get_restraint_mask.py']
+scripts = ['dabble.py', 'get_restraint_mask.py', 'convert_step5_to_dabble.py']
 package_data = {
         'Dabble' : ['lipid_membranes/*.mae'],
         'DabbleParam' : ['charmm_parameters/*'],
