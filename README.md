@@ -25,7 +25,6 @@ You can specify which atoms should be aligned as well using VMD atom selection
 language, which defaults to atoms that are "protein and backbone".
 
       --opm-pdb <opm.pdb> --opm-align "protein and backbone"
-
 Alternatively, you can manually specify the orientation of the protein relative
 to the membrane in terms of its angle to the membrane and z offset. The membrane
 angle is the rotation of the membrane relative to the axis of the protein, in
@@ -114,6 +113,30 @@ file instead of the prmtop to check the final structure.
 
 
 ## More advanced usage, by example ##
+
+### Ligands ###
+
+*"I have a ligand not defined in cgenff"*
+
+Currently our lab uses [paramchem](cgenff.paramchem.org) to obtain ligand parameters, with
+extensive validation. Put the resulting .str filename in at the prompts.
+
+*"It says it couldn't find atoms, but they're in the structure!"*
+
+This indicates that the psf generation process was unable to match up the atoms in your
+file with atoms that it knows about. Unfortunately psfgen is not very smart and only matches
+by name, not by any knowlege of different molecules. Check the molecule definition in the
+charmm topology files or your .str file, and make sure that your atom names match. Dabble
+will try to help you with this process, but it sometimes fails. Most of the time it is
+because there are multiple atoms with the same name. Ensure you have unique names.
+
+*"I have a cholesterol but it's not recognizing it!"*
+Cholesterol or other small molecules defined in cgenff are identified during psf generation
+by residue name and atom names, so it may not match or may match atoms incorrectly. The
+easiest way to fix name issues is to generate a mol2 file of your small molecule and run
+that through [paramchem](cgenff.paramchem.org) which is smart enough to recognize the
+molecule and will provide a topology file that translates the atom names to the correct 
+charmm atom types.
 
 ## *NEW* Custom membranes, or no membranes ##
 
@@ -235,6 +258,7 @@ Alternatively, you could specify the desired XY dimension of the final system:
 Or you can specify the entire size of the system:
     
     --absolute-dim 20.0,30.0
+
 
 
 ## Troubleshooting ##

@@ -650,24 +650,15 @@ class CharmmWriter(object):
         alig = atomsel('user 1.0 and residue %d' % residue)
         # Get a residue name charmm knows about, either through
         # manual translation or prompting the user
-        if 'CLR' in alig.get('resname'):
-            alig.set('resname', 'CLOL') #cgenff naming convention
-            res = 'CLOL'
-            print("INFO: Found a cholesterol!\n")
-        elif 'BGC' in alig.get('resname'):
-            alig.set('resname', 'BGLC')
-            res = 'BGLC'
-            print("INFO: Found a beta-glucose!\n")
-        else: # Check it's recognized, if not give the user a chance to rename
-            res = alig.get('resname')[0]
-            while not self._find_residue_in_rtf(residue=residue, molid=self.molid):
-                print("\nERROR: Residue name %s wasn't found in any input "
-                      "topology.\nWould you like to rename it?\n" % res)
-                sys.stdout.flush()
-                newname = raw_input("New residue name or CTRL+D to quit > ")
-                sys.stdout.flush()
-                alig.set('resname', newname)
-                res = newname
+        res = alig.get('resname')[0]
+        while not self._find_residue_in_rtf(residue=residue, molid=self.molid):
+            print("\nERROR: Residue name %s wasn't found in any input "
+                  "topology.\nWould you like to rename it?\n" % res)
+            sys.stdout.flush()
+            newname = raw_input("New residue name or CTRL+D to quit > ")
+            sys.stdout.flush()
+            alig.set('resname', newname)
+            res = newname
 
         # Write temporary file containg the ligand and update tcl commands
         temp = tempfile.mkstemp(suffix='.pdb', prefix='psf_ligand_',
@@ -881,9 +872,6 @@ class CharmmWriter(object):
             return False
         print("INFO: Successfully found residue %s in input topologies" % resname)
 
-        # Rename atoms if it's a hardcoded residue
-        self._rename_atoms_manual(residue=residue)
-
         # Match up atoms with python sets
         pdb_atoms = set(atomsel('residue %s and user 1.0'
                                 % residue, molid=molid).get('name'))
@@ -947,48 +935,6 @@ class CharmmWriter(object):
             self._find_residue_in_rtf(residue, molid)
         print("INFO: Matched up all atom names for residue %s\n" % resname)
         return True
-
-    #==========================================================================
-
-    def _rename_atoms_manual(self, residue):
-        """
-        Reassigns atom names for a few known residues that are common
-        enough to be hardcoded. Currently this is just cholesterol.
-
-        Args:
-          residue (int): VMD residue number to check (not resid)
-          molid (int): VMD molecule to look at
-
-        Returns:
-          True if atoms were renamed
-        """
-        # Reassign atom names for known residues
-        clol_names = {'H11' :  'H1A', 'H12' : 'H1B',
-                      'H21' :  'H2A', 'H22' : 'H2B',
-                      'O1'  :   'O3', 'HO1' : 'H3\'',
-                      'H41 ':  'H4A', 'H42' : 'H4B',
-                      'H71' :  'H7A', 'H72' : 'H7B',
-                      'H111': 'H11A', 'H112': 'H11B',
-                      'H121': 'H12A', 'H122': 'H12B',
-                      'H151': 'H15A', 'H152': 'H15B',
-                      'H161': 'H16A', 'H162': 'H16B',
-                      'H181': 'H18A', 'H182': 'H18B', 'H183': 'H18C',
-                      'H191': 'H19A', 'H192': 'H19B', 'H193': 'H19C',
-                      'H211': 'H21A', 'H212': 'H21B', 'H213': 'H21C',
-                      'H221': 'H22A', 'H222': 'H22B',
-                      'H231': 'H23A', 'H232': 'H23B',
-                      'H241': 'H24A', 'H242': 'H24B',
-                      'H261': 'H26A', 'H262': 'H26B', 'H263': 'H26C',
-                      'H271': 'H27A', 'H272': 'H27B', 'H273': 'H27C'}
-
-        if 'CLOL' in atomsel('residue %s' % residue,
-                             molid=self.molid).get('resname'):
-            print("RENAMING CLOL\n")
-            for name in clol_names:
-                atomsel('user 1.0 and residue %d and name %s' % (residue, name),
-                        molid=self.molid).set('name', clol_names[name])
-            return True
-        return False
 
     #==========================================================================
 

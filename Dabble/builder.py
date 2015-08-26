@@ -479,9 +479,6 @@ class DabbleBuilder(object):
               min(atomsel("not (%s or %s)" % (self.solute_sel, self.opts.lipid_sel)).get('z')) \
               - min(atomsel(self.solute_sel).get('z'))
 
-        print("NEED TO ADD: %f %f" % (zup, zdo))
-        raw_input()
-
         # Load water
         wat_path = self.opts.membrane_system = resource_filename(__name__, \
                 "lipid_membranes/tip3pbox.mae")
