@@ -325,29 +325,29 @@ class CharmmWriter(object):
                 patches += 'patch ASPP %s:%d\n' % (seg, resid)
             if "HD2" in atomsel('resid %s' % resid).get('name'):
                 patches += 'patch ASPP %s:%d\n' % (seg, resid)
-
-        # Check if an N terminal patch is needed
-        if "ACE" not in atomsel().get('resname'):
-            resid = min(atomsel().get('resid'))
-            index = atomsel('name N and resid %s' % resid).get('index')[0]
-            v = self._get_bonded_atoms(prot_molid, index)
-            v.sort()
-            if cmp(v, ["C","H","H","H"]) == 0:
-                print("INFO: Found N-terminal resid %d" % resid)
-                patches += 'patch NTER %s:%d\n' % (seg, resid)
-
-        # Check if a C terminal patch is needed
-        if "NMA" not in atomsel().get('resname'):
-            resid = max(atomsel().get('resid'))
-            index = atomsel('name N and resid %s' % resid).get('index')[0]
-            v = self._get_bonded_atoms(prot_molid, index)
-            v.sort()
-            if cmp(v, ["C","O","N"]):
-                print("INFO: Found amidated C-terminal resid %d" % resid)
-                patches += 'patch CT2 %s:%d\n' % (seg, resid)
-            elif cmp(v, ["C","O","O"]):
-                print("INFO: Found C-terminal resid %d" % resid)
-                patches += 'patch CTER %s:%d\n' % (seg,resid)
+# ROBIN: disabled for now-- too many false positives
+#        # Check if an N terminal patch is needed
+#        if "ACE" not in atomsel().get('resname'):
+#            resid = min(atomsel().get('resid'))
+#            index = atomsel('name N and resid %s' % resid).get('index')[0]
+#            v = self._get_bonded_atoms(prot_molid, index)
+#            v.sort()
+#            if cmp(v, ["C","H","H","H"]) == 0:
+#                print("INFO: Found N-terminal resid %d" % resid)
+#                patches += 'patch NTER %s:%d\n' % (seg, resid)
+#
+#        # Check if a C terminal patch is needed
+#        if "NMA" not in atomsel().get('resname'):
+#            resid = max(atomsel().get('resid'))
+#            index = atomsel('name N and resid %s' % resid).get('index')[0]
+#            v = self._get_bonded_atoms(prot_molid, index)
+#            v.sort()
+#            if cmp(v, ["C","O","N"]):
+#                print("INFO: Found amidated C-terminal resid %d" % resid)
+#                patches += 'patch CT2 %s:%d\n' % (seg, resid)
+#            elif cmp(v, ["C","O","O"]):
+#                print("INFO: Found C-terminal resid %d" % resid)
+#                patches += 'patch CTER %s:%d\n' % (seg,resid)
 
         # Methionine hydrogen names
         atomsel('name H2 H1 and resname MET').set('name', 'HN')
