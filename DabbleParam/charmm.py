@@ -437,6 +437,10 @@ class CharmmWriter(object):
         atomsel('resname TIP3').set('chain', 'W')
         atomsel('resname TIP3 and element O').set('name', 'OH2')
 
+        # Dowser can name water hydrogens strangely
+        atomsel('resname TIP3 and name HW1').set('name', 'H1')
+        atomsel('resname TIP3 and name HW2').set('name', 'H2')
+
         # Select all the waters. We'll use the user field to track which
         # ones have been written
         allw = atomsel('water and user 1.0')
@@ -776,7 +780,7 @@ class CharmmWriter(object):
         have unmatched atoms that are all at (0,0,0).
         """
 
-    # Check file was written at all
+        # Check file was written at all
         if not os.path.isfile('%s.pdb'% self.psf_name):
             print("\nERROR: psf file failed to write.\n"
                   "       Please see log above.\n")
