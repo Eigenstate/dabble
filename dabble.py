@@ -166,15 +166,6 @@ opts = parser.parse_args(sys.argv[1:])
 log = _make_logger(sys.stdout, opts.quiet)
 log('\n\n')
 
-# Hack to move vmdrc before vmd is imported
-vmdrc = os.path.expanduser("~/.vmdrc")
-if os.path.isfile(vmdrc):
-    os.rename(vmdrc, vmdrc + "dabbleold")
-
 builder = DabbleBuilder(opts)
 builder.write(opts.output_filename)
-
-# Now restore vmdrc lol
-if os.path.isfile(vmdrc + "dabbleold"):
-    os.rename(vmdrc + "dabbleold", vmdrc)
 
