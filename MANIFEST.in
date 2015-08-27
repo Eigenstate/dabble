@@ -1,0 +1,9 @@
+include dabble.py
+include get_restraint_mask.py
+include molecule_to_psf.py
+
+recursive-include Dabble *.py
+recursive-include Dabble/lipid_membranes *.mae
+
+recursive-include DabbleParam *.py
+recursive-include DabbleParam/charmm_parameters *_all36_*
