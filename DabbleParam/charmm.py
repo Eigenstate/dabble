@@ -342,7 +342,6 @@ class CharmmWriter(object):
             maxresname = atomsel('resid %d' % maxid).get('resname')[0]
             print("\n\nINFO: Didn't find a N-terminal NMA for segment ending"
                   " with %s%d" % (maxresname, maxid))
-            print(atomsel().get('resname'))
             patches += self._get_patch(seg, maxid)
 
 # ROBIN: disabled for now-- too many false positives
