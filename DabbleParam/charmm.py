@@ -184,7 +184,7 @@ class CharmmWriter(object):
             prot_molid = molecule.load('mae', temp)
 
             self._write_protein_blocks(seg='P%s'%frag,
-                                           prot_molid=prot_molid)
+                                       prot_molid=prot_molid)
             molecule.delete(prot_molid)
             fragment.set('user', 0.0)
 
@@ -325,6 +325,26 @@ class CharmmWriter(object):
                 patches += 'patch ASPP %s:%d\n' % (seg, resid)
             if "HD2" in atomsel('resid %s' % resid).get('name'):
                 patches += 'patch ASPP %s:%d\n' % (seg, resid)
+
+        # If ACE and NMA aren't present, prompt for the residue name of the patch to 
+        # apply, since auto-detecting it can be dangerous and the user may want
+        # to define their own
+        
+        if "ACE" not in atomsel().get('resname'):
+            minid = min(atomsel().get('resid'))
+            minresname = atomsel('resid %d' % minid).get('resname')[0]
+            print("\n\nINFO: Didn't find a C-terminal ACE for segment beginning"
+                  " with %s%d" % (minresname, minid))
+            patches += self._get_patch(seg, minid)
+
+        if "NMA" not in atomsel().get('resname'):
+            maxid = max(atomsel().get('resid'))
+            maxresname = atomsel('resid %d' % maxid).get('resname')[0]
+            print("\n\nINFO: Didn't find a N-terminal NMA for segment ending"
+                  " with %s%d" % (maxresname, maxid))
+            print(atomsel().get('resname'))
+            patches += self._get_patch(seg, maxid)
+
 # ROBIN: disabled for now-- too many false positives
 #        # Check if an N terminal patch is needed
 #        if "ACE" not in atomsel().get('resname'):
@@ -1007,5 +1027,55 @@ class CharmmWriter(object):
         for atom in a.bonds[0]:
             bound.append(atomsel('index %d' % atom).get('element')[0])
         return bound
+    
+    #========================================================================== 
+
+    def _get_patch(self, seg, resid):
+        """
+        Prompts the user for a patch to apply for the given residue.
+        Gathers available patches from topology files
+
+        Args:
+          seg (str): Segment to apply the patch to
+          resid (int): Residue ID to apply the patch to
+
+        Returns:
+          (str) patch line to put in the psfgen input file
+        """
+        avail_patches = self._get_avail_patches()
+        print("What is the patch name I should apply?")
+        print("Or type HELP for a list of all patches I know about")
+        patchname = raw_input("> ")
+        if patchname == "HELP":
+            print("   PATCH     COMMENT")
+            print("   -----     -------")
+            for p in avail_patches:
+                print("%7s %s" % (p, avail_patches[p]))
+            patchname = raw_input("> ")
+        while patchname not in avail_patches:
+            print("I don't know about patch %s" % patchname)
+            patchname = raw_input("Try again > ")
+
+        return "patch %s %s:%d\n" % (patchname, seg, resid)
+           
+    #========================================================================== 
+    
+    def _get_avail_patches(self):
+        """
+        Gathers the patches defined in all topology files.
+
+        Returns:
+          (dict str -> str): Patch names as keys, comment as value
+        """
+        avail_patches = {}
+        for top in self.topologies:
+            topfile = open(top, 'r')
+            for line in topfile:
+                tokens = line.split()
+                if not len(tokens): continue 
+                if tokens[0] == "PRES": 
+                    comment = ' '.join(tokens[tokens.index("!")+1:])
+                    avail_patches[tokens[1]] = comment
+        return avail_patches
 
 #++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
