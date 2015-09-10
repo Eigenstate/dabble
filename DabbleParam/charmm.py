@@ -234,6 +234,10 @@ class CharmmWriter(object):
         molecule.set_top(prot_molid)
         print("Writing protein file\n")
 
+    # TODO There is a bug where somewhere the NMA gets named ASP
+        #atomsel().write('mae','duh.mae')
+        #quit()
+
         # Renumber residues starting from 1
         atomsel('all').set('user', 1.0)
 #       residues = set(atomsel('all').get('residue'))
@@ -325,25 +329,6 @@ class CharmmWriter(object):
                 patches += 'patch ASPP %s:%d\n' % (seg, resid)
             if "HD2" in atomsel('resid %s' % resid).get('name'):
                 patches += 'patch ASPP %s:%d\n' % (seg, resid)
-
-        # If ACE and NMA aren't present, prompt for the residue name of the patch to 
-        # apply, since auto-detecting it can be dangerous and the user may want
-        # to define their own
-        
-        if "ACE" not in atomsel().get('resname'):
-            minid = min(atomsel().get('resid'))
-            minresname = atomsel('resid %d' % minid).get('resname')[0]
-            print("\n\nINFO: Didn't find a C-terminal ACE for segment beginning"
-                  " with %s%d" % (minresname, minid))
-            patches += self._get_patch(seg, minid)
-
-        if "NMA" not in atomsel().get('resname'):
-            maxid = max(atomsel().get('resid'))
-            maxresname = atomsel('resid %d' % maxid).get('resname')[0]
-            print("\n\nINFO: Didn't find a N-terminal NMA for segment ending"
-                  " with %s%d" % (maxresname, maxid))
-            patches += self._get_patch(seg, maxid)
-
 # ROBIN: disabled for now-- too many false positives
 #        # Check if an N terminal patch is needed
 #        if "ACE" not in atomsel().get('resname'):
@@ -416,11 +401,33 @@ class CharmmWriter(object):
                 sys.stdout.flush()
                 atomsel('residue %s' % residue).set('resname', newname)
 
+        # If ACE and NMA aren't present, prompt for the residue name of the patch to 
+        # apply, since auto-detecting it can be dangerous and the user may want
+        # to define their own
+
+#        if "ACE" not in atomsel().get('resname'):
+#            minid = min(atomsel().get('resid'))
+#            minresname = atomsel('resid %d' % minid).get('resname')[0]
+#            print("\n\nINFO: Didn't find a C-terminal ACE for segment beginning"
+#                  " with %s%d" % (minresname, minid))
+#            patches += self._get_patch(seg, minid)
+#
+#        maxid = max(atomsel().get('resid'))
+#        maxresname = atomsel('resid %d' % maxid).get('resname')
+#        if "NMA" not in maxresname:
+#            print("RESNAMES ARE")
+#            print(set(atomsel().get('resname')))
+#            print(set(atomsel().get('resid')))
+#            print("\n\nINFO: Didn't find a N-terminal NMA for segment ending"
+#                  " with %s%d" % (maxresname, maxid))
+#            patches += self._get_patch(seg, maxid)
+
         # Now protein
         filename = self.tmp_dir + '/psf_protein_%s.pdb'% seg
         self._write_ordered_pdb(filename, 'all', prot_molid)
         print("Wrote %d atoms to the protein segment %s"
               % (len(atomsel('all')), seg))
+
         molecule.set_top(old_top)
 
         # Now write to psfgen input file
