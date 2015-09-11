@@ -234,10 +234,6 @@ class CharmmWriter(object):
         molecule.set_top(prot_molid)
         print("Writing protein file\n")
 
-    # TODO There is a bug where somewhere the NMA gets named ASP
-        #atomsel().write('mae','duh.mae')
-        #quit()
-
         # Renumber residues starting from 1
         atomsel('all').set('user', 1.0)
 #       residues = set(atomsel('all').get('residue'))
@@ -270,7 +266,6 @@ class CharmmWriter(object):
         for name in nma_names:
             atomsel('resname NMA and name %s'%name).set('name', nma_names[name])
 
-
         # Determine protonation states of those called HIS based on atom names
         atomsel('resname HIS and same residue as name HE2').set('resname',
                                                                 'HSE')
@@ -302,17 +297,23 @@ class CharmmWriter(object):
         # Must loop by resid, not residue, to get correct PATCH statement index
         glups = set(atomsel('resname GLU GLH GLUP').get('resid'))
         for resid in glups:
-            atomsel('resid %s' % resid).set('resname', 'GLU')
-            if "HE1" in atomsel('resid %s' % resid).get('name'):
-                atomsel('resid %s and name HE1'% resid).set('name', 'HE2')
-                atomsel('resid %s and name OE1'% resid).set('name', 'temp')
-                atomsel('resid %s and name OE2'% resid).set('name', 'OE1')
-                atomsel('resid %s and name temp'% resid).set('name', 'OE2')
+            # Need to specify resname here in case this residue
+            # is attached to a NMA which will have the same resid
+            # because of the way Maestro does things. Otherwise we will
+            # rename the NMA to GLU or whatever when we standardize 
+            # residue name
+            ressel = "(resid %s and resname GLU GLH GLUP)" % resid
+            atomsel(ressel).set('resname', 'GLU')
+            if "HE1" in atomsel(ressel).get('name'):
+                atomsel('%s and name HE1'% ressel).set('name', 'HE2')
+                atomsel('%s and name OE1'% ressel).set('name', 'temp')
+                atomsel('%s and name OE2'% ressel).set('name', 'OE1')
+                atomsel('%s and name temp'% ressel).set('name', 'OE2')
                 patches += 'patch GLUP %s:%d\n' % (seg, resid)
-            elif "HE2" in atomsel('resid %s' % resid).get('name'):
+            elif "HE2" in atomsel(ressel).get('name'):
                 patches += 'patch GLUP %s:%d\n' % (seg, resid)
-            elif "HXT" in atomsel('resid %s' % resid).get('name'):
-                atomsel('resid %s and name HXT' % resid).set('name', 'HE2')
+            elif "HXT" in atomsel(ressel).get('name'):
+                atomsel('%s and name HXT' % ressel).set('name', 'HE2')
                 patches += 'patch GLUP %s:%d\n' % (seg, resid)
 
         # Aspartate check each residue to see if it's protonated
@@ -320,38 +321,17 @@ class CharmmWriter(object):
         # Must loop by resid, not residue, to get correct PATCH statement index
         asps = set(atomsel('resname ASP ASH ASPP').get('resid'))
         for resid in asps:
-            atomsel('resid %s'% resid).set('resname', 'ASP')
-            if "HD1" in atomsel('resid %s' % resid).get('name'):
-                atomsel('resid %s and name HD1' % resid).set('name', 'HD2')
-                atomsel('resid %s and name OD1' % resid).set('name', 'temp')
-                atomsel('resid %s and name OD2' % resid).set('name', 'OD1')
-                atomsel('resid %s and name temp' % resid).set('name', 'OD2')
+            # Again use ressel to shorten long selection
+            ressel = "(resid %s and resname ASP ASH ASPP)" % resid
+            atomsel(ressel).set('resname', 'ASP')
+            if "HD1" in atomsel(ressel).get('name'):
+                atomsel('%s and name HD1' % ressel).set('name', 'HD2')
+                atomsel('%s and name OD1' % ressel).set('name', 'temp')
+                atomsel('%s and name OD2' % ressel).set('name', 'OD1')
+                atomsel('%s and name temp' % ressel).set('name', 'OD2')
                 patches += 'patch ASPP %s:%d\n' % (seg, resid)
-            if "HD2" in atomsel('resid %s' % resid).get('name'):
+            if "HD2" in atomsel(ressel).get('name'):
                 patches += 'patch ASPP %s:%d\n' % (seg, resid)
-# ROBIN: disabled for now-- too many false positives
-#        # Check if an N terminal patch is needed
-#        if "ACE" not in atomsel().get('resname'):
-#            resid = min(atomsel().get('resid'))
-#            index = atomsel('name N and resid %s' % resid).get('index')[0]
-#            v = self._get_bonded_atoms(prot_molid, index)
-#            v.sort()
-#            if cmp(v, ["C","H","H","H"]) == 0:
-#                print("INFO: Found N-terminal resid %d" % resid)
-#                patches += 'patch NTER %s:%d\n' % (seg, resid)
-#
-#        # Check if a C terminal patch is needed
-#        if "NMA" not in atomsel().get('resname'):
-#            resid = max(atomsel().get('resid'))
-#            index = atomsel('name N and resid %s' % resid).get('index')[0]
-#            v = self._get_bonded_atoms(prot_molid, index)
-#            v.sort()
-#            if cmp(v, ["C","O","N"]):
-#                print("INFO: Found amidated C-terminal resid %d" % resid)
-#                patches += 'patch CT2 %s:%d\n' % (seg, resid)
-#            elif cmp(v, ["C","O","O"]):
-#                print("INFO: Found C-terminal resid %d" % resid)
-#                patches += 'patch CTER %s:%d\n' % (seg,resid)
 
         # Methionine hydrogen names
         atomsel('name H2 H1 and resname MET').set('name', 'HN')
@@ -404,23 +384,34 @@ class CharmmWriter(object):
         # If ACE and NMA aren't present, prompt for the residue name of the patch to 
         # apply, since auto-detecting it can be dangerous and the user may want
         # to define their own
+        if "ACE" not in atomsel().get('resname'):
+            minid = min(atomsel().get('resid'))
+            minresname = set(atomsel('resid %d' % minid).get('resname'))
+            # Sanity check
+            if len(minresname) != 1:
+                raise ValueError("Duplicate residue numbering for C-terminal"
+                                 " resid %d names %s" % (minid,
+                                         ' '.join([x for x in minresname])))
+            else: minresname = minresname.pop()
 
-#        if "ACE" not in atomsel().get('resname'):
-#            minid = min(atomsel().get('resid'))
-#            minresname = atomsel('resid %d' % minid).get('resname')[0]
-#            print("\n\nINFO: Didn't find a C-terminal ACE for segment beginning"
-#                  " with %s%d" % (minresname, minid))
-#            patches += self._get_patch(seg, minid)
-#
-#        maxid = max(atomsel().get('resid'))
-#        maxresname = atomsel('resid %d' % maxid).get('resname')
-#        if "NMA" not in maxresname:
-#            print("RESNAMES ARE")
-#            print(set(atomsel().get('resname')))
-#            print(set(atomsel().get('resid')))
-#            print("\n\nINFO: Didn't find a N-terminal NMA for segment ending"
-#                  " with %s%d" % (maxresname, maxid))
-#            patches += self._get_patch(seg, maxid)
+            print("\n\nINFO: Didn't find a C-terminal ACE for segment beginning"
+                  " with %s%d" % (minresname, minid))
+            patches += self._get_patch(seg, minid)
+
+        if "NMA" not in atomsel().get('resname'):
+            maxid = max(atomsel().get('resid'))
+            maxresname = set(atomsel('resid %d' % maxid).get('resname'))
+
+            # Sanity check
+            if len(maxresname) != 1:
+                raise ValueError("Duplicate residue numbering for C-terminal"
+                                 " resid %d names %s" % (minid,
+                                         ' '.join([x for x in minresname])))
+            else: maxresname = maxresname.pop()
+
+            print("\n\nINFO: Didn't find a N-terminal NMA for segment ending"
+                  " with %s%d" % (maxresname, maxid))
+            patches += self._get_patch(seg, maxid)
 
         # Now protein
         filename = self.tmp_dir + '/psf_protein_%s.pdb'% seg
@@ -1050,6 +1041,8 @@ class CharmmWriter(object):
         """
         avail_patches = self._get_avail_patches()
         print("What is the patch name I should apply?")
+        print("Type NONE for no patch, if your residue is completely "
+              "defined in a str file")
         print("Or type HELP for a list of all patches I know about")
         patchname = raw_input("> ")
         if patchname == "HELP":
@@ -1058,9 +1051,11 @@ class CharmmWriter(object):
             for p in avail_patches:
                 print("%7s %s" % (p, avail_patches[p]))
             patchname = raw_input("> ")
-        while patchname not in avail_patches:
+        while (patchname not in avail_patches) and (patchname != "NONE"):
             print("I don't know about patch %s" % patchname)
             patchname = raw_input("Try again > ")
+        if patchname == "NONE":
+            return ""
 
         return "patch %s %s:%d\n" % (patchname, seg, resid)
            
