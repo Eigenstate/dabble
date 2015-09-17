@@ -196,8 +196,8 @@ class CharmmWriter(object):
         leftovers = atomsel('user 1.0', molid=self.molid)
         if len(leftovers) > 0:
             print("Found extra ligands: %s" % set(leftovers.get('resname')))
-        for lid in set(leftovers.get('residue')):
-            self._write_ligand_blocks(lid)
+        for lig in set(leftovers.get('resname')):
+            self._write_ligand_blocks(lig)
 
         # Write the output files and run
         string = '''
@@ -367,19 +367,18 @@ class CharmmWriter(object):
                 'TYR MET TRP HSP HSE HSD PHE)'% _acids).set('name', 'HE2')
 
         # Final chance to fix unrecognized atom names for non-protein residues
-        others = set(atomsel('not resname %s' % _acids).get('residue'))
+        others = set(atomsel('not resname %s' % _acids).get('resname'))
         if len(others):
             print("WARNING: Found non-protein residues in protein...")
 
-        for residue in others:
-            while not self._find_residue_in_rtf(residue=residue, molid=prot_molid):
-                res = atomsel('residue %s' % residue).get('resname')[0]
+        for resname in others:
+            while not self._find_residue_in_rtf(resname=resname, molid=prot_molid):
                 print("\nERROR: Residue name %s wasn't found in any input "
-                      "topology. Would you like to rename it?\n" % res)
+                      "topology. Would you like to rename it?\n" % resname)
                 sys.stdout.flush()
                 newname = raw_input("New residue name or CTRL+D to quit > ")
                 sys.stdout.flush()
-                atomsel('residue %s' % residue).set('resname', newname)
+                atomsel('resname %s' % resname).set('resname', newname)
 
         # If ACE and NMA aren't present, prompt for the residue name of the patch to 
         # apply, since auto-detecting it can be dangerous and the user may want
@@ -653,13 +652,14 @@ class CharmmWriter(object):
 
     #==========================================================================
 
-    def _write_ligand_blocks(self, residue):
+    def _write_ligand_blocks(self, resname):
         """
         Matches ligands to available topology file, renames atoms, and then
         writes temporary files for the ligands
 
         Args:
-          residue (int): Residue number of the ligand that will be written
+          resname (str): Residue name of the ligand that will be written.
+            All ligands with that name will be written as one segment.
 
         Returns:
           True if successful
@@ -668,18 +668,17 @@ class CharmmWriter(object):
         old_top = molecule.get_top()
         molecule.set_top(self.molid)
 
-        alig = atomsel('user 1.0 and residue %d' % residue)
+        alig = atomsel('user 1.0 and resname %s' % resname)
         # Get a residue name charmm knows about, either through
         # manual translation or prompting the user
-        res = alig.get('resname')[0]
-        while not self._find_residue_in_rtf(residue=residue, molid=self.molid):
+        while not self._find_residue_in_rtf(resname=resname, molid=self.molid):
             print("\nERROR: Residue name %s wasn't found in any input "
-                  "topology.\nWould you like to rename it?\n" % res)
+                  "topology.\nWould you like to rename it?\n" % resname)
             sys.stdout.flush()
             newname = raw_input("New residue name or CTRL+D to quit > ")
             sys.stdout.flush()
             alig.set('resname', newname)
-            res = newname
+            resname = newname
 
         # Write temporary file containg the ligand and update tcl commands
         temp = tempfile.mkstemp(suffix='.pdb', prefix='psf_ligand_',
@@ -692,7 +691,7 @@ class CharmmWriter(object):
          last none
        }
        coordpdb $ligfile %s
-        ''' % (temp, alig.get('resname')[0], alig.get('resname')[0])
+        ''' % (temp, resname, resname)
         alig.write('pdb', temp)
         alig.set('user', 0.0)
         self.file.write(string)
@@ -858,10 +857,10 @@ class CharmmWriter(object):
 
     #==========================================================================
 
-    def _find_residue_in_rtf(self, residue, molid):
+    def _find_residue_in_rtf(self, resname, molid):
         """
         Scans the input topology files to find a name match for the given
-        residue ID, then pulls out the atoms involved and checks that they
+        residue name, then pulls out the atoms involved and checks that they
         are all present in the input coordinates, prompting the user to correct
         the names of atoms that could not be matched.
 
@@ -869,8 +868,7 @@ class CharmmWriter(object):
         with the same name, but only one has missing or extra atoms.
 
         Args:
-          topologies (list of str): Filenames of topologies to search
-          residue (int): Residue number to search for (not resid)
+          resname (str): Residue name to check
           molid (int): VMD molecule ID
 
         Returns:
@@ -878,8 +876,6 @@ class CharmmWriter(object):
           False if the residue name cannot be found
         """
 
-        resname = atomsel('residue %s and user 1.0'
-                          % residue, molid=molid).get('resname')[0]
         print("Finding residue name %s" % resname)
         for top in self.topologies:
             topfile = open(top, 'r')
@@ -894,8 +890,8 @@ class CharmmWriter(object):
         print("INFO: Successfully found residue %s in input topologies" % resname)
 
         # Match up atoms with python sets
-        pdb_atoms = set(atomsel('residue %s and user 1.0'
-                                % residue, molid=molid).get('name'))
+        pdb_atoms = set(atomsel('resname %s and user 1.0'
+                                % resname, molid=molid).get('name'))
         pdb_only = pdb_atoms - topo_atoms
         topo_only = topo_atoms - pdb_atoms
 
@@ -945,16 +941,16 @@ class CharmmWriter(object):
                     print("'%s' is not an available name in the topology."
                           "Please try again.\n" % newname)
                     newname = raw_input("  %s  -> " % unmatched)
-                atomsel('residue %s and user 1.0 and name %s'
-                        % (residue, unmatched)).set('name', newname)
-                pdb_atoms = set(atomsel('residue %s and user 1.0'
-                                        % residue).get('name'))
+                atomsel('resname %s and user 1.0 and name %s'
+                        % (resname, unmatched)).set('name', newname)
+                pdb_atoms = set(atomsel('resname %s and user 1.0'
+                                        % resname).get('name'))
                 topo_only = topo_atoms-pdb_atoms
                 resname = newname
 
             # Recurse to check that everything is assigned correctly
-            self._find_residue_in_rtf(residue, molid)
-        print("INFO: Matched up all atom names for residue %s\n" % resname)
+            self._find_residue_in_rtf(resname, molid)
+        print("INFO: Matched up all atom names for resname %s\n" % resname)
         return True
 
     #==========================================================================
