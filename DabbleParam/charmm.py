@@ -159,6 +159,7 @@ class CharmmWriter(object):
 
         # Mark all atoms as unsaved with the user field
         atomsel('all', molid=self.molid).set('user', 1.0)
+        self._check_atom_names(molid=self.molid)
 
         # Now ions if present, changing the atom names
         if len(atomsel('element Na Cl K', molid=self.molid)) > 0:
@@ -1074,5 +1075,22 @@ class CharmmWriter(object):
                     comment = ' '.join(tokens[tokens.index("!")+1:])
                     avail_patches[tokens[1]] = comment
         return avail_patches
+
+    #========================================================================== 
+
+    def _check_atom_names(self, molid):
+        """
+        Checks that there are no spaces in atom names. If spaces are
+        found, they are removed and a warning is printed
+        """
+
+        names = set(atomsel(molid=molid).get('name'))
+        for name in names:
+            if ' ' in name:
+                print("\nWARNING: Found space character in name '%s'\n"
+                      "         Incompatible with charmm formats, removing it"
+                      % name)
+                atomsel('name %s', molid=molid).set('name',
+                                                    name.replace(' ',''))
 
 #++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
