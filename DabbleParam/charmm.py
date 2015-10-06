@@ -373,7 +373,8 @@ class CharmmWriter(object):
             print("WARNING: Found non-protein residues in protein...")
 
         for resname in others:
-            while not self._find_residue_in_rtf(resname=resname, molid=prot_molid):
+            newname = resname
+            while not self._find_residue_in_rtf(resname=newname, molid=prot_molid):
                 print("\nERROR: Residue name %s wasn't found in any input "
                       "topology. Would you like to rename it?\n" % resname)
                 sys.stdout.flush()
