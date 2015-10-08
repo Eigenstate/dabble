@@ -71,7 +71,7 @@ def groupOutput(inputset):
     l = list(ranges(inputset))
 
     # Put tuples together into a passable list
-    result = ":"
+    result = ""
     for i in l:
         if i[0] == i[1]: result += "%d," % i[0]
         else: result += "%d-%d," % (i[0],i[1])
