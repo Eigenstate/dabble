@@ -1,7 +1,21 @@
 
 Changes in the CHARMM toppar file format.
-July 2013
-updated August 2014
+updated July 2015
+
+As of July 2015 a new, additional version of the topology and
+parameter files has been created in which the MASS numbers are all set
+to -1.  This coincides with changes in version 39 of CHARMM and onward
+in which the MASS numbers are assigned as the new atom types are read.
+This avoid problems with overlapping mass numbers, which has become an
+issue as we have increased the number of atom types with CGenFF as
+well as other aspects of the force field.  As of July 2015 the default
+version of the toppar files will contain the traditional MASS numbers
+with a second version of the files included with "MASS -1".  This will
+allow for earlier versions of CHARMM to be used.  As of July 2016 we
+anticipate moving to "MASS -1" as the default for all the toppar
+files.
+
+!July 2013
 
 To facilitate the application of the CHARMM force field to
 heterogeneous systems the toppar files have been converted to a
@@ -68,7 +82,9 @@ toppar_all36_prot_fluoro_alkanes.str   optimized fluoroalkanes, requires
 toppar_all36_prot_heme.str             heme, O2, CO, CO2 and related patches
 toppar_all36_prot_model.str            model compounds used in protein parameter 
                                        development as well as additional compounds
-toppar_all36_prot_na_combined.str      residues and patches, including phospho tyrosine, 
+toppar_all36_prot_modify_res.str       various modifed amino acid residues/patches
+                                       include posttranslational modifications (see na combined)
+toppar_all36_prot_na_combined.str      residues and patches, including phosphotyrosine, 
                                        serine and threonine that require both protein and
                                        nucleic acid toppar parent files.
 toppar_all36_prot_pyridines.str        various substituted pyridines
@@ -82,6 +98,7 @@ toppar_all36_na_model.str              model compounds used in na parameter deve
                                        including individual bases etc.
 toppar_all36_na_nad_ppi.str            NAD, NADH, ADP, ATP and others.  
 toppar_all36_na_reactive_rna.str       reactive species associated with phophate hydrolysis
+toppar_all36_na_rna_modified.str       modified RNA nucleotides (as in tRNA etc.)
 
 stream/lipid
 
@@ -95,6 +112,7 @@ toppar_all36_lipid_list.str           list of required files for running test ca
 toppar_all36_lipid_llo.str            lipid linked oligosaccharides
 toppar_all36_lipid_miscellaneous.str  various lipids
 toppar_all36_lipid_model.str          model compounds used in lipid parameter development
+toppar_all36_lipid_prot.str           protein residues modified with lipids
 toppar_all36_lipid_sphingo.str        Ceramide/sphingomylein
 toppar_all36_lipid_yeast.str          various lipids in yeast
 
@@ -110,13 +128,16 @@ stream/misc
 toppar_amines.str                      highly optimized neutral aliphatic amines
 toppar_dum_noble_gases.str             nobel gases and dummy atom
 toppar_hbond.str                       stream file to estimate hydrogen bond interactions
+toppar_ions_won.str                    extensive collection of ion parameters that covers
+                                       the majority of the periodic table.  Caution: use
+                                       optimized ions in toppar_water_ions.str when possible.
 
 (D) Parameters for the polarizable force field based on a classical
 Drude oscillator.  As this force field is currently under development
 such that the parameters have been placed in the "drude" subdirectory.
-Parameters for water, alkanes, ethers, aromatics, alcohols and amides
-are available as of January 2007 and this list will be expanding.  See
-the 00readme for details and the approriate references.
+It is suggested that these be obtained from the MacKerell lab force
+field web page.  Also accessible via the CHARMM Gui.  See the 00readme
+for details and the approriate references.
 
 (E) Parameters for selected silicate and aluminosilicate surfaces have
 been developed.  These parameters are designed to be compatible with

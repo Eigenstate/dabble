@@ -852,7 +852,7 @@ Summary of changes in version C39/40
 
   4) stream files moved to subdirectories ( toppar/stream/*/*.str )
 
-  5) Addition of a collection of lipids and glycolipids in the stream/lipid subdirectory
+  5) Addition of a collection of lipids, glycolipids and lipid-modified amino acids in the stream/lipid subdirectory
 
   6) Addition of glycoprotein linkages in stream/prot subdirectory
 
@@ -861,7 +861,12 @@ Summary of changes in version C39/40
 
   8) Patches for ionized cysteine and serine added to protein parent files
 
-  9) Addition of posttranslation patches in stream/prot subdirectory
+  9) Addition of posttranslation patches in stream/prot subdirectory in toppar_all36_prot_modify_res.str
 
+ 10) Extensive set of ions (coverage of periodic table) in misc/toppar_ions_won.str
+
+ 11) New AAM version of the OPLS protein FF in non_charmm directory: top_opls_aam.inp and par_opls_aam.inp
+
+ 12) Amber parm14sb_all.rtf and .prm added to non_charmm directory: includes proteins and nucleic acids
 
 
