@@ -154,6 +154,7 @@ class AmberWriter(object):
         # Do hydrogen mass repartitioning if requested
         if self.hmr:
             print("\nINFO: Repartitioning hydrogen masses...")
+            parm = action.parm
             action = HMassRepartition(parm)
             action.execute()
 

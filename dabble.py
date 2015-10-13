@@ -36,10 +36,10 @@ WELCOME_SCREEN = '''
 |             >(.)__ <(.)__ =(.)__              |
 |              (___/  (___/  (___/              | 
 |                                               |
-|                    DABBLE                     |
-|                 _      _      _               |
-|              __(.)< __(.)> __(.)=             |
-|              \___)  \___)  \___)              |
+|                    DABBLE            ______   |
+|                 _      _      _     /       \ |
+|              __(.)< __(.)> __(.)=  <  beta! | |
+|              \___)  \___)  \___)    \_______/ | 
 |                                               |
 |                 Robin Betz, 2015              |
 |               Stanford University             |
@@ -89,6 +89,11 @@ group.add_argument('-O', '--overwrite', dest='overwrite', action='store_true',
                    help='Overwrite output files, if found')
 group.add_argument('-q', '--quiet', dest='quiet',
                    action='store_true', default=False)
+
+group = parser.add_argument_group('Output Format Options')
+group.add_argument('--hmr', dest='hmassrepartition', default=False,
+                   action='store_true', help='Repartition Hydrogen masses'
+                   'to allow up to 4fs time steps. Currently amber only')
 
 # TODO detect automatically
 group = parser.add_argument_group('Lipid Membrane Options')

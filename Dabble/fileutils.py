@@ -212,6 +212,7 @@ def write_final_system(opts, out_fmt, molid, tmp_dir,
         writer = AmberWriter(molid=temp_mol,
                              tmp_dir=tmp_dir,
                              lipid_sel=opts.lipid_sel,
+                             hmr=opts.hmassrepartition,
                              extra_params=extra_params)
         writer.write(write_psf_name)
 
@@ -267,19 +268,22 @@ def check_write_ok(filename, out_fmt, overwrite=False):
 
 #==========================================================================
 
-def check_out_type(value):
+def check_out_type(value, hmr=False):
     """
     Checks the file format of the requiested output is supported, and sets
     internal variables as necessary.
 
     Args:
       value (str): Filename requested
+      hmr (bool): If hydrogen mass repartitioning is requested
 
     Returns:
       The requested output format
 
     Raises:
       ValueError: if the output format requested is currently unsupported
+      NotImplementedError: if hydrogen mass repartitioning is requested
+                           for amber files
     """
 
     if len(value) < 3 :
@@ -297,6 +301,10 @@ def check_out_type(value):
         out_fmt='amber'
     else :
         raise ValueError("%s is an unsupported format" % value)
+
+    if hmr and (out_fmt != 'amber'):
+        raise NotImplementedError("HMR only supported with AMBER outputs!")
+
     return out_fmt 
 
 #++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++

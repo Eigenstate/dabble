@@ -138,6 +138,12 @@ that through [paramchem](cgenff.paramchem.org) which is smart enough to recogniz
 molecule and will provide a topology file that translates the atom names to the correct 
 charmm atom types.
 
+## *NEW* Hydrogen mass repartitioning ##
+To run your simulations with timesteps up to 4fs, dabble now supports hydrogen
+mass repartitioning. Currently this only works when using AMBER with charmm parameters.
+
+    -hmr
+
 ## *NEW* Custom membranes, or no membranes ##
 
 *"I want a system with just water, no membrane*

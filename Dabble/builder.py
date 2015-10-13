@@ -82,7 +82,8 @@ class DabbleBuilder(object):
                     "lipid_membranes/tip3pbox.mae")
 
         # Check the file output format is supported
-        self.out_fmt = fileutils.check_out_type(opts.output_filename)
+        self.out_fmt = fileutils.check_out_type(opts.output_filename,
+                                                opts.hmassrepartition)
 
     #==========================================================================
 
