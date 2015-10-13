@@ -141,8 +141,9 @@ charmm atom types.
 ## *NEW* Hydrogen mass repartitioning ##
 To run your simulations with timesteps up to 4fs, dabble now supports hydrogen
 mass repartitioning. Currently this only works when using AMBER with charmm parameters.
+Just add the following flag.
 
-    -hmr
+    --hmr
 
 ## *NEW* Custom membranes, or no membranes ##
 
