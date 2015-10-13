@@ -48,10 +48,12 @@ class AmberWriter(object):
     #==========================================================================
 
     def __init__(self, molid, tmp_dir,
-                 forcefield='charmm', lipid_sel="lipid", extra_params=None):
+                 forcefield='charmm', lipid_sel="lipid",
+                 hmr=False, extra_params=None):
         self.lipid_sel = lipid_sel
         self.molid = molid
         self.tmp_dir = tmp_dir
+        self.hmr = hmr
         if forcefield not in ['amber', 'charmm']:
             raise ValueError("Unsupported forcefield: %s" % forcefield)
         self.forcefield = forcefield
@@ -62,7 +64,8 @@ class AmberWriter(object):
                 resource_filename(__name__, "charmm_parameters/par_all36_cgenff.prm"),
                 resource_filename(__name__, "charmm_parameters/par_all36_prot.prm"),
                 resource_filename(__name__, "charmm_parameters/par_all36_lipid.prm"),
-                resource_filename(__name__, "charmm_parameters/par_all36_carb.prm")
+                resource_filename(__name__, "charmm_parameters/par_all36_carb.prm"),
+                resource_filename(__name__, "charmm_parameters/toppar_all36_prot_na_combined.str")
                 ]
         else:
             self.parameters = [] # TODO amber default parameters
@@ -138,7 +141,7 @@ class AmberWriter(object):
         box = molecule.get_periodic(molid=self.molid)
         args += " -box %f,%f,%f" % (box['a'], box['b'], box['c'])
 
-        from ParmedTools import chamber, parmout
+        from ParmedTools import chamber, parmout, HMassRepartition
         from chemistry.amber import AmberParm
 
         print("\nINFO: Running chamber. This may take a while...")
@@ -147,6 +150,13 @@ class AmberWriter(object):
         action = chamber(parm, args)
         print(action)
         action.execute()
+
+        # Do hydrogen mass repartitioning if requested
+        if self.hmr:
+            print("\nINFO: Repartitioning hydrogen masses...")
+            action = HMassRepartition(parm)
+            action.execute()
+
         print("\nINFO: Ran chamber")
         write = parmout(action.parm, "%s.prmtop %s.inpcrd"
                         %(self.prmtop_name, self.prmtop_name))

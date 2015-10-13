@@ -89,7 +89,8 @@ class CharmmWriter(object):
             resource_filename(__name__, "charmm_parameters/top_all36_cgenff.rtf"),
             resource_filename(__name__, "charmm_parameters/top_all36_prot.rtf"),
             resource_filename(__name__, "charmm_parameters/top_all36_lipid.rtf"),
-            resource_filename(__name__, "charmm_parameters/top_all36_carb.rtf")
+            resource_filename(__name__, "charmm_parameters/top_all36_carb.rtf"),
+            resource_filename(__name__, "charmm_parameters/toppar_all36_prot_na_combined.str")
             ]
         if extra_topos is not None:
             self.topologies.extend(extra_topos)
@@ -1028,17 +1029,18 @@ class CharmmWriter(object):
         atomsel("resname CYS CYX CYD CYSD and resid %s"
                 % " ".join([str(x) for x in cyss])).set('resname', 'baa')
         toupdate = set(atomsel('resname baa').get('resid'))
-        for resid in toupdate:
+        while len(toupdate):
+            resid = toupdate.pop()
             ressel = "(resid %d and resname baa)" % resid
             seg1 = atomsel(ressel).get('fragment')[0]
             sulfidx = atomsel("%s and name SG" % ressel).get('index')
             if len(sulfidx) > 1:
                 raise ValueError("More than one sulfur in Cys %d" % resid)
-            bonded = atomsel("%s and index %d" % (ressel, sulfidx)).bonds[0]
-            elements = atomsel("index %s" % " ".join([str(x) for x in bonded])).get('element')
+            bonded = atomsel("%s and index %s" % (ressel, sulfidx[0])).bonds[0]
+            elements = set(atomsel("index %s" % " ".join([str(x) for x in bonded])).get('element'))
             if {"H", "C"} == elements: # Normal cysteine
                 atomsel(ressel).set('resname', 'CYS')
-            if {"S", "C"} == elements: # Disulfide bridge
+            elif {"S", "C"} == elements: # Disulfide bridge
                 partner = atomsel("element S and index %s" % " ".join([str(x) for x in bonded]))
                 res2 = partner.get('resid')[0]
                 seg2 = partner.get('fragment')[0]
@@ -1053,7 +1055,7 @@ class CharmmWriter(object):
                 patches += 'patch CYSD P%s:%d' % (seg1, resid)
             else:
                 raise ValueError("Unknown modification to Cys %d" % resid)
-        toupdate = set(atomsel('resname baa').get('resid'))
+            toupdate = set(atomsel('resname baa').get('resid'))
 
         self.file.write(patches)
         molecule.set_top(old_top)
