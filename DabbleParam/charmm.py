@@ -90,6 +90,7 @@ class CharmmWriter(object):
             resource_filename(__name__, "charmm_parameters/top_all36_prot.rtf"),
             resource_filename(__name__, "charmm_parameters/top_all36_lipid.rtf"),
             resource_filename(__name__, "charmm_parameters/top_all36_carb.rtf"),
+            resource_filename(__name__, "charmm_parameters/top_all36_na.rtf"),
             resource_filename(__name__, "charmm_parameters/toppar_all36_prot_na_combined.str")
             ]
         if extra_topos is not None:
