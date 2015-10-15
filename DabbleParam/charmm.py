@@ -192,6 +192,7 @@ class CharmmWriter(object):
             fragment.set('user', 0.0)
 
         # Detect disulfide bridges and add appropriate patch lines
+        print("Checking cysteines...")
         self._set_disulfide_bridges()
         # End protein
 
@@ -350,11 +351,11 @@ class CharmmWriter(object):
             ressel = "(resid %s and resname SER SERD SP1 SP2)" % resid
             atomsel(ressel).set('resname', 'SER')
             if "P" in atomsel(ressel).get('element'): # Phosphorylated
-                numh = len(atomsel('%s and element H' % ressel))
-                if numh == 4:
+                charge = int(sum(atomsel(ressel).get('charge')))
+                if charge== -1:
                     print("INFO: Found monoanionic phosphoserine resid %d" % resid)
                     patches += 'patch SP1 %s:%d\n' % (seg, resid)
-                elif numh == 5:
+                elif charge == -2:
                     print("INFO: Found dianionic phosphoserine resid %d" % resid)
                     patches += 'patch SP2 %s:%d\n' % (seg, resid)
                 else: # Print just a warning in case user handles it later
@@ -369,11 +370,11 @@ class CharmmWriter(object):
             ressel = "(resid %s and resname THR THP1 THP2)" % resid
             atomsel(ressel).set('resname', 'THR')
             if "P" in atomsel(ressel).get('element'): # Phosphorylated
-                numh = len(atomsel('%s and element H' % ressel))
-                if numh == 7:
+                charge = int(sum(atomsel(ressel).get('charge')))
+                if charge == -1:
                     print("INFO: Found monoanionic phosphothreonine resid %d" % resid)
                     patches += 'patch THP1 %s:%d\n' % (seg, resid)
-                elif numh == 6:
+                elif charge == -2:
                     print("INFO: Found dianionic phosphothreonine resid %d" % resid)
                     patches += 'patch THP2 %s:%d\n' % (seg, resid)
                 else:
@@ -385,11 +386,11 @@ class CharmmWriter(object):
             ressel = "(resid %s and resname TYR TP1 TP2)" % resid
             atomsel(ressel).set('resname', 'TYR')
             if "P" in atomsel(ressel).get('element'): # Phosphorylated
-                numh = len(atomsel('%s and element H' % ressel))
-                if numh == 9:
+                charge = int(sum(atomsel(ressel).get('charge')))
+                if charge == -1:
                     print("INFO: Found monoanionic phosphotyrosine resid %d" % resid)
                     patches += 'patch TP1 %s:%d\n' % (seg, resid)
-                elif numh == 8:
+                elif charge == -2:
                     print("INFO: Found dianionic phosphotyrosine resid %d" % resid)
                     patches += 'patch TP2 %s:%d\n' % (seg, resid)
                 else:
