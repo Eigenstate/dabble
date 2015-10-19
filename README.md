@@ -1,4 +1,6 @@
 ## Dabble ##
+[![Documentation Status](https://readthedocs.org/projects/dabble-md/badge/?version=latest)](http://dabble-md.readthedocs.org/en/latest/?badge=latest)
+[![Github Releases (by Release)](https://img.shields.io/github/downloads/atom/atom/v0.190.0/total.svg?style=flat-square)]()
 
 *Dabble* is a Python program that facilitates the insertion of a protein system
 into a pre-equilibrated membrane. It incorporates the atomselection language
