@@ -144,7 +144,7 @@ class CharmmWriter(object):
                 print("  - %s" % top.split("/")[-1])
 
             print("Enter the path to the filename(s) from the current working "
-                  "directory, separated by a comma, of any additional rtf files "
+                  "directory, separated by a comma, of any additional rtf or str files "
                   "you wish to use.\n")
             sys.stdout.flush()
             inp = raw_input('> ')
