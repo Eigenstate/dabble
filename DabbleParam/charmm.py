@@ -1028,8 +1028,9 @@ class CharmmWriter(object):
         # Rename cysteines to indicate we dont know what they are
         # Complicated selection to avoid resid bug with next to ACE or NMA
         cyss = set(atomsel('resname CYS CYX CYD CYSD').get('resid'))
-        atomsel("resname CYS CYX CYD CYSD and resid %s"
-                % " ".join([str(x) for x in cyss])).set('resname', 'baa')
+        if len(cyss):
+            atomsel("resname CYS CYX CYD CYSD and resid %s"
+                    % " ".join([str(x) for x in cyss])).set('resname', 'baa')
         toupdate = set(atomsel('resname baa').get('resid'))
         while len(toupdate):
             resid = toupdate.pop()
