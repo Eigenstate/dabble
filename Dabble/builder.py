@@ -219,6 +219,11 @@ class DabbleBuilder(object):
                                  self.out_fmt,
                                  overwrite=self.opts['overwrite'])
         final_id = self.build()
+        if self.opts.get('extra_topos'):
+            self.opts['extra_topos'] = self.opts['extra_topos'].split(',')
+        if self.opts.get('extra_params'):
+            self.opts['extra_params'] = self.opts['extra_params'].split(',')
+
         print("Writing system to %s with %d atoms comprising:\n"
               "  %d lipid molecules\n"
               "  %d water molecules\n"
@@ -227,7 +232,9 @@ class DabbleBuilder(object):
                  molutils.num_lipids_remaining(final_id, self.opts['lipid_sel']),
                  molutils.num_waters_remaining(molid=final_id)))
         fileutils.write_final_system(out_fmt=self.out_fmt, out_name=self.opts['output_filename'],
-                                     molid=final_id, tmp_dir=self.tmp_dir)
+                                     molid=final_id, tmp_dir=self.tmp_dir,
+                                     extra_topos=self.opts.get('extra_topos'),
+                                     extra_params=self.opts.get('extra_params'))
         molecule.delete(final_id)
 
     #==========================================================================

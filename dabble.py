@@ -90,10 +90,18 @@ group.add_argument('-O', '--overwrite', dest='overwrite', action='store_true',
 group.add_argument('-q', '--quiet', dest='quiet',
                    action='store_true', default=False)
 
-group = parser.add_argument_group('Output Format Options')
+group = parser.add_argument_group('Parameterization Options')
 group.add_argument('--hmr', dest='hmassrepartition', default=False,
                    action='store_true', help='Repartition Hydrogen masses'
                    'to allow up to 4fs time steps. Currently amber only')
+group.add_argument('-top', '--topology', default=None,
+                    type=str, metavar='<topologies>', dest='extra_topos',
+                    help='Additional topology (rtf or str) files to'
+                    'include in parameterization, separated by commas')
+group.add_argument('-par', '--parameters', default=None,
+                   type=str, metavar='<parameters>', dest='extra_params',
+                   help='Additional parameter (prm or str) files to'
+                   'include in parameterization, separated by commas')
 
 group = parser.add_argument_group('Lipid Membrane Options')
 group.add_argument('-L', '--lipid-selection', dest='lipid_sel',
