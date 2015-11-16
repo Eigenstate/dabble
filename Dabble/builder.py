@@ -96,16 +96,10 @@ class DabbleBuilder(object):
          (int) VMD molecule id of built system
         """
 
-        # Load and orient to solute (protein or ligand)
+        # Load the solute (protein or ligand)
         print("Loading and orienting the solute...")
         self.add_molecule(self.opts['solute_filename'], 'solute')
         self._set_solute_sel(self.molids['solute'])
-        self.molids['solute'] = orient_solute(self.molids['solute'],
-                                              z_move=self.opts['z_move'],
-                                              z_rotation=self.opts['z_rotation'],
-                                              opm_pdb=self.opts['opm_pdb'],
-                                              opm_align=self.opts['opm_align'],
-                                              tmp_dir=self.tmp_dir)
 
         # Compute dimensions of the input system
         print("Computing the size of the input periodic cell...")
@@ -123,8 +117,6 @@ class DabbleBuilder(object):
             self.size[0] = self.opts['user_x']
         if self.opts.get('user_y'):
             self.size[1] = self.opts['user_y']
-        if self.opts.get('user_z'):
-            self.size[2] = self.opts['user_z']
         print("Final system will be %.2f x %.2f x %.2f"
               % (self.size[0], self.size[1], self.size[2]))
         print("X,Y solvent buffer: (%4.1f, %4.1f)" % (self.size[0] - dx_sol,
@@ -132,6 +124,9 @@ class DabbleBuilder(object):
         print("X,Y transmembrane buffer: (%4.1f, %4.1f)" % (self.size[0] - dx_tm,
                                                             self.size[1] - dy_tm))
         print("Z solvent buffer: %4.1f" % (self.size[2]-dz_full))
+
+        # Orient the solute in the membrane so padding is equal on all sides
+        self.molids['solute'] = self._orient_solute(self.molids['solute'])
 
         # Load, tile, and center the membrane system, check if it's water only
         self.add_molecule(self.opts['membrane_system'], 'membrane')
@@ -397,6 +392,7 @@ class DabbleBuilder(object):
         dy_sol = max(sol_solute.get('y')) - min(sol_solute.get('y'))
 
         self.size[0] = max(dx_tm + mem_buf, dx_sol + wat_buf)
+        print("mem_buf = %f, wat_buf = %f" % (mem_buf, wat_buf))
         self.size[1] = max(dy_tm + mem_buf, dy_sol + wat_buf)
 
         # Z dimension
@@ -810,6 +806,80 @@ class DabbleBuilder(object):
               "  %4d atoms from lipids getting stuck in a sidechain"
               % (solute_lips, ring_lips, clash_lips, protein_lips))
 
+#==========================================================================
+
+    def _orient_solute(self, molid):
+        """
+        Orients the solute. Can either move it explicitly in the z direction,
+        or align to an OPM structure.
+
+        Args:
+          molid (int): VMD molecule ID to orient
+          z_move (float): Amount to move in the Z direction
+          z_rotation (float): Amount to rotate membrane relative to protein,
+            can just take this straight from the OPM website value
+          opm_pdb (str): Filename of OPM structure to align to
+          opm_align (str): Atom selection string to align
+          tmp_dir (str): Directory to put temporary files in
+
+        Returns:
+          (int) VMD molecule ID of oriented system
+
+        Raises:
+          ValueError if movement and alignment arguments are both specified
+        """
+
+
+        # Check that OPM and alignment aren't both specified
+        if self.opts.get('opm_pdb') and \
+                (self.opts.get('z_move') != 0 or self.opts.get('z_rotation') != 0):
+            raise ValueError("ERROR: Cannot specify an OPM pdb and manual orientation information")
+
+        if self.opts.get('opm_pdb'):
+            opm = molecule.load('pdb', self.opts['opm_pdb'])
+            moveby = atomsel('protein and backbone', molid=molid).fit( \
+                             atomsel(self.opts.get('opm_align'), molid=opm))
+            atomsel('all', molid=molid).move(moveby)
+            molecule.delete(opm)
+            return molid
+
+        if self.opts.get('z_move'):
+            atomsel('all', molid=molid).moveby((0, 0, self.opts['z_move']))
+            if not self.opts.get('z_rotation'):
+                return molid
+
+        if self.opts.get('z_rotation'):
+            trans.resetview(molid) # View affect rotation matrix, now it's I
+            # This is negative because we want membrane flat along the z-axis,
+            # and OPM lists the membrane rotation relative to the protein
+            theta = math.radians(-1*self.opts['z_rotation'])
+            # Rotation matrix in row order with 4th dimension just from I
+            # pylint: disable=bad-whitespace, bad-continuation
+            rotmat = [ math.cos(theta), -1*math.sin(theta), 0, 0,
+                       math.sin(theta),   math.cos(theta),  0, 0,
+                             0        ,         0,          1, 0,
+                             0        ,         0,          0, 1 ]
+            # pylint: enable=bad-whitespace, bad-continuation
+            trans.set_rotation(molid, rotmat)
+            return molid
+
+        # Center the system according to VMD's internal metric, then
+        # move the protein in the xy plane so that there is equal padding
+        # on either side
+        molid = molutils.center_system(molid=molid, tmp_dir=self.opts.get('tmp_dir'),
+                                       center_z=False)
+        system = atomsel('all', molid=molid)
+        tx = (-max(system.get('x')) - min(system.get('x')))/2.
+        ty = (-max(system.get('y')) - min(system.get('y')))/2.
+        temp_mae = tempfile.mkstemp(suffix='.mae',
+                                    prefix='dabble_centered',
+                                    dir=self.opts.get('tmp_dir'))[1]
+        system.moveby((tx, ty, 0))
+        system.write('mae', temp_mae)
+        molecule.delete(molid)
+        new_id = molecule.load('mae', temp_mae)
+        return new_id
+
 #+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
 #                           MODULE FUNCTIONS
 #+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
@@ -909,68 +979,6 @@ def _remove_residues(sel, molid):
 #                            PUBLIC FUNCTIONS                             #
 #++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
 
-def orient_solute(molid, **kwargs):
-    """
-    Orients the solute. Can either move it explicitly in the z direction,
-    or align to an OPM structure.
-
-    Args:
-      molid (int): VMD molecule ID to orient
-      z_move (float): Amount to move in the Z direction
-      z_rotation (float): Amount to rotate membrane relative to protein,
-        can just take this straight from the OPM website value
-      opm_pdb (str): Filename of OPM structure to align to
-      opm_align (str): Atom selection string to align
-      tmp_dir (str): Directory to put temporary files in
-
-    Returns:
-      (int) VMD molecule ID of oriented system
-
-    Raises:
-      ValueError if movement and alignment arguments are both specified
-    """
-
-
-    # Check that OPM and alignment aren't both specified
-    if 'opm_pdb' in kwargs and 'z_move' in kwargs and 'z_rotation' in kwargs and \
-       kwargs['opm_pdb'] is not None and \
-       (kwargs['z_move'] is not 0 or kwargs['z_rotation'] is not 0):
-        raise ValueError("ERROR: Cannot specify an OPM pdb and manual orientation information")
-
-    if kwargs.get('opm_pdb'):
-        opm = molecule.load('pdb', kwargs['opm_pdb'])
-        moveby = atomsel('protein and backbone', molid=molid).fit(atomsel(kwargs['opm_align'],
-                                                                          molid=opm))
-        atomsel('all', molid=molid).move(moveby)
-        molecule.delete(opm)
-        return molid
-
-    if kwargs.get('z_move') is not None:
-        atomsel('all', molid=molid).moveby((0, 0, kwargs['z_move']))
-        if 'z_rotation' not in kwargs:
-            return molid
-
-    if kwargs.get('z_rotation') is not None:
-        trans.resetview(molid) # View affect rotation matrix, now it's I
-        # This is negative because we want membrane flat along the z-axis,
-        # and OPM lists the membrane rotation relative to the protein
-        theta = math.radians(-1*kwargs['z_rotation'])
-        # Rotation matrix in row order with 4th dimension just from I
-        # pylint: disable=bad-whitespace, bad-continuation
-        rotmat = [ math.cos(theta), -1*math.sin(theta), 0, 0,
-                   math.sin(theta),   math.cos(theta),  0, 0,
-                         0        ,         0,          1, 0,
-                         0        ,         0,          0, 1 ]
-        # pylint: enable=bad-whitespace, bad-continuation
-        trans.set_rotation(molid, rotmat)
-        return molid
-
-    molid = molutils.center_system(molid=molid, tmp_dir=kwargs['tmp_dir'],
-                                   center_z=False)
-
-    return molid
-
-#==========================================================================
 
 def add_salt_ion(element, molid):
     """
