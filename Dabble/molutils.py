@@ -23,14 +23,17 @@ Boston, MA 02111-1307, USA.
 from __future__ import print_function
 import numpy as np
 import os
-import sys
 import tempfile
 
+# pylint: disable=import-error, unused-import
 import vmd
 import molecule
 from atomsel import atomsel
+# pylint: enable=import-error
 
-import fileutils
+from Dabble import fileutils
+
+# pylint: disable=no-member
 
 #++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
 
@@ -106,6 +109,7 @@ def diameter(coords, chunkmem=30e6):
     Returns:
       (float, float): The diameter of the stuff in both dimensions
     """
+    # pylint: disable=invalid-name
     coords = np.require(coords, dtype=np.float32)
     if coords.size == 0:
         return 0
@@ -137,8 +141,8 @@ def solute_xy_diameter(solute_sel, molid):
       (float, float) X and Y diameter of the selection
     """
 
-    a = atomsel(solute_sel, molid=molid)
-    return diameter(np.transpose([a.get('x'), a.get('y')]))
+    sol = atomsel(solute_sel, molid=molid)
+    return diameter(np.transpose([sol.get('x'), sol.get('y')]))
 
 #==========================================================================
 
@@ -167,51 +171,53 @@ def get_num_salt_ions_needed(molid,
       Exception if number of cations and the net cation charge are
         not equal (should never happen)
     """
+    # pylint: disable = too-many-branches, too-many-locals
 
     cations = atomsel_remaining(molid, 'element %s' % cation)
     anions = atomsel_remaining(molid, 'element %s' % anion)
-    num_cations = len(cations)
-    num_anions = len(anions)
     molid = molecule.get_top()
     try:
-        abs(get_net_charge(str(cations), molid)-num_cations) > 0.01
-    except:
+        abs(get_net_charge(str(cations), molid)-len(cations)) > 0.01
+    except ValueError:
         # Check for bonded cations
-        nonbonded_cation_index = [atomsel('index %d' %x).get('index')[0] \
-          for x in nonzero(array(map( \
-          len, atomsel('element %s'%cation).bonds)) == 0)[0]]
+        # Minimize the number of calls to atomsel
+        nonbonded_cation_index = [cations.get('index')[i] \
+                                  for i in range(len(cations)) \
+                                  if len(cations.bonds[i]) == 0]
+
         if len(nonbonded_cation_index) == 0:
             cations = atomsel('none')
         else:
-            cations = atomsel_remaining(molid, 
+            cations = atomsel_remaining(molid,
                                         'index '+' '.join(nonbonded_cation_index))
-        num_cations = len(cations)
 
-        if abs(get_net_charge(str(cations), molid)-num_cations) < 0.01:
+        if abs(get_net_charge(str(cations), molid)-len(cations)) < 0.01:
             raise Exception('Num cations and net cation charge are not equal')
     try:
-        abs(get_net_charge(str(anions), molid)+num_anions) > 0.01
-    except:
+        abs(get_net_charge(str(anions), molid)+len(anions)) > 0.01
+    except ValueError:
         # Check for bonded anions
-        nonbonded_anion_index = [atomsel('index %d' % x).get('index')[0] \
-          for x in np.nonzero(np.array(map(len, \
-          atomsel_remaining(molid, 'element %s'%anion).bonds)) == 0)[0]]
+        nonbonded_anion_index = [anions.get('index')[i] \
+                                 for i in range(len(anions)) \
+                                 if len(anions.bonds[i]) == 0]
+        #nonbonded_anion_index = [atomsel('index %d' % x).get('index')[0] \
+        #  for x in np.nonzero(np.array(map(len, \
+        #  atomsel_remaining(molid, 'element %s'%anion).bonds)) == 0)[0]]
         if len(nonbonded_anion_index) == 0:
             anions = atomsel('none')
         else:
             anions = atomsel_remaining(molid,
                                        'index '+' '.join(nonbonded_anion_index))
-        num_anions = len(anions)
-        if abs(get_net_charge(str(anions), molid)+num_anions) < 0.01:
+        if abs(get_net_charge(str(anions), molid)+len(anions)) < 0.01:
             raise Exception('num anions and abs anion charge are not equal')
 
     num_waters = num_atoms_remaining(molid, water_sel)
     num_for_conc = int(round(__1M_SALT_IONS_PER_WATER * num_waters * conc))
-    pos_ions_needed = num_for_conc - num_cations
-    neg_ions_needed = num_for_conc - num_anions
+    pos_ions_needed = num_for_conc - len(cations)
+    neg_ions_needed = num_for_conc - len(anions)
     system_charge = get_system_net_charge(molid)
 
-    new_system_charge = system_charge + num_anions - num_cations
+    new_system_charge = system_charge + len(anions) - len(cations)
     to_neutralize = abs(new_system_charge)
     if new_system_charge > 0:
         if to_neutralize > pos_ions_needed:
@@ -225,8 +231,8 @@ def get_num_salt_ions_needed(molid,
             neg_ions_needed = 0
         neg_ions_needed -= to_neutralize
 
-    total_cations = num_cations + pos_ions_needed
-    total_anions = num_anions + neg_ions_needed
+    total_cations = len(cations) + pos_ions_needed
+    total_anions = len(anions) + neg_ions_needed
 
     # volume estimate from prev waters
     cation_conc = (float(total_cations) / num_waters) / __1M_SALT_IONS_PER_WATER
@@ -256,13 +262,16 @@ def lipid_composition(lipid_sel, molid):
     """
 
     def leaflet(leaflet_sel):
+        """
+        Returns the composition in one selected leaflet
+        """
         sel = atomsel_remaining(molid, 'not element H C and (%s) and (%s)'
                                 % (lipid_sel, leaflet_sel))
         resnames = set(sel.get('resname'))
-        d = dict([(s, len(set(atomsel_remaining(molid, 'not element H C and ' \
-            'resname %s and (%s) and (%s)' % (s, lipid_sel, leaflet_sel) \
-            ).get('fragment')))) for s in resnames])
-        return d
+        dct = dict([(s, len(set(atomsel_remaining(molid, 'not element H C and ' \
+             'resname %s and (%s) and (%s)' % (s, lipid_sel, leaflet_sel) \
+             ).get('fragment')))) for s in resnames])
+        return dct
 
     inner, outer = leaflet('z < 0'), leaflet('not (z < 0)')
     return inner, outer
@@ -283,11 +292,11 @@ def print_lipid_composition(lipid_sel, molid):
 
     inner, outer = lipid_composition(lipid_sel, molid)
     desc = "Inner leaflet:"
-    for r, n in sorted(inner.items()):
-        desc += "  %d %s\n" % (n, r)
+    for kind, num in sorted(inner.items()):
+        desc += "  %d %s\n" % (num, kind)
     desc += "Outer leaflet:"
-    for r, n in sorted(outer.items()):
-        desc += "  %d %s\n" % (n, r)
+    for kind, num in sorted(outer.items()):
+        desc += "  %d %s\n" % (num, kind)
 
     return desc
 
@@ -307,11 +316,11 @@ def get_system_dimensions(molid):
       ValueError if no box is found
     """
 
-    p = molecule.get_periodic(molid)
+    box = molecule.get_periodic(molid)
 
-    if p['a'] == 0.0 and p['b'] == 0.0 and p['c'] == 0.0:
+    if box['a'] == 0.0 and box['b'] == 0.0 and box['c'] == 0.0:
         raise Exception('No periodic box found in membrane!')
-    return p['a'], p['b'], p['c']
+    return (box['a'], box['b'], box['c'])
 
 
 #==========================================================================
@@ -330,6 +339,7 @@ def center_system(molid, tmp_dir, center_z=False):
     Returns:
       (int) : VMD molecule id of centered system
     """
+    # pylint: disable=invalid-name
     x, y, z = atomsel('all', molid=molid).center()
 
     if center_z is True:
@@ -367,11 +377,11 @@ def set_ion(molid, atom_id, element):
 
     resname = dict(Na='SOD', K='POT', Cl='CLA')[element]
     name = dict(Na='NA', K='K', Cl='CL')[element]
-    type = dict(Na='NA', K='K', Cl='CL')[element]
+    attype = dict(Na='NA', K='K', Cl='CL')[element]
     charge = dict(Na=1, K=1, Cl=-1)[element]
     sel.set('element', element)
     sel.set('name', name)
-    sel.set('type', type)
+    sel.set('type', attype)
     sel.set('resname', resname)
     sel.set('chain', 'N')
     sel.set('segid', 'ION')
@@ -416,7 +426,7 @@ def tile_system(input_id, times_x, times_y, times_z, tmp_dir):
     Returns:
       (int) VMD molecule ID of tiled system
     """
-
+    # pylint: disable=invalid-name, too-many-locals
     # Read in the equilibrated bilayer file
     new_resid = np.array(atomsel('all', molid=input_id).get('residue'))
     num_residues = new_resid.max()
@@ -579,7 +589,7 @@ def num_lipids_remaining(molid, lipid_sel):
     if not molecule.exists(molid):
         raise ValueError("Invalid molecule %d" % molid)
 
-    return np.unique(atomsel_remaining(molid,lipid_sel).get('fragment')).size
+    return np.unique(atomsel_remaining(molid, lipid_sel).get('fragment')).size
 
 #++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
 

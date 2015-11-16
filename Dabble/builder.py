@@ -28,10 +28,13 @@ import random
 import os
 import tempfile
 
+# Pylint hates vmd
+# pylint: disable=import-error, unused-import
 import vmd
 import molecule
 import trans
 from atomsel import atomsel
+# pylint: enable=import-error, unused-import
 
 from Dabble import fileutils
 from Dabble import molutils
@@ -53,8 +56,7 @@ class DabbleBuilder(object):
 
     Attributes:
       molids (dict str->int): Molecule IDs comprising system components
-      xy_size (float): Size of the membrane / xy dimension of the system
-      z_size (float): Size of the solvent / z dimension of the system
+      size (array len 3 of floats): Size of the x, y, and z dimensions of the system
       solute_sel (str): VMD atom selection string for original solute
       opts (argparse thing): All options passed to the system builder
       tmp_dir (str): Directory in which to save temporary files
@@ -63,27 +65,26 @@ class DabbleBuilder(object):
 
     #==========================================================================
 
-    def __init__(self, opts):
-        random.seed(2015)
-        self.opts = opts
+    def __init__(self, **kwargs):
+        random.seed(2015) # Be deterministic
+        self.opts = kwargs
         self.molids = {}
-        self.xy_size = 0
-        self.z_size = 0
+        self.size = [0., 0., 0.]
         self.solute_sel = ""
         self.water_only = False
         self.tmp_dir = tempfile.mkdtemp(prefix='dabble', dir=os.getcwd())
 
         # Check for default lipid membrane
-        if self.opts.membrane_system == 'DEFAULT':
-            self.opts.membrane_system = resource_filename(__name__, \
+        if self.opts['membrane_system'] == 'DEFAULT':
+            self.opts['membrane_system'] = resource_filename(__name__, \
                     "lipid_membranes/popc.mae")
-        elif self.opts.membrane_system == 'TIP3':
-            self.opts.membrane_system = resource_filename(__name__, \
+        elif self.opts['membrane_system'] == 'TIP3':
+            self.opts['membrane_system'] = resource_filename(__name__, \
                     "lipid_membranes/tip3pbox.mae")
 
         # Check the file output format is supported
-        self.out_fmt = fileutils.check_out_type(opts.output_filename,
-                                                opts.hmassrepartition)
+        self.out_fmt = fileutils.check_out_type(self.opts['output_filename'],
+                                                self.opts['hmassrepartition'])
 
     #==========================================================================
 
@@ -97,39 +98,44 @@ class DabbleBuilder(object):
 
         # Load and orient to solute (protein or ligand)
         print("Loading and orienting the solute...")
-        self.add_molecule(self.opts.solute_filename, 'solute')
+        self.add_molecule(self.opts['solute_filename'], 'solute')
         self._set_solute_sel(self.molids['solute'])
         self.molids['solute'] = orient_solute(self.molids['solute'],
-                                              z_move=self.opts.z_move,
-                                              z_rotation=self.opts.z_rotation,
-                                              opm_pdb=self.opts.opm_pdb,
-                                              opm_align=self.opts.opm_align,
+                                              z_move=self.opts['z_move'],
+                                              z_rotation=self.opts['z_rotation'],
+                                              opm_pdb=self.opts['opm_pdb'],
+                                              opm_align=self.opts['opm_align'],
                                               tmp_dir=self.tmp_dir)
 
         # Compute dimensions of the input system
         print("Computing the size of the input periodic cell...")
-        self.xy_size, self.z_size, dxy_sol, dxy_tm, dz_full = \
-                self.get_cell_size(mem_buf=self.opts.xy_buf,
-                                   wat_buf=self.opts.wat_buffer,
+        dx_sol, dy_sol, dx_tm, dy_tm, dz_full = \
+                self.get_cell_size(mem_buf=self.opts['xy_buf'],
+                                   wat_buf=self.opts['wat_buffer'],
                                    molid=self.molids['solute'])
-        print("Solute xy diameter is %.2f (%.2f in TM region)\n"
-              "Solute + membrane Z diameter is %.2f" % (dxy_sol, dxy_tm,
-                                                        dz_full))
+        print("Solute x diameter is %.2f (%.2f in TM region)\n"
+              "Solute y diameter is %.2f (%.2f in TM region)\n"
+              "Solute + membrane Z diameter is %.2f"
+              % (dx_sol, dx_tm, dy_sol, dy_tm, dz_full))
 
         # Compute dimensions of the final system
-        if self.opts.user_xy:
-            self.xy_size = self.opts.user_xy
-        if self.opts.user_z:
-            self.z_size = self.opts.user_z
+        if self.opts.get('user_x'):
+            self.size[0] = self.opts['user_x']
+        if self.opts.get('user_y'):
+            self.size[1] = self.opts['user_y']
+        if self.opts.get('user_z'):
+            self.size[2] = self.opts['user_z']
         print("Final system will be %.2f x %.2f x %.2f"
-              % (self.xy_size, self.xy_size, self.z_size))
-        print("XY solvent buffer: %4.1f" % (self.xy_size-dxy_sol))
-        print("XY transmembrane buffer: %4.1f" % (self.xy_size - dxy_tm))
-        print("Z solvent buffer: %4.1f" % (self.z_size-dz_full))
+              % (self.size[0], self.size[1], self.size[2]))
+        print("X,Y solvent buffer: (%4.1f, %4.1f)" % (self.size[0] - dx_sol,
+                                                      self.size[1] - dy_sol))
+        print("X,Y transmembrane buffer: (%4.1f, %4.1f)" % (self.size[0] - dx_tm,
+                                                            self.size[1] - dy_tm))
+        print("Z solvent buffer: %4.1f" % (self.size[2]-dz_full))
 
         # Load, tile, and center the membrane system, check if it's water only
-        self.add_molecule(self.opts.membrane_system, 'membrane')
-        if not len(atomsel(self.opts.lipid_sel, molid=self.molids['membrane'])):
+        self.add_molecule(self.opts['membrane_system'], 'membrane')
+        if not len(atomsel(self.opts['lipid_sel'], molid=self.molids['membrane'])):
             self.water_only = True
             print("No lipid detected. Proceeding with pure liquid solvent")
         x_mem, y_mem, z_mem = \
@@ -140,7 +146,7 @@ class DabbleBuilder(object):
         print("Tiling solvent...")
         self.molids['tiled_membrane'], times = \
                 tile_membrane_patch(self.molids['membrane'],
-                                    self.xy_size, self.z_size,
+                                    self.size,
                                     tmp_dir=self.tmp_dir,
                                     allow_z_tile=self.water_only)
         print("Solvent tiled %d x %d x %d times" % (times[0], times[1], times[2]))
@@ -162,7 +168,7 @@ class DabbleBuilder(object):
         self.remove_molecule('tiled_membrane')
         self.remove_molecule('solute')
 
-        # Add more waters if necessary 
+        # Add more waters if necessary
         self.molids['combined'] = self._add_water(self.molids['inserted'])
         self.remove_molecule('inserted')
 
@@ -176,14 +182,14 @@ class DabbleBuilder(object):
         # Remove extra lipids and print info about membrane
         if not self.water_only:
             print("\nInitial membrane composition:\n%s" %
-                  molutils.print_lipid_composition(self.opts.lipid_sel,
+                  molutils.print_lipid_composition(self.opts['lipid_sel'],
                                                    molid=self.molids['combined']))
             self._remove_clashing_lipids(self.molids['combined'],
-                                         self.opts.lipid_sel,
-                                         self.opts.lipid_friendly_sel)
+                                         self.opts['lipid_sel'],
+                                         self.opts['lipid_friendly_sel'])
             print("\nFinal membrane composition:\n%s" %
-                  molutils.print_lipid_composition(self.opts.lipid_sel,
-                                               self.molids['combined']))
+                  molutils.print_lipid_composition(self.opts['lipid_sel'],
+                                                   self.molids['combined']))
 
         # Calculate charge
         print("\nSolute net charge: %+d\n"
@@ -192,8 +198,8 @@ class DabbleBuilder(object):
                  molutils.get_system_net_charge(self.molids['combined'])))
 
         # Add ions as necessary
-        self.convert_ions(self.opts.salt_conc,
-                          self.opts.cation,
+        self.convert_ions(self.opts['salt_conc'],
+                          self.opts['cation'],
                           self.molids['combined'])
 
         # System is now built
@@ -211,17 +217,17 @@ class DabbleBuilder(object):
 
         fileutils.check_write_ok(filename,
                                  self.out_fmt,
-                                 overwrite=self.opts.overwrite)
+                                 overwrite=self.opts['overwrite'])
         final_id = self.build()
         print("Writing system to %s with %d atoms comprising:\n"
               "  %d lipid molecules\n"
               "  %d water molecules\n"
               % (filename,
                  molutils.num_atoms_remaining(molid=final_id),
-                 molutils.num_lipids_remaining(final_id, self.opts.lipid_sel),
+                 molutils.num_lipids_remaining(final_id, self.opts['lipid_sel']),
                  molutils.num_waters_remaining(molid=final_id)))
-        fileutils.write_final_system(self.opts, self.out_fmt, final_id,
-                                     tmp_dir=self.tmp_dir)
+        fileutils.write_final_system(out_fmt=self.out_fmt, out_name=self.opts['output_filename'],
+                                     molid=final_id, tmp_dir=self.tmp_dir)
         molecule.delete(final_id)
 
     #==========================================================================
@@ -258,7 +264,7 @@ class DabbleBuilder(object):
         Raises:
           KeyError if there is no molecule with that key string
         """
-        
+
         molid = self.molids[desc]
         try:
             molecule.delete(molid)
@@ -287,7 +293,7 @@ class DabbleBuilder(object):
         """
 
         # Check cation
-        if self.opts.cation not in ['Na', 'K']:
+        if self.opts['cation']not in ['Na', 'K']:
             raise ValueError("Invalid cation")
 
         # Give existing cations correct nomenclature
@@ -296,10 +302,11 @@ class DabbleBuilder(object):
         # Calculate number of salt ions needed
         pos_ions_needed, neg_ions_needed, num_wat, total_cations, total_anions, \
         cation_conc, anion_conc = molutils.get_num_salt_ions_needed(molid,
-            salt_conc, cation=cation)
+                                                                    salt_conc,
+                                                                    cation=cation)
 
         print("Solvent will be %d waters, %d %s (%.3f M), %d Cl (%.3f M)" %
-              (num_wat, total_cations, self.opts.cation, cation_conc,
+              (num_wat, total_cations, self.opts['cation'], cation_conc,
                total_anions, anion_conc))
 
         print("Converting %d waters to %d %s ions and %d Cl ions..." %
@@ -324,7 +331,8 @@ class DabbleBuilder(object):
                       zh_mem_hyd=_MEMBRANE_HYDROPHOBIC_THICKNESS / 2.0):
         """
         Gets the cell size of the final system given initial system and
-        buffers. Detects whether or not a membrane is present.
+        buffers. Detects whether or not a membrane is present. Sets the
+        size of the system.
 
         Args:
           mem_buf (float) : Membrane (xy) buffer amount
@@ -335,8 +343,9 @@ class DabbleBuilder(object):
           zh_mem_hyd (float) : Membrane hydrophobic region thickness
 
         Returns:
-          (float tuple): xy size, z size, xy solute diameter,
-                         transmembrane xy solute diameter, solute z dimension
+        return dx_sol, dy_sol, dx_tm, dy_tm, dz_full
+          (float tuple): x solute dimension, y solute dimension,
+            TM x solute dimension, TM y solute dimension, solute z dimension
 
         Raises:
           ValueError: if filename and molid are both specified
@@ -355,22 +364,37 @@ class DabbleBuilder(object):
         # Some options different for water-only systems (no lipid)
         if self.water_only:
             solute_z = atomsel(self.solute_sel, molid=molid).get('z')
-            dxy_tm = 0.0
+            dx_tm = 0.0
+            dy_tm = 0.0
         else:
             # Add dummy to the membrane boundaries in case protein is peripheral
             solute_z = atomsel(self.solute_sel, molid=molid).get('z') + \
                        [-zh_mem_full, zh_mem_full]
-            dxy_tm = molutils.solute_xy_diameter('(%s) and z > %f and z < %f' %
-                                                 (self.solute_sel,
-                                                  -zh_mem_hyd,
-                                                  zh_mem_hyd), molid)
+            tm_solute = atomsel('(%s) and z > %f and z < %f' % (self.solute_sel,
+                                                                -zh_mem_hyd,
+                                                                zh_mem_hyd), molid)
+            dx_tm = max(tm_solute.get('x')) - min(tm_solute.get('x'))
+            dy_tm = max(tm_solute.get('y')) - min(tm_solute.get('y'))
+
+# Old way of doing it- get diameter of protein in membrane
+#            dxy_tm = molutils.solute_xy_diameter('(%s) and z > %f and z < %f' %
+#                                                 (self.solute_sel,
+#                                                  -zh_mem_hyd,
+#                                                  zh_mem_hyd), molid)
+#
+#       dxy_sol = molutils.solute_xy_diameter(self.solute_sel, molid)
 
         # Solvent invariant options
-        dxy_sol = molutils.solute_xy_diameter(self.solute_sel, molid)
-        xy_size = max(dxy_tm + mem_buf, dxy_sol + wat_buf)
-        z_min, z_max = min(solute_z), max(solute_z)
-        dz_full = z_max - z_min
-        z_size = dz_full + wat_buf
+        sol_solute = atomsel(self.solute_sel, molid)
+        dx_sol = max(sol_solute.get('x')) - min(sol_solute.get('x'))
+        dy_sol = max(sol_solute.get('y')) - min(sol_solute.get('y'))
+
+        self.size[0] = max(dx_tm + mem_buf, dx_sol + wat_buf)
+        self.size[1] = max(dy_tm + mem_buf, dy_sol + wat_buf)
+
+        # Z dimension
+        dz_full = max(solute_z) - min(solute_z)
+        self.size[2] = dz_full + wat_buf
 
         # Cleanup temporary file, if read in
         if filename is not None:
@@ -378,7 +402,7 @@ class DabbleBuilder(object):
             if top != -1:
                 molecule.set_top(top)
 
-        return xy_size, z_size, dxy_sol, dxy_tm, dz_full
+        return dx_sol, dy_sol, dx_tm, dy_tm, dz_full
 
     #==========================================================================
     #                            Private methods                              #
@@ -402,15 +426,15 @@ class DabbleBuilder(object):
         # Temporary fix for chain W in input file
         if len(atomsel('chain W')):
             print("WARNING: Renaming crystal water chain to X, temporary bugfix")
-            atomsel('chain W').set('chain','X')
+            atomsel('chain W').set('chain', 'X')
         chains = set(atomsel('all', molid=molid).get('chain'))
         sel = ""
         while len(chains):
             chn = chains.pop() # have to handle first separately because of or
             sel += "(chain %s and resid " % (chn) + \
-                   " ".join([str(i) for i in 
+                   " ".join([str(i) for i in \
                        set(atomsel('chain %s' % chn, molid=molid).get('resid'))]) + \
-                   ")" 
+                   ")"
             if len(chains):
                 sel += " or "
         self.solute_sel = sel
@@ -428,7 +452,7 @@ class DabbleBuilder(object):
         old_top = molecule.get_top()
         molecule.set_top(molid)
         molecule.set_periodic(-1, -1,
-                              self.xy_size, self.xy_size, self.z_size,
+                              self.size[0], self.size[1], self.size[2],
                               90.0, 90.0, 90.0)
         molecule.set_top(old_top)
 
@@ -447,7 +471,7 @@ class DabbleBuilder(object):
           (int) number of atoms deleted
         """
         return _remove_residues('(not (%s)) and noh and abs(z) > %f'
-                                % (self.solute_sel, self.z_size / 2.0),
+                                % (self.solute_sel, self.size[2] / 2.0),
                                 molid=molid)
 
     #==========================================================================
@@ -468,36 +492,37 @@ class DabbleBuilder(object):
             ValueError if water buffer is None
         """
 
-        if self.opts.wat_buffer is None:
+        if not self.opts.get('wat_buffer'):
             raise ValueError("Water buffer undefined")
 
         # Check the +Z direction
-        zup = self.opts.wat_buffer + \
+        zup = self.opts['wat_buffer']+ \
               max(atomsel(self.solute_sel).get('z')) - \
-              max(atomsel("not (%s or %s)" % (self.solute_sel, self.opts.lipid_sel)).get('z'))
+              max(atomsel("not (%s or %s)" % (self.solute_sel, self.opts['lipid_sel'])).get('z'))
         # Check the -Z direction
-        zdo = self.opts.wat_buffer + \
-              min(atomsel("not (%s or %s)" % (self.solute_sel, self.opts.lipid_sel)).get('z')) \
+        zdo = self.opts['wat_buffer']+ \
+              min(atomsel("not (%s or %s)" % (self.solute_sel, self.opts['lipid_sel'])).get('z')) \
               - min(atomsel(self.solute_sel).get('z'))
 
         # Load water
-        wat_path = self.opts.membrane_system = resource_filename(__name__, \
+        wat_path = self.opts['membrane_system'] = resource_filename(__name__, \
                 "lipid_membranes/tip3pbox.mae")
         self.add_molecule(wat_path, 'water')
-        to_combine = [ molid ]
+        to_combine = [molid]
 
         # Handle adding water above the protein
         # When moving add a 0.5 less so there isn't a gap
-        if zup > 0: 
+        if zup > 0:
             print("Adding %f A water above the solute..." % zup)
-            self.molids['wtmp'], times = \
-                    tile_membrane_patch(self.molids['water'], self.xy_size, zup,
-                    self.tmp_dir, allow_z_tile=True)
+            self.molids['wtmp'], tiletimes = tile_membrane_patch(self.molids['water'],
+                                                                 [self.size[0], self.size[1], zup],
+                                                                 self.tmp_dir, allow_z_tile=True)
             move = max(atomsel("not (%s)" % self.solute_sel, molid=molid).get('z')) - \
                     min(atomsel(molid=self.molids['wtmp']).get('z')) - 0.5
-            atomsel(molid=self.molids['wtmp']).moveby((0,0,move))
+            atomsel(molid=self.molids['wtmp']).moveby((0, 0, move))
             self.molids['wats_up'] = molutils.center_system(molid=self.molids['wtmp'],
-                    tmp_dir=self.tmp_dir, center_z=False)
+                                                            tmp_dir=self.tmp_dir,
+                                                            center_z=False)
             self.remove_molecule('wtmp')
             to_combine.append(self.molids['wats_up'])
 
@@ -505,14 +530,15 @@ class DabbleBuilder(object):
         # When moving add a 0.5 less so there isn't a gap
         if zdo > 0:
             print("Adding %f A water below the solute..." % zdo)
-            self.molids['wtmp'], times = \
-                    tile_membrane_patch(self.molids['water'], self.xy_size, zdo,
-                    self.tmp_dir, allow_z_tile=True)
+            self.molids['wtmp'], tiletimes = \
+                    tile_membrane_patch(self.molids['water'], [self.size[0], self.size[1], zdo],
+                                        self.tmp_dir, allow_z_tile=True)
             move = min(atomsel("not (%s)" % self.solute_sel, molid=molid).get('z')) - \
                     max(atomsel(molid=self.molids['wtmp']).get('z')) + 0.5
-            atomsel(molid=self.molids['wtmp']).moveby((0,0,move))
+            atomsel(molid=self.molids['wtmp']).moveby((0, 0, move))
             self.molids['wats_down'] = molutils.center_system(molid=self.molids['wtmp'],
-                    tmp_dir=self.tmp_dir, center_z=False)
+                                                              tmp_dir=self.tmp_dir,
+                                                              center_z=False)
             self.remove_molecule('wtmp')
             to_combine.append(self.molids['wats_down'])
 
@@ -540,35 +566,41 @@ class DabbleBuilder(object):
           ValueError if water buffer is None
         """
 
-        if self.opts.wat_buffer is None:
+        if self.opts['wat_buffer']is None:
             raise ValueError("Water buffer undefined")
 
         # Remove waters in the Z direction
         total = 0
         zcoord = atomsel(self.solute_sel).get('z')
         total = _remove_residues('(not (%s)) and noh and z > %f' % \
-                (self.solute_sel, max(zcoord) + self.opts.wat_buffer),
-                molid=molid)
+                                 (self.solute_sel,
+                                  max(zcoord) + self.opts['wat_buffer']),
+                                 molid=molid)
         total += _remove_residues('(not (%s)) and noh and z < %f' %
-                (self.solute_sel, min(zcoord) - self.opts.wat_buffer),
-                molid=molid)
+                                  (self.solute_sel,
+                                   min(zcoord) - self.opts['wat_buffer']),
+                                  molid=molid)
 
         # Trim in the XY direction if it's a pure water system
         if self.water_only:
             xcoord = atomsel(self.solute_sel).get('x')
             ycoord = atomsel(self.solute_sel).get('y')
             total += _remove_residues('(not (%s)) and noh and x > %f' %
-                     (self.solute_sel, max(xcoord) + self.opts.wat_buffer),
-                     molid=molid)
+                                      (self.solute_sel,
+                                       max(xcoord) + self.opts['wat_buffer']),
+                                      molid=molid)
             total += _remove_residues('(not (%s)) and noh and x < %f' %
-                     (self.solute_sel, min(xcoord) - self.opts.wat_buffer),
-                     molid=molid)
+                                      (self.solute_sel,
+                                       min(xcoord) - self.opts['wat_buffer']),
+                                      molid=molid)
             total += _remove_residues('(not (%s)) and noh and y > %f' %
-                     (self.solute_sel, max(ycoord) + self.opts.wat_buffer),
-                     molid=molid)
+                                      (self.solute_sel,
+                                       max(ycoord) + self.opts['wat_buffer']),
+                                      molid=molid)
             total += _remove_residues('(not (%s)) and noh and y < %f' %
-                     (self.solute_sel, min(ycoord) - self.opts.wat_buffer),
-                     molid=molid)
+                                      (self.solute_sel,
+                                       min(ycoord) - self.opts['wat_buffer']),
+                                      molid=molid)
 
         return total
 
@@ -590,13 +622,14 @@ class DabbleBuilder(object):
         """
 
         # Select residues that are outside the box
-        half_xy_size = self.xy_size / 2.0
-        box_sel_str = 'abs(x) > %f or abs(y) > %f' %(half_xy_size, half_xy_size)
+        half_x_size = self.size[0] / 2.0
+        half_y_size = self.size[1] / 2.0
+        box_sel_str = 'abs(x) > %f or abs(y) > %f' % (half_x_size, half_y_size)
 
         # Identify lipids that have some part outside of the box
         suspicious_lipid_residues = list(set(atomsel('(%s) and (%s)' % \
-               (self.opts.lipid_sel, box_sel_str), molid=molid).get('residue')))
-        bad_lipids = list()
+               (self.opts['lipid_sel'], box_sel_str), molid=molid).get('residue')))
+        bad_lipids = []
 
         # Delete lipids whose center is too far out of the box, keep others
         for i in suspicious_lipid_residues:
@@ -607,19 +640,19 @@ class DabbleBuilder(object):
                 raise ValueError("No heavy atoms found in suspicious residue %s"
                                  "Check your input file." % str(i))
 
-            if abs(lipid_center[0]) > half_xy_size or \
-               abs(lipid_center[1]) > half_xy_size:
+            if abs(lipid_center[0]) > half_x_size or \
+               abs(lipid_center[1]) > half_y_size:
                 bad_lipids.append(i)
-        lipid_headgroup_sel = 'residue ' + ' '.join(map(str, bad_lipids))
+        lipid_headgroup_sel = 'residue ' + ' '.join([str(l) for l in bad_lipids])
 
         # Do the deletion
         removal_sel_str = '(%s) or not (%s)' % (lipid_headgroup_sel,
-                                                self.opts.lipid_sel)
+                                                self.opts['lipid_sel'])
         total = _remove_residues('noh and (%s) and (%s) and not (%s)' %
                                  (box_sel_str,
                                   removal_sel_str,
                                   self.solute_sel),
-                                  molid=molid)
+                                 molid=molid)
         return total
 
     #==========================================================================
@@ -697,7 +730,7 @@ class DabbleBuilder(object):
 
     #==========================================================================
 
-    def _remove_lipid_boundary_clash(self, pointy_type, ring_type,
+    def _remove_lipid_boundary_clash(self, pointy_type, ring_type, # pylint: disable=no-self-use
                                      molid, dist=1.0):
         """
         Deletes lipids that are too close to other lipids at the periodic
@@ -746,18 +779,19 @@ class DabbleBuilder(object):
         # TODO
         clash_lips = 0
         protein_lips = 0
-        if self.opts.clash_lipids:
-            edge_dim = self.xy_size*0.5*0.9
+        if self.opts['clash_lipids']:
+            x_edge_dim = self.size[0]*0.5*0.9
+            y_edge_dim = self.size[1]*0.5*0.9
             pointy_lipid_sel = '((%s) and not (%s)) and (abs(x) > %f or ' \
-            'abs(y) > %f)' % (lipid_sel, self.opts.clash_lipids,
-                              edge_dim, edge_dim)
+            'abs(y) > %f)' % (lipid_sel, self.opts['clash_lipids'],
+                              x_edge_dim, y_edge_dim)
             ring_lipid_sel = '%s and (abs(x) > %f or abs(y) > %f)' \
-            % (self.opts.clash_lipids, edge_dim, edge_dim)
+            % (self.opts['clash_lipids'], x_edge_dim, y_edge_dim)
             clash_lips = self._remove_lipid_boundary_clash(pointy_lipid_sel,
                                                            ring_lipid_sel,
                                                            molid)
-#TODO replace with its own thing not near rings
-            protein_lips = self._remove_lipids_near_rings(self.opts.clash_lipids, \
+            #TODO replace with its own thing not near rings
+            protein_lips = self._remove_lipids_near_rings(self.opts['clash_lipids'], \
                 ring_sel='noh and protein and not backbone', dist=1.25, \
                 molid=molid)
 
@@ -773,7 +807,7 @@ class DabbleBuilder(object):
 #                           MODULE FUNCTIONS
 #+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
 
-def _find_convertible_water_molecule(molid,
+def _find_convertible_water_molecule(molid, # pylint: disable=invalid-name
                                      water_sel='resname TIP3',
                                      min_ion_dist=5.0):
     """
@@ -843,9 +877,9 @@ def _remove_atoms(sel, molid):
       (int): The number of atoms removed
     """
 
-    s = atomsel('beta 1 and (%s)' % sel, molid=molid)
-    s.set('beta', 0)
-    return len(s)
+    marked = atomsel('beta 1 and (%s)' % sel, molid=molid)
+    marked.set('beta', 0)
+    return len(marked)
 
 #==========================================================================
 
@@ -868,8 +902,7 @@ def _remove_residues(sel, molid):
 #                            PUBLIC FUNCTIONS                             #
 #++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
 
-def orient_solute(molid, z_move, z_rotation,
-                  opm_pdb, opm_align, tmp_dir):
+def orient_solute(molid, **kwargs):
     """
     Orients the solute. Can either move it explicitly in the z direction,
     or align to an OPM structure.
@@ -892,38 +925,40 @@ def orient_solute(molid, z_move, z_rotation,
 
 
     # Check that OPM and alignment aren't both specified
-    if opm_pdb is not None and \
-            (z_move is not 0 or z_rotation is not 0) :
+    if 'opm_pdb' in kwargs and 'z_move' in kwargs and 'z_rotation' in kwargs and \
+       kwargs['opm_pdb'] is not None and \
+       (kwargs['z_move'] is not 0 or kwargs['z_rotation'] is not 0):
         raise ValueError("ERROR: Cannot specify an OPM pdb and manual orientation information")
 
-    if opm_pdb is not None :
-        opm = molecule.load('pdb',opm_pdb)
-        T=atomsel('protein and backbone', molid=molid).fit(atomsel(opm_align,molid=opm))
-        atomsel('all', molid=molid).move(T)
+    if kwargs.get('opm_pdb'):
+        opm = molecule.load('pdb', kwargs['opm_pdb'])
+        moveby = atomsel('protein and backbone', molid=molid).fit(atomsel(kwargs['opm_align'],
+                                                                          molid=opm))
+        atomsel('all', molid=molid).move(moveby)
         molecule.delete(opm)
         return molid
 
-    if z_move is not None :
-        print("Moving z!")
-        atomsel('all',molid=molid).moveby((0,0,z_move))
-        if z_rotation is None:
-          return molid
+    if kwargs.get('z_move') is not None:
+        atomsel('all', molid=molid).moveby((0, 0, kwargs['z_move']))
+        if 'z_rotation' not in kwargs:
+            return molid
 
-    if z_rotation is not None:
-        print("Rotating!")
+    if kwargs.get('z_rotation') is not None:
         trans.resetview(molid) # View affect rotation matrix, now it's I
         # This is negative because we want membrane flat along the z-axis,
         # and OPM lists the membrane rotation relative to the protein
-        theta = math.radians(-1*z_rotation)
+        theta = math.radians(-1*kwargs['z_rotation'])
         # Rotation matrix in row order with 4th dimension just from I
+        # pylint: disable=bad-whitespace, bad-continuation
         rotmat = [ math.cos(theta), -1*math.sin(theta), 0, 0,
                    math.sin(theta),   math.cos(theta),  0, 0,
                          0        ,         0,          1, 0,
                          0        ,         0,          0, 1 ]
+        # pylint: enable=bad-whitespace, bad-continuation
         trans.set_rotation(molid, rotmat)
         return molid
 
-    molid = molutils.center_system(molid=molid, tmp_dir=tmp_dir,
+    molid = molutils.center_system(molid=molid, tmp_dir=kwargs['tmp_dir'],
                                    center_z=False)
 
     return molid
@@ -947,20 +982,18 @@ def add_salt_ion(element, molid):
     assert element in ['Na', 'K', 'Cl'], 'element must be Na, K, or Cl'
     atom_id = _find_convertible_water_molecule(molid)
     _convert_water_molecule_to_ion(molid, atom_id, element)
-    return atom_id 
+    return atom_id
 
 #==========================================================================
 
-def tile_membrane_patch(input_id, min_xy_size, min_z_size, tmp_dir,
-                        allow_z_tile):
+def tile_membrane_patch(input_id, min_size, tmp_dir, allow_z_tile):
     """
     Tiles a system in the x and y dimension (z currently unsupported) to
     make a larger system.
 
     Args:
       input_id (int): VMD molecule id to tile
-      min_xy_size (float): Final system XY dimension
-      min_z_sizes (float): Final system Z dimension (Currently unused)
+      min_size (array of 3 floats): Final system X, Y, Z dimension
       tmp_dir (str): Directory in which to put tiled molecule
       allow_z_tile (bool): Whether to allow tiling in the Z direction
 
@@ -969,10 +1002,9 @@ def tile_membrane_patch(input_id, min_xy_size, min_z_size, tmp_dir,
       (int 3x) number of times tiled in x, y, z direction
     """
 
-    sys_dimensions = np.array([min_xy_size, min_xy_size, min_z_size])
     mem_dimensions = np.array(molutils.get_system_dimensions(molid=input_id))
     times_x, times_y, times_z = [int(times) for times in \
-            np.ceil(sys_dimensions / mem_dimensions)]
+            np.ceil(min_size / mem_dimensions)]
 
     # Disallow tiling in Z direction
     if not allow_z_tile:

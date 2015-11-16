@@ -25,9 +25,11 @@ from __future__ import print_function
 import os
 import tempfile
 
+# pylint: disable=import-error, unused-import
 import vmd
 import molecule
 from atomsel import atomsel
+# pylint: enable=import-error, unused-import
 
 from DabbleParam import AmberWriter, CharmmWriter
 
@@ -116,11 +118,12 @@ def concatenate_mae_files(output_filename,
 
 #==========================================================================
 
-def write_ct_blocks(sel, output_filename, tmp_dir):
+def write_ct_blocks(molid, sel, output_filename, tmp_dir):
     """
     Writes a mae format file containing the specified selection.
 
     Args:
+      molid (int): VMD molecule ID to write
       sel (str): the selection to write
       output_filename (str): the file to write to, including .mae extension
       tmp_dir (str): Directory to put files in
@@ -128,16 +131,17 @@ def write_ct_blocks(sel, output_filename, tmp_dir):
     Returns:
       length (int): the number of CT blocks written
     """
-    users = sorted(set(atomsel(sel).get('user')))
+    users = sorted(set(atomsel(sel, molid=molid).get('user')))
     filenames = [(tempfile.mkstemp(suffix='.mae',
                                    prefix='dabble_tmp_user',
                                    dir=tmp_dir))[1] for _ in users]
     length = len(users)
 
     for i, filen in zip(users, filenames):
-        tempsel = atomsel('user %f and (%s)' % (i, sel))
+        tempsel = atomsel('user %f and (%s)' % (i, sel), molid=molid)
         sel2 = atomsel('index ' + \
-               ' '.join([str(s) for s in set(tempsel.get('index'))]))
+                       ' '.join([str(s) for s in set(tempsel.get('index'))]),
+                       molid=molid)
         sel2.set('user', 0.0)
         sel2.write('mae', filen)
 
@@ -152,34 +156,43 @@ def write_ct_blocks(sel, output_filename, tmp_dir):
 
 #==========================================================================
 
-def write_final_system(opts, out_fmt, molid, tmp_dir,
-                       extra_topos=None, extra_params=None):
+def write_final_system(out_fmt, out_name, molid, **kwargs):
     """
     Writes the final output in whatever format(s) are requested.
     Always writes a mae format file as well
 
     Args:
-      opts (argparse): options passed to dabble
+      out_name (str): Filename to output to
       out_fmt (str): format to write the output to
       molid (int): VMD molecule_id to write
+
       tmp_dir (str): Directory to put temporary files in
       extra_topos (list of str): Extra topology files to use
       extra_params (list of str): Extra parameter files to use
+      lipid_sel (str): Lipid selection
+      hmassrepartition (bool): Whether or not to repartition hydrogen
+        masses
 
     Returns:
       (str) main final filename written
     """
 
+    # Set defaults for extra keyword options
+    if not kwargs.get('tmp_dir'):
+        kwargs['tmp_dir'] = "."
+    if not kwargs.get('lipid_sel'):
+        kwargs['lipid_sel'] = "lipid or resname POPS POPG"
+
     # Write a mae file always, removing the prefix from the output file
-    mae_name = '.'.join(opts.output_filename.rsplit('.')[:-1]) + '.mae'
-    write_ct_blocks(sel='beta 1', output_filename=mae_name,
-                    tmp_dir=tmp_dir)
+    mae_name = '.'.join(out_name.rsplit('.')[:-1]) + '.mae'
+    write_ct_blocks(molid=molid, sel='beta 1', output_filename=mae_name,
+                    tmp_dir=kwargs['tmp_dir'])
 
     # If a converted output format (pdb or dms) desired, write that here
     # and the mae is a temp file that can be deleted
     if out_fmt == 'dms':
         temp_mol = molecule.load('mae', mae_name)
-        atomsel('all', molid=temp_mol).write(out_fmt, opts.output_filename)
+        atomsel('all', molid=temp_mol).write(out_fmt, out_name)
         molecule.delete(temp_mol)
         os.remove(mae_name)
 
@@ -187,20 +200,19 @@ def write_final_system(opts, out_fmt, molid, tmp_dir,
     # pdb writing routine
     if out_fmt == 'pdb':
         temp_mol = molecule.load('mae', mae_name)
-        atomsel('all', molid=temp_mol).write(out_fmt, opts.out_filename)
+        atomsel('all', molid=temp_mol).write(out_fmt, out_name)
         #dabbleparam.write_amber_pdb(opts.output_filename, molid=temp_mol)
         molecule.delete(temp_mol)
 
     # If we want a parameterized format like amber or charmm, a psf must
     # first be written which does the atom typing, etc
-#TODO this is broken from an OOP standpoint
     if out_fmt == 'charmm':
         temp_mol = molecule.load('mae', mae_name)
         write_psf_name = mae_name.replace('.mae', '')
         writer = CharmmWriter(molid=temp_mol,
-                              tmp_dir=tmp_dir,
-                              lipid_sel=opts.lipid_sel,
-                              extra_topos=extra_topos)
+                              tmp_dir=kwargs['tmp_dir'],
+                              lipid_sel=kwargs.get('lipid_sel'),
+                              extra_topos=kwargs.get('extra_topos'))
         writer.write(write_psf_name)
 
     # For amber format files, invoke the parmed chamber routine
@@ -210,13 +222,13 @@ def write_final_system(opts, out_fmt, molid, tmp_dir,
         temp_mol = molecule.load('mae', mae_name)
         write_psf_name = mae_name.replace('.mae', '')
         writer = AmberWriter(molid=temp_mol,
-                             tmp_dir=tmp_dir,
-                             lipid_sel=opts.lipid_sel,
-                             hmr=opts.hmassrepartition,
-                             extra_params=extra_params)
+                             tmp_dir=kwargs['tmp_dir'],
+                             lipid_sel=kwargs.get('lipid_sel'),
+                             hmr=kwargs.get('hmassrepartition'),
+                             extra_params=kwargs.get('extra_params'))
         writer.write(write_psf_name)
 
-    return opts.output_filename
+    return out_name
 
 #==========================================================================
 
@@ -253,9 +265,9 @@ def check_write_ok(filename, out_fmt, overwrite=False):
         suffixes.extend(['psf', 'pdb', 'prmtop', 'inpcrd'])
 
     exists = []
-    for s in suffixes:
-        if os.path.isfile('%s.%s' % (prefix, s)):
-            exists.append('%s.%s' % (prefix, s))
+    for sfx in suffixes:
+        if os.path.isfile('%s.%s' % (prefix, sfx)):
+            exists.append('%s.%s' % (prefix, sfx))
 
     if len(exists):
         print("\nERROR: The following files exist and would be overwritten:\n")
@@ -286,25 +298,25 @@ def check_out_type(value, hmr=False):
                            for amber files
     """
 
-    if len(value) < 3 :
-          raise ValueError("%s is too short to determine output filetype" % value)
+    if len(value) < 3:
+        raise ValueError("%s is too short to determine output filetype" % value)
     ext = value.rsplit('.')[-1]
-    if ext=='mae' :
-        out_fmt='mae'
-    elif ext=='pdb' :
-        out_fmt='pdb'
-    elif ext=='dms' :
-        out_fmt='dms'
-    elif ext=='psf' :
-        out_fmt='charmm'
-    elif ext=='prmtop' :
-        out_fmt='amber'
-    else :
+    if ext == 'mae':
+        out_fmt = 'mae'
+    elif ext == 'pdb':
+        out_fmt = 'pdb'
+    elif ext == 'dms':
+        out_fmt = 'dms'
+    elif ext == 'psf':
+        out_fmt = 'charmm'
+    elif ext == 'prmtop':
+        out_fmt = 'amber'
+    else:
         raise ValueError("%s is an unsupported format" % value)
 
     if hmr and (out_fmt != 'amber'):
         raise NotImplementedError("HMR only supported with AMBER outputs!")
 
-    return out_fmt 
+    return out_fmt
 
 #++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++

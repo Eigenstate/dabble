@@ -24,7 +24,6 @@ Boston, MA 02111-1307, USA.
 
 from __future__ import print_function
 import argparse
-import os
 import signal
 import sys
 
@@ -37,9 +36,9 @@ WELCOME_SCREEN = '''
 |              (___/  (___/  (___/              | 
 |                                               |
 |                    DABBLE            ______   |
-|                 _      _      _     /       \ |
+|                 _      _      _     /       \\ |
 |              __(.)< __(.)> __(.)=  <  beta! | |
-|              \___)  \___)  \___)    \_______/ | 
+|              \\___)  \\___)  \\___)    \\_______/ | 
 |                                               |
 |                 Robin Betz, 2015              |
 |               Stanford University             |
@@ -48,9 +47,9 @@ WELCOME_SCREEN = '''
 '''
 
 # Handle interrupts
-def signal_handler(*args, **kwargs):
+def signal_handler(*args, **kwargs): # pylint: disable=unused-argument
     """ Catch signals """
-    sys.stdout.write('Interrupted\n')
+    sys.stdout.write('\nInterrupted\n')
     sys.exit(1)
 
 signal.signal(signal.SIGINT, signal_handler)
@@ -60,12 +59,13 @@ def _make_logger(out, quiet=False):
     """
     Creates a logger that auto-flushes
     """
-    def logger(s):
+    def logger(msg): # pylint: disable=missing-docstring
         if not quiet:
-            out.write(s)
+            out.write(msg)
             out.flush()
     return logger
 
+# pylint: disable=invalid-name
 parser = argparse.ArgumentParser(prog='dabble')
 
 group = parser.add_argument_group('Input and Output Files')
@@ -95,7 +95,6 @@ group.add_argument('--hmr', dest='hmassrepartition', default=False,
                    action='store_true', help='Repartition Hydrogen masses'
                    'to allow up to 4fs time steps. Currently amber only')
 
-# TODO detect automatically
 group = parser.add_argument_group('Lipid Membrane Options')
 group.add_argument('-L', '--lipid-selection', dest='lipid_sel',
                    default='lipid or resname POPS POPG', type=str,
@@ -126,7 +125,6 @@ z_buffer_opts = group.add_mutually_exclusive_group()
 z_buffer_opts.add_argument('-w', '--water-buffer', dest='wat_buffer', default=20.0,
                            type=float, help='water padding from each side of '
                            'protein [default 20.0 angstroms]')
-
 group.add_argument('-m', '--membrane-buffer-dist', dest='xy_buf', default=35.0,
                    type=float, help='buffer distance through the membrane.'
                    '[default: 35.0 angstroms]')
@@ -134,8 +132,11 @@ group.add_argument('-d', '--lipid-dist', dest='lipid_dist',
                    default=1.75, type=float,
                    help='minimum distance from solute to lipid acyl group'
                    '[default: 1.75]')
-group.add_argument('--absolute-xy', type=float, default=None,
-                   dest='user_xy', help='Specifies the xy dimension. Takes '
+group.add_argument('--absolute-x', type=float, default=None,
+                   dest='user_x', help='Specifies the x dimension. Takes '
+                   'precedence over buffer-based calculation.')
+group.add_argument('--absolute-y', type=float, default=None,
+                   dest='user_y', help='Specifies the y dimension. Takes '
                    'precedence over buffer-based calculation.')
 group.add_argument('--absolute-z', type=float, default=None, dest='user_z',
                    help='Specifies the z dimension. Takes precedence over '
@@ -171,6 +172,6 @@ opts = parser.parse_args(sys.argv[1:])
 log = _make_logger(sys.stdout, opts.quiet)
 log('\n\n')
 
-builder = DabbleBuilder(opts)
+builder = DabbleBuilder(**vars(opts)) # pylint: disable=star-args
 builder.write(opts.output_filename)
 
