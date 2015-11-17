@@ -1,6 +1,6 @@
 ## Dabble ##
 [![Documentation Status](https://readthedocs.org/projects/dabble-md/badge/?version=latest)](http://dabble-md.readthedocs.org/en/latest/?badge=latest)
-[![Github Releases (by Release)](https://img.shields.io/github/downloads/atom/atom/v0.190.0/total.svg?style=flat-square)]()
+[![GitHub license](https://img.shields.io/github/license/mashape/apistatus.svg?style=flat-square)]()
 
 *Dabble* is a Python program that facilitates the insertion of a protein system
 into a pre-equilibrated membrane. It incorporates the atomselection language
@@ -27,6 +27,7 @@ You can specify which atoms should be aligned as well using VMD atom selection
 language, which defaults to atoms that are "protein and backbone".
 
       --opm-pdb <opm.pdb> --opm-align "protein and backbone"
+
 Alternatively, you can manually specify the orientation of the protein relative
 to the membrane in terms of its angle to the membrane and z offset. The membrane
 angle is the rotation of the membrane relative to the axis of the protein, in
@@ -39,14 +40,20 @@ is always centered at the origin and on the XY plane.
 ### The membrane ###
 
 You can also specify a membrane to insert into. The membrane should be equilibrated,
-and solvated with enough water on either side to fit your protein. It is best to
-prepare your membrane with a lot of extra water, as it will be truncated to fit the
-protein. The membrane should be oriented on the XY plane, and centered at the origin,
+and can include any amount of water in the +-Z direction, as Dabble will trim the
+excess. If there is insufficient water to solvate your protein, Dabble will add
+more, but it will not be equilibrated.
+The membrane should be oriented on the XY plane, and centered at the origin,
 and in mae file format.
 
       -M <membrane.mae>
 
 Dabble uses an equilibrated POPC membrane if you don't specify a membrane of your own.
+
+*NEW*: If you don't want a membrane, Dabble can also solvate in water with the 
+following option.
+
+      -M TIP3
 
 ### The output ###
 
@@ -121,7 +128,11 @@ file instead of the prmtop to check the final structure.
 *"I have a ligand not defined in cgenff"*
 
 Currently our lab uses [paramchem](cgenff.paramchem.org) to obtain ligand parameters, with
-extensive validation. Put the resulting .str filename in at the prompts.
+extensive validation. Put the resulting .str filename in at the prompts, or by passing
+a comma separated list at the command line.
+
+    -par <files>
+    -top <files>
 
 *"It says it couldn't find atoms, but they're in the structure!"*
 
@@ -133,6 +144,7 @@ will try to help you with this process, but it sometimes fails. Most of the time
 because there are multiple atoms with the same name. Ensure you have unique names.
 
 *"I have a cholesterol but it's not recognizing it!"*
+
 Cholesterol or other small molecules defined in cgenff are identified during psf generation
 by residue name and atom names, so it may not match or may match atoms incorrectly. The
 easiest way to fix name issues is to generate a mol2 file of your small molecule and run
@@ -237,18 +249,7 @@ lipid either closer or farther from your protein. The default is 1.75 A.
 *"I need lots of water on the top and bottom of the protein, and dabble keeps
 cutting it off too close"*
 
-There are two ways of doing this. First, you can specify the desired absolute size of
-your system, which will take priority over a buffer-based calculation. You can specify
-only one dimension, in which case the other will be buffer based:
-
-    --absolute-z 30.0
-
-Or you can specify the entire size of the system:
-    
-    --absolute-dim 20.0,30.0
-
-You could also change the buffer values, which can be easier if you don't know the 
-exact size of your protein or want a guaranteed amount of water or lipid.
+You can set the amount of padding on each side of the protein with the following:
 
     --z-buffer-dist 10.0
 
@@ -256,18 +257,21 @@ exact size of your protein or want a guaranteed amount of water or lipid.
 *"I want a much larger area of membrane around the protein"*
 
 You can specify the buffer distance around the protein that must consist of lipids.
-The default is 20.0 A, which errs on the small side.
+The default is 20.0 A, which errs on the small side. 
 
     --membrane-buffer-dist 30.0
 
-Alternatively, you could specify the desired XY dimension of the final system:
+Alternatively, you could specify the desired X and/or Y dimension of the final system:
 
-    --absolute-xy 20.0
+    --absolute-x 20.0
+    --absolute-y 25.0
 
-Or you can specify the entire size of the system:
-    
-    --absolute-dim 20.0,30.0
+*"I want a square system, but my lipid is a rectangle"*
 
+Dabble now treats the X and Y dimensions of the protein separately. This results in
+large decreases in the number of atoms in the dabbled system, especially for
+non-cylindrical proteins. You can force the old behavior by specifying equal
+X and Y dimensions.
 
 
 ## Troubleshooting ##
