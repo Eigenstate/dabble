@@ -606,23 +606,7 @@ class CharmmWriter(object):
             resname = resname.pop()
             names = {}
             if resname == "POPC":
-                # Carbons and hydrogen above nitrogen in head group
-                # These selections must be done in order because there is a swap
-                atomsel('(%s) and name C11' % self.lipid_sel).set('name', 't12')
-                atomsel('(%s) and name C15' % self.lipid_sel).set('name', 'C11')
-                atomsel('(%s) and name C14' % self.lipid_sel).set('name', 'C15')
-                atomsel('(%s) and name C12' % self.lipid_sel).set('name', 'C14')
-                atomsel('(%s) and name t12' % self.lipid_sel).set('name', 'C12')
-
-                popc_names = {'H31':'H13A', 'H32':'H13B', 'H33':'H13C',
-                              'H41':'H15A', 'H42':'H15B', 'H43':'H15C',
-                              'H21':'H14A', 'H22':'H14B', 'H23':'H14C',
-                              'H51':'H11A', 'H52':'H11B',
-                              'H11':'H12A', 'H12':'H12B',
-                              # Phosphate and its oxygens
-                              'P1' :  'P', 'O1' :'O12', 'O2' :'O11',
-                              'O3' :'O13', 'O4' :'O14'}
-                names = popc_names
+                pass
             elif resname == "POPE":
                 pass
             elif resname == "POPG":
