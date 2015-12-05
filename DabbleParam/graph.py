@@ -23,24 +23,31 @@ Boston, MA 02111-1307, USA.
 """
 
 from __future__ import print_function
+import logging
 import networkx as nx
+from networkx.algorithms import isomorphism
+from itertools import product
+# pylint: disable=import-error, unused-import
 import vmd
 from atomsel import atomsel
-from itertools import product
+# pylint: enable=import-error, unused-import
+logger = logging.getLogger(__name__)
 
 #++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
 #                                CONSTANTS                                    #
 #++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
 
-_lookup_mass = { 1: "H",  12: "C",  14: "N", 
-                16: "O",  31: "P",  32: "S",
-                35: "Cl", 80: "Br", 19: "F",
-               126: "I",  27: "Al",  4: "He",
-                20: "Ne",  0: "DU", 56: "Fe",
-                23: "Na",  7: "Li", 24: "Mg",
-               137: "Ba", 40: "Ca", 85: "Rb",
-               133: "Ce", 39: "K",  65: "Zn",
-               112: "Cd" }
+# pylint: disable=bad-whitespace,bad-continuation
+MASS_LOOKUP= { 1: "H",  12: "C",  14: "N",
+              16: "O",  31: "P",  32: "S",
+              35: "Cl", 80: "Br", 19: "F",
+             126: "I",  27: "Al",  4: "He",
+              20: "Ne",  0: "DU", 56: "Fe",
+             23: "Na",  7: "Li", 24: "Mg",
+             137: "Ba", 40: "Ca", 85: "Rb",
+             133: "Ce", 39: "K",  65: "Zn",
+             112: "Cd" }
+# pylint: enable=bad-whitespace,bad-continuation
 
 #++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
 #                                   CLASSES                                   #
@@ -62,7 +69,7 @@ class MoleculeGraph(object):
 
     #==========================================================================
 
-    def __init__(rtffiles):
+    def __init__(self, rtffiles):
         """
         Initializes a graph parser with the given rtf files
         as known molecules
@@ -70,18 +77,53 @@ class MoleculeGraph(object):
         self.rtffiles = rtffiles
         self.nodenames = {}
         self.known_res = {}
-        
+
         for filename in rtffiles:
             self._parse_rtf(filename)
-
-    #==========================================================================
-
+        self._assign_elements()
 
     #=========================================================================
     #                           Private methods                              #
     #=========================================================================
 
-    def _parse_rtf(filename): """
+    def get_names(self, selection):
+        """
+        Obtains a name mapping for the current selection
+
+        Args:
+            selection (VMD atomsel): Selection to set names for
+
+        Returns:
+            resname matched
+            translation dictionary
+
+        Raises:
+            KeyError: if no matching possible
+        """
+        resname = selection.get('resname')[0]
+        rgraph = parse_vmd_graph(selection)
+       
+        if resname in self.known_res.keys():
+            matcher = isomorphism.GraphMatcher(rgraph, self.known_res(resname),
+                                   node_match=_check_element)
+            if matcher.is_isomorphic():
+                return (resname, matcher.match())
+        else:
+            for matchname in self.known_res.keys():
+                G = self.known_res[matchname]
+                matcher = isomorphism.GraphMatcher(rgraph, G, node_match=_check_element)
+
+                if matcher.is_isomorphic():
+                    logger.info("Renaming resname %s -> %s", resname, matchname)
+                    return (str(matchname), matcher.match())
+
+        logger.error("No match in topologies for resname %s" % resname)
+        return (None, None)
+
+    #==========================================================================
+
+    def _parse_rtf(self, filename):
+        """
         Parses an rtf file and pulls out the defined residues into
         graph representation.
         First pulls out atom types that are defined and updates nodenames,
@@ -96,87 +138,113 @@ class MoleculeGraph(object):
         Raises:
             ValueError if rtf file is malformed in various ways
         """
-    
         resname = ""
-        for line in open(file, 'r'):
-            # Skip comment lines
-            if line[0] == '!': continue
-            tokens = [ strip(i) for i in line.split(' ') ]
+        for line in open(filename, 'r'):
+            # Remove comments
+            if "!" in line:
+                line = line[:line.index("!")]
+            if not len(line):
+                continue
+            tokens = [i.strip() for i in line.split()]
+            if not len(tokens):
+                continue
 
             # Handle new residue definition
-            if tokens[0] == "RESI"
+            if tokens[0] == "RESI":
                 resname = tokens[1]
                 self.known_res[resname] = nx.Graph()
+                logging.info("Found resname %s in file %s", resname, filename)
             # Atoms mean add node to current residue
             elif tokens[0] == "ATOM":
                 if not resname:
                     raise ValueError("Atom added but no residue defined!")
-                self.known_res[resname].add_node(tokens[1])
+                self.known_res[resname].add_node(tokens[1], type=tokens[2])
+                logging.info("Added node %s", tokens[1])
             # Bond or double means add edge to residue graph
             elif tokens[0] == "BOND" or tokens[0] == "DOUBLE":
                 if not resname:
                     raise ValueError("Bond added but no residue defined!")
-                if len(tokens) % 2 == 1:
+                if len(tokens) % 2 == 0:
                     raise ValueError("Unequal number of atoms in bond terms\n"
                                      "Line was:\n%s" % line)
-                for t in range(1, len(tokens), 2):
-                    node1 = tokens[t]
-                    node2 = tokens[t+1]
-                    if node1 not in self.known_res.keys() or \
-                       node2 not in self.known_res.keys():
-                           raise ValueError("Atom name undefined for bond %s-%s, "
-                                            "residue %s" % (node1, node2, resname))
+                for txn in range(1, len(tokens), 2):
+                    node1 = tokens[txn]
+                    node2 = tokens[txn+1]
+                    if node1 not in self.known_res[resname].nodes() or \
+                       node2 not in self.known_res[resname].nodes():
+                        raise ValueError("Atom name undefined. Line '%s'" % line)
+                    logging.info("Added bond %s-%s", node1, node2)
                     self.known_res[resname].add_edge(node1, node2)
             # Check for atom definitions
             elif tokens[0] == 'MASS':
-                self.nodenames[tokens[2]] = self._get_element(tokens[3])
+                self.nodenames[tokens[2]] = get_element(float(tokens[3]))
+# TODO: Handle +- residues for amino acid chains
+    #=========================================================================
+
+    def _assign_elements(self):
+        """
+        Assigns elements to parsed in residues. Called after all
+        rtf, str, and prm files are read in.
+        """
+        # Now that all atom and mass lines are read, get the element for each atom
+        for res in self.known_res.keys():
+            for node, data in self.known_res[res].nodes(data=True):
+                type = data.get('type')
+                element = self.nodenames.get(type)
+                if not element:
+                    raise ValueError("Unknown atom type %s in residue %s" % (node, res))
+                data['element'] = element
 
     #=========================================================================
 
-    def _get_element(mass):
-        """
-        Returns the element corresponding to a given mass
-        """
-        ele = self.lookup_mass.get(int(mass+0.5))
-        if not ele:
-            return "Other"
-        else:
-            return ele
+#++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+#                            PUBLIC FUNCTIONS                             #
+#++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
 
-    #=========================================================================
+def get_element(mass):
+    a = MASS_LOOKUP.get(int(mass+0.5))
+    if not a:
+        return "Other"
+    else:
+        return a
+#=========================================================================
 
-    def parse_vmd(selection):
-        """
-        Takes a VMD atom selection, translates it to a graph representation
+def _check_element(n1, n2):
+    return n1.get('element') == n2.get('element')
 
-        Args:
-            selection (VMD atomsel): Atom selection to verify, modified.
+#=========================================================================
 
-        Returns:
-            graph representing the molecule, with nodes named indices
-            dictionary translating index to element
+def parse_vmd_graph(selection):
+    """
+    Takes a VMD atom selection, translates it to a graph representation
 
-        Raises:
-            ValueError if atom selection is more than one residue
-            LookupError if the residue couldn't be found in known templates
-        """
+    Args:
+        selection (VMD atomsel): Atom selection to verify, modified.
 
-        # Check selection is an entire residue
-        if len(set(selection.get('residue'))) > 1:
-            raise ValueError("Selection %s is more than one residue!" % selection)
+    Returns:
+        graph representing the molecule, with nodes named indices
 
-        # Name nodes by atom index so duplicate names aren't a problem
-        rgraph = nx.Graph()
-        rgraph.add_nodes_from(selection.get('index'))
+    Raises:
+        ValueError if atom selection is more than one residue
+        LookupError if the residue couldn't be found in known templates
+    """
 
-        # Edges. This adds each bond twice but it's no big deal
-        for i in range(len(selection)):
-            gen = product([selection.get('index')[i]], selection.bonds[i])
-            rgraph.add_edges_from([bnd for bnd in gen])
+    # Check selection is an entire residue
+    if len(set(selection.get('residue'))) > 1:
+        raise ValueError("Selection %s is more than one residue!" % selection)
 
-       # Dictionary translating index to element
-       rdict = {selection.get('index')[i]: selection.get('element')[i] \
-                for i in range(len(selection))}
+    # Name nodes by atom index so duplicate names aren't a problem
+    rgraph = nx.Graph()
+    rgraph.add_nodes_from(selection.get('index'))
 
-       return rgraph, rdict
-    #=========================================================================
+    # Edges. This adds each bond twice but it's no big deal
+    for i in range(len(selection)):
+        gen = product([selection.get('index')[i]], selection.bonds[i])
+        rgraph.add_edges_from([bnd for bnd in gen])
+
+    # Dictionary translating index to element, set as known attribute
+    rdict = {selection.get('index')[i]: selection.get('element')[i] \
+            for i in range(len(selection))}
+    nx.set_node_attributes(rgraph, 'element', rdict)
+
+    return rgraph
