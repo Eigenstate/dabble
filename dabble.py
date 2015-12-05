@@ -171,6 +171,9 @@ group.add_argument('--membrane-rotation', dest='z_rotation',
                         'degrees. Use the number from OPM if you have it. '
                         '[default: 0]')
 
+group = parser.add_argument_group('Debug and Testing Options')
+group.add_argument('--tmp-dir', dest='tmp_dir', default=None)
+
 print(WELCOME_SCREEN)
 print("\nCommand was:\n  %s\n" % " ".join([i for i in sys.argv]))
 opts = parser.parse_args(sys.argv[1:])
@@ -178,5 +181,5 @@ log = _make_logger(sys.stdout, opts.quiet)
 log('\n\n')
 
 builder = DabbleBuilder(**vars(opts)) # pylint: disable=star-args
-builder.write(opts.output_filename)
+builder.write()
 

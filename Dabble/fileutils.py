@@ -225,6 +225,7 @@ def write_final_system(out_fmt, out_name, molid, **kwargs):
                              tmp_dir=kwargs['tmp_dir'],
                              lipid_sel=kwargs.get('lipid_sel'),
                              hmr=kwargs.get('hmassrepartition'),
+                             extra_topos=kwargs.get('extra_topos'),
                              extra_params=kwargs.get('extra_params'))
         writer.write(write_psf_name)
 
