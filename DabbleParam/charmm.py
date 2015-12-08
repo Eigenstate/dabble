@@ -29,9 +29,14 @@ import os
 import tempfile
 from pkg_resources import resource_filename
 
+from .graph import MoleculeGraph
+
+# pylint: disable=import-error, unused-import
 import vmd
 import molecule
 from atomsel import atomsel
+from VMD import evaltcl
+# pylint: enable=import-error, unused-import
 
 #++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
 #                                CONSTANTS                                    #
@@ -68,6 +73,7 @@ class CharmmWriter(object):
       topologies (list of str): Topology files that were used in creating the
           psf
       prompt_topos (bool): Whether to ask for more topology files
+      matcher (MoleculeGraph): Molecular graph matcher object
 
     """
 
@@ -98,6 +104,9 @@ class CharmmWriter(object):
             self.prompt_topos = False
         else:
             self.prompt_topos = True
+
+        # Initialize graph matcher with topologies we know about
+        self.matcher = MoleculeGraph(self.topologies)
 
     #=========================================================================
 
@@ -198,10 +207,9 @@ class CharmmWriter(object):
 
         # Check if there is anything else and let the user know about it
         leftovers = atomsel('user 1.0', molid=self.molid)
-        if len(leftovers) > 0:
-            print("Found extra ligands: %s" % set(leftovers.get('resname')))
         for lig in set(leftovers.get('resname')):
-            self._write_ligand_blocks(lig)
+            residues = self._write_ligand_graphs(lig)
+            self._write_generic_block(residues)
 
         # Write the output files and run
         string = '''
@@ -210,7 +218,6 @@ class CharmmWriter(object):
         self.file.write(string)
         self.file.close()
 
-        from VMD import evaltcl
         evaltcl('play %s' % self.filename)
         self._check_psf_output()
 
@@ -238,13 +245,7 @@ class CharmmWriter(object):
         molecule.set_top(prot_molid)
         print("Writing protein file\n")
 
-        # Renumber residues starting from 1
         atomsel('all').set('user', 1.0)
-#       residues = set(atomsel('all').get('residue'))
-#       resnum = 1
-#       while len(residues):
-#           atomsel('residue %s'% residues.pop()).set('resid', resnum)
-#           resnum += 1
 
         # Check the protein has hydrogens
         if len(atomsel('element H')) == 0:
@@ -352,7 +353,7 @@ class CharmmWriter(object):
             atomsel(ressel).set('resname', 'SER')
             if "P" in atomsel(ressel).get('element'): # Phosphorylated
                 charge = int(sum(atomsel(ressel).get('charge')))
-                if charge== -1:
+                if charge == -1:
                     print("INFO: Found monoanionic phosphoserine resid %d" % resid)
                     patches += 'patch SP1 %s:%d\n' % (seg, resid)
                 elif charge == -2:
@@ -660,7 +661,8 @@ class CharmmWriter(object):
                            % " ".join([str(s) for s in set(total.get('index'))]))
         ions = set(total.get('residue')) - set(not_ions.get('residue'))
 
-        if not len(ions): return
+        if not len(ions):
+            return
         ionstr = "residue " + " ".join([str(s) for s in ions])
 
         # Fix the names
@@ -696,14 +698,78 @@ class CharmmWriter(object):
 
     #==========================================================================
 
-    def _write_ligand_blocks(self, resname):
+    def _write_ligand_graphs(self, resname):
+        """
+        Uses graph matcher and available topologies to match up
+        ligand names automatically. Tries to use graphs, and if there's an
+        uneven number of atoms tries to match manually to suggest which atoms
+        are most likely missing.
+
+        Args:
+          resname (str): Residue name of the ligand that will be written.
+            All ligands with that name will be written as one segment, although
+            they will be checked against the graph separately.
+
+        Returns:
+          (list of ints): Residue numbers (not resid) of all input ligands to
+            be written to temporary files. Need to do it this way since
+            residue names can be changed in here to different things.
+
+        Raises:
+          ValueError if number of resids does not match number of residues as
+            interpreted by VMD
+        """
+        # Put our molecule on top
+        old_top = molecule.get_top()
+        molecule.set_top(self.molid)
+        num_renamed = 0
+
+        # Sanity check that there is no discrepancy between defined resids and
+        # residues as interpreted by VMD.
+        residues = list(set(atomsel('user 1.0 and resname %s' % resname).get('residue')))
+        resids = list(set(atomsel('user 1.0 and resname %s' % resname).get('resid')))
+        if len(residues) != len(resids):
+            raise ValueError("VMD found %d residues for resname %s, but there "
+                             "are %d resids! Check input." % (resname, len(residues),
+                                                              len(resids)))
+
+        for residue in residues:
+            sel = atomsel('residue %s and resname %s and user 1.0' % (residue, resname))
+            (name, mdict) = self.matcher.get_names(sel)
+            if not name:
+                print("ERROR: Could not find a residue definition for %s:%s"
+                      % (resname, residue))
+                # TODO attempt to match up
+                self._handle_unmatched(residue, resname)
+
+            # Set the resname correctly
+            sel.set('resname', name)
+
+            # Do the renaming
+            newnames = mdict.next()
+            for idx in newnames.keys():
+                atom = atomsel('index %s' % idx)
+                if atom.get('name')[0] != newnames[idx]:
+                    num_renamed += 1
+        #            logger.info("Renaming %s:%s: %s -> %s" % (resname, residue,
+        #                                                      atom.get('name')[0],
+        #                                                      newnames[idx]))
+                    atom.set('name', [newnames[idx]])
+        #logger.info("Renamed %d atoms for all resname %s->%s" % (num_renamed, resname, name))
+        molecule.set_top(old_top)
+
+        return residues
+
+    #==========================================================================
+
+    def _write_generic_block(self, residues):
         """
         Matches ligands to available topology file, renames atoms, and then
         writes temporary files for the ligands
 
         Args:
-          resname (str): Residue name of the ligand that will be written.
-            All ligands with that name will be written as one segment.
+          residues (list of int): Residue numbers to be written. Will all
+            be written to one segment.
 
         Returns:
           True if successful
@@ -712,30 +778,20 @@ class CharmmWriter(object):
         old_top = molecule.get_top()
         molecule.set_top(self.molid)
 
-        alig = atomsel('user 1.0 and resname %s' % resname)
-        # Get a residue name charmm knows about, either through
-        # manual translation or prompting the user
-        while not self._find_residue_in_rtf(resname=resname, molid=self.molid):
-            print("\nERROR: Residue name %s wasn't found in any input "
-                  "topology.\nWould you like to rename it?\n" % resname)
-            sys.stdout.flush()
-            newname = raw_input("New residue name or CTRL+D to quit > ")
-            sys.stdout.flush()
-            alig.set('resname', newname)
-            resname = newname
+        alig = atomsel('user 1.0 and residue %s' % " ".join([str(x) for x in residues]))
 
-        # Write temporary file containg the ligand and update tcl commands
-        temp = tempfile.mkstemp(suffix='.pdb', prefix='psf_ligand_',
+        # Write temporary file containg the residues and update tcl commands
+        temp = tempfile.mkstemp(suffix='.pdb', prefix='psf_block_',
                                 dir=self.tmp_dir)[1]
         string = '''
-       set ligfile %s
-       segment %s {
-         pdb $ligfile 
+       set blockfile %s
+       segment B%s {
+         pdb $blockfile
          first none
          last none
        }
-       coordpdb $ligfile %s
-        ''' % (temp, resname, resname)
+       coordpdb $blockfile B%s
+        ''' % (temp, residues[0], residues[0])
         alig.write('pdb', temp)
         alig.set('user', 0.0)
         self.file.write(string)

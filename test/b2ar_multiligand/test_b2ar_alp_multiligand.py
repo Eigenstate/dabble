@@ -2,8 +2,9 @@
 import pytest
 import subprocess
 
+#==============================================================================
 
-def test_multiligand_building(capfd, tmpdir):
+def test_multiligand_building(tmpdir):
     from Dabble import DabbleBuilder
 
     p = str(tmpdir.mkdir("multiligand_build"))
@@ -14,7 +15,9 @@ def test_multiligand_building(capfd, tmpdir):
     #resout, reserr = capfd.readouterr()
     subprocess.check_call(["diff","-q","test_multiligand_correct.mae", p+"/test.mae"])
 
-def test_multiligand_parameterizing(capfd, tmpdir):
+#==============================================================================
+
+def test_multiligand_parameterizing(tmpdir):
     from DabbleParam import CharmmWriter
     import vmd, molecule
 
@@ -26,20 +29,32 @@ def test_multiligand_parameterizing(capfd, tmpdir):
     subprocess.check_call(["diff","-q","test_multiligand_correct.psf", p+"/test.psf"])
     subprocess.check_call(["diff","-q","test_multiligand_correct.pdb", p+"/test.pdb"])
 
-def test_multiligand_chamber(capfd, tmpdir):
-    from ParmedTools import chamber, parmout
-    from chemistry.amber import AmberParm
+#==============================================================================
+
+def test_multiligand_chamber(tmpdir):
+    from DabbleParam import AmberWriter
+    import vmd, molecule
 
     p = str(tmpdir.mkdir("multiligand_chamber"))
-    parm = AmberParm()
-    action = chamber(parm, "-crd test_multiligand_correct.pdb -psf test_multiligand_correct.psf"
-                     " -top alprenolol.rtf -par alprenolol.par")
-    action.execute()
-    write = parmout(action.parm, "test.prmtop test.inpcrd")
-    write.execute()
+    molid = molecule.load("mae", "test_multiligand_correct.mae")
+    w = AmberWriter(molid=molid, tmp_dir=p, extra_topos=["alprenolol.rtf"],
+                    extra_params=["alprenolol.prm"])
+    w.write(p+"/test")
     subprocess.check_call(["diff","-q","test_multiligand_correct.prmtop", p+"/test.prmtop"])
     subprocess.check_call(["diff","-q","test_multiligand_correct.inpcrd", p+"/test.inpcrd"])
 
+#==============================================================================
 
+def test_multiligand_renaming(tmpdir):
+    from DabbleParam import CharmmWriter
+    import vmd, molecule
+
+    p = str(tmpdir.mkdir("multiligand_rename"))
+    molid = molecule.load("mae", "B2AR_10ALPs_renamed.mae")
+    w = CharmmWriter(tmp_dir=p, molid=molid, lipid_sel="lipid",
+                     extra_topos=["alprenolol.rtf"])
+    w.write(p+"/test")
+    subprocess.check_call(["diff","-q","test_renamed_correct.psf", p+"/test.psf"])
+    subprocess.check_call(["diff","-q","test_renamed_correct.pdb", p+"/test.pdb"])
 
 

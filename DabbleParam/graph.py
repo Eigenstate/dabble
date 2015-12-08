@@ -83,7 +83,7 @@ class MoleculeGraph(object):
         self._assign_elements()
 
     #=========================================================================
-    #                           Private methods                              #
+    #                            Public methods                              #
     #=========================================================================
 
     def get_names(self, selection):
@@ -102,25 +102,29 @@ class MoleculeGraph(object):
         """
         resname = selection.get('resname')[0]
         rgraph = parse_vmd_graph(selection)
-       
+      
+        # First check against matching residue names
         if resname in self.known_res.keys():
-            matcher = isomorphism.GraphMatcher(rgraph, self.known_res(resname),
+            matcher = isomorphism.GraphMatcher(rgraph, self.known_res.get(resname),
                                    node_match=_check_element)
             if matcher.is_isomorphic():
                 return (resname, matcher.match())
-        else:
-            for matchname in self.known_res.keys():
-                G = self.known_res[matchname]
-                matcher = isomorphism.GraphMatcher(rgraph, G, node_match=_check_element)
 
-                if matcher.is_isomorphic():
-                    logger.info("Renaming resname %s -> %s", resname, matchname)
-                    return (str(matchname), matcher.match())
+        # If that didn't work, loop through all known residues
+        for matchname in self.known_res.keys():
+            G = self.known_res[matchname]
+            matcher = isomorphism.GraphMatcher(rgraph, G, node_match=_check_element)
+
+            if matcher.is_isomorphic():
+                logger.info("Renaming resname %s -> %s", resname, matchname)
+                return (str(matchname), matcher.match())
 
         logger.error("No match in topologies for resname %s" % resname)
         return (None, None)
 
-    #==========================================================================
+    #=========================================================================
+    #                           Private methods                              #
+    #=========================================================================
 
     def _parse_rtf(self, filename):
         """
@@ -152,17 +156,29 @@ class MoleculeGraph(object):
             # Handle new residue definition
             if tokens[0] == "RESI":
                 resname = tokens[1]
+                if self.known_res.get(resname):
+                    logging.info("Skipping duplicate residue %s" % resname)
+                    # TODO define as a different residue name???
+                    # Currently reads in first file's definition, ignores others
+                    resname = "_skip"
                 self.known_res[resname] = nx.Graph()
                 logging.info("Found resname %s in file %s", resname, filename)
+            # PRES is a patch. Currently unimplemented TODO
+            elif tokens[0] == "PRES":
+                resname = "_skip"
             # Atoms mean add node to current residue
             elif tokens[0] == "ATOM":
-                if not resname:
+                if resname == "_skip": # patches unimplemented
+                    continue
+                elif not resname:
                     raise ValueError("Atom added but no residue defined!")
                 self.known_res[resname].add_node(tokens[1], type=tokens[2])
                 logging.info("Added node %s", tokens[1])
             # Bond or double means add edge to residue graph
             elif tokens[0] == "BOND" or tokens[0] == "DOUBLE":
-                if not resname:
+                if resname == "_skip": # patches unimplemented
+                    continue
+                elif not resname:
                     raise ValueError("Bond added but no residue defined!")
                 if len(tokens) % 2 == 0:
                     raise ValueError("Unequal number of atoms in bond terms\n"
@@ -170,14 +186,21 @@ class MoleculeGraph(object):
                 for txn in range(1, len(tokens), 2):
                     node1 = tokens[txn]
                     node2 = tokens[txn+1]
-                    if node1 not in self.known_res[resname].nodes() or \
-                       node2 not in self.known_res[resname].nodes():
-                        raise ValueError("Atom name undefined. Line '%s'" % line)
+                    if "+" in node1 or "+" in node2 or \
+                       "-" in node1 or "-" in node2: # TODO: Handle +- 
+                           continue 
+                    elif node1 not in self.known_res[resname].nodes() or \
+                         node2 not in self.known_res[resname].nodes():
+                        raise ValueError("Atom name undefined. Line '%s'"
+                                         " Bond %s-%s" % (line, node1, node2))
                     logging.info("Added bond %s-%s", node1, node2)
                     self.known_res[resname].add_edge(node1, node2)
             # Check for atom definitions
             elif tokens[0] == 'MASS':
-                self.nodenames[tokens[2]] = get_element(float(tokens[3]))
+                if self.nodenames.get(tokens[2]):
+                    logger.info("Skipping duplicate type %s" % tokens[2])
+                else:
+                    self.nodenames[tokens[2]] = get_element(float(tokens[3]))
 # TODO: Handle +- residues for amino acid chains
     #=========================================================================
 
@@ -192,7 +215,7 @@ class MoleculeGraph(object):
                 type = data.get('type')
                 element = self.nodenames.get(type)
                 if not element:
-                    raise ValueError("Unknown atom type %s in residue %s" % (node, res))
+                    raise ValueError("Unknown atom type %s in residue %s name %s" % (type, res, node))
                 data['element'] = element
 
     #=========================================================================
@@ -246,5 +269,13 @@ def parse_vmd_graph(selection):
     rdict = {selection.get('index')[i]: selection.get('element')[i] \
             for i in range(len(selection))}
     nx.set_node_attributes(rgraph, 'element', rdict)
+
+    # Loop through all nodes for indices that are not in this selection.
+    # They were added to the graph from edges that go to other residues,
+    # such as amino acid +N or -CA bonds. Mark these as special elements.
+    others = set(rgraph.nodes()) - set(selection.get('index'))
+    if len(others):
+        raise NotImplementedError("Graph name checking for extra-residue bonded "
+                                  "atoms unsupported. Atoms were: %s" % others)
 
     return rgraph
