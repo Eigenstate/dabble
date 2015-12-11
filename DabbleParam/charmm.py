@@ -208,7 +208,7 @@ class CharmmWriter(object):
         # Check if there is anything else and let the user know about it
         leftovers = atomsel('user 1.0', molid=self.molid)
         for lig in set(leftovers.get('resname')):
-            residues = self._write_ligand_graphs(lig)
+            residues = self._find_residue_names(resname=lig, molid=self.molid)
             self._write_generic_block(residues)
 
         # Write the output files and run
@@ -432,14 +432,7 @@ class CharmmWriter(object):
             print("WARNING: Found non-protein residues in protein...")
 
         for resname in others:
-            newname = resname
-            while not self._find_residue_in_rtf(resname=newname, molid=prot_molid):
-                print("\nERROR: Residue name %s wasn't found in any input "
-                      "topology. Would you like to rename it?\n" % resname)
-                sys.stdout.flush()
-                newname = raw_input("New residue name or CTRL+D to quit > ")
-                sys.stdout.flush()
-                atomsel('resname %s' % resname).set('resname', newname)
+            self._find_residue_names(resname, molid=prot_molid)
 
         # If ACE and NMA aren't present, prompt for the residue name of the patch to
         # apply, since auto-detecting it can be dangerous and the user may want
@@ -698,7 +691,7 @@ class CharmmWriter(object):
 
     #==========================================================================
 
-    def _write_ligand_graphs(self, resname):
+    def _find_residue_names(self, resname, molid):
         """
         Uses graph matcher and available topologies to match up
         ligand names automatically. Tries to use graphs, and if there's an
@@ -707,22 +700,22 @@ class CharmmWriter(object):
 
         Args:
           resname (str): Residue name of the ligand that will be written.
-            All ligands with that name will be written as one segment, although
-            they will be checked against the graph separately.
+            All ligands will be checked separately against the graphs.
+          molid (int): VMD molecule ID to consider
 
         Returns:
-          (list of ints): Residue numbers (not resid) of all input ligands to
-            be written to temporary files. Need to do it this way since
+          (list of ints): Residue numbers (not resid) of all input ligands
+            that were successfully matched. Need to do it this way since
             residue names can be changed in here to different things.
 
         Raises:
           ValueError if number of resids does not match number of residues as
             interpreted by VMD
+          NotImplementedError if a residue could not be matched to a graph.
         """
         # Put our molecule on top
         old_top = molecule.get_top()
-        molecule.set_top(self.molid)
-        num_renamed = 0
+        molecule.set_top(molid)
 
         # Sanity check that there is no discrepancy between defined resids and
         # residues as interpreted by VMD.
@@ -739,8 +732,8 @@ class CharmmWriter(object):
             if not name:
                 print("ERROR: Could not find a residue definition for %s:%s"
                       % (resname, residue))
+                raise NotImplementedError("No residue definition for %s:%s" % (resname, residue))
                 # TODO attempt to match up
-                self._handle_unmatched(residue, resname)
 
             # Set the resname correctly
             sel.set('resname', name)
@@ -749,11 +742,11 @@ class CharmmWriter(object):
             newnames = mdict.next()
             for idx in newnames.keys():
                 atom = atomsel('index %s' % idx)
-                if atom.get('name')[0] != newnames[idx]:
-                    num_renamed += 1
-        #            logger.info("Renaming %s:%s: %s -> %s" % (resname, residue,
-        #                                                      atom.get('name')[0],
-        #                                                      newnames[idx]))
+                if atom.get('name')[0] != newnames[idx] and "+" not in newnames[idx] and \
+                   "-" not in newnames[idx]:
+                    print("Renaming %s:%s: %s -> %s" % (resname, residue,
+                                                        atom.get('name')[0],
+                                                        newnames[idx]))
                     atom.set('name', [newnames[idx]])
         #logger.info("Renamed %d atoms for all resname %s->%s" % (num_renamed, resname, name))
         molecule.set_top(old_top)
@@ -866,8 +859,8 @@ class CharmmWriter(object):
                 atoms = atomsel('residue %d' % rid).get('index')
 
             for i in atoms:
-                a = atomsel('index %d' % i)
 
+                a = atomsel('index %d' % i) # pylint: disable=invalid-name
                 entry = ('%-6s%5d %-5s%-4s%c%4d    %8.3f%8.3f%8.3f%6.2f%6.2f'
                          '     %-4s%2s\n' % ('ATOM', idx, a.get('name')[0],
                                              a.get('resname')[0],
@@ -1117,9 +1110,9 @@ class CharmmWriter(object):
           (list of str) elements of atoms bound to the current atom
         """
 
-        a = atomsel('index %d' % index, molid=molid)
+        asel = atomsel('index %d' % index, molid=molid)
         bound = []
-        for atom in a.bonds[0]:
+        for atom in asel.bonds[0]:
             bound.append(atomsel('index %d' % atom).get('element')[0])
         return bound
 
@@ -1146,8 +1139,8 @@ class CharmmWriter(object):
         if patchname == "HELP":
             print("   PATCH     COMMENT")
             print("   -----     -------")
-            for p in avail_patches:
-                print("%7s %s" % (p, avail_patches[p]))
+            for patch in avail_patches:
+                print("%7s %s" % (patch, avail_patches[patch]))
             patchname = raw_input("> ")
         while (patchname not in avail_patches) and (patchname != "NONE"):
             print("I don't know about patch %s" % patchname)
@@ -1171,7 +1164,8 @@ class CharmmWriter(object):
             topfile = open(top, 'r')
             for line in topfile:
                 tokens = line.split()
-                if not len(tokens): continue
+                if not len(tokens):
+                    continue
                 if tokens[0] == "PRES":
                     comment = ' '.join(tokens[tokens.index("!")+1:])
                     avail_patches[tokens[1]] = comment

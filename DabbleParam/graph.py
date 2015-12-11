@@ -31,7 +31,7 @@ from itertools import product
 import vmd
 from atomsel import atomsel
 # pylint: enable=import-error, unused-import
-logger = logging.getLogger(__name__)
+logger = logging.getLogger(__name__) # pylint: disable=invalid-name
 
 #++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
 #                                CONSTANTS                                    #
@@ -102,24 +102,24 @@ class MoleculeGraph(object):
         """
         resname = selection.get('resname')[0]
         rgraph = parse_vmd_graph(selection)
-      
+
         # First check against matching residue names
         if resname in self.known_res.keys():
             matcher = isomorphism.GraphMatcher(rgraph, self.known_res.get(resname),
-                                   node_match=_check_element)
+                                               node_match=_check_atom_match)
             if matcher.is_isomorphic():
                 return (resname, matcher.match())
 
         # If that didn't work, loop through all known residues
         for matchname in self.known_res.keys():
-            G = self.known_res[matchname]
-            matcher = isomorphism.GraphMatcher(rgraph, G, node_match=_check_element)
+            graph = self.known_res[matchname]
+            matcher = isomorphism.GraphMatcher(rgraph, graph, node_match=_check_atom_match)
 
             if matcher.is_isomorphic():
                 logger.info("Renaming resname %s -> %s", resname, matchname)
                 return (str(matchname), matcher.match())
 
-        logger.error("No match in topologies for resname %s" % resname)
+        logger.error("No match in topologies for resname %s", resname)
         return (None, None)
 
     #=========================================================================
@@ -157,7 +157,7 @@ class MoleculeGraph(object):
             if tokens[0] == "RESI":
                 resname = tokens[1]
                 if self.known_res.get(resname):
-                    logging.info("Skipping duplicate residue %s" % resname)
+                    logging.warning("Skipping duplicate residue %s", resname)
                     # TODO define as a different residue name???
                     # Currently reads in first file's definition, ignores others
                     resname = "_skip"
@@ -172,7 +172,8 @@ class MoleculeGraph(object):
                     continue
                 elif not resname:
                     raise ValueError("Atom added but no residue defined!")
-                self.known_res[resname].add_node(tokens[1], type=tokens[2])
+                self.known_res[resname].add_node(tokens[1], type=tokens[2],
+                                                 residue="self")
                 logging.info("Added node %s", tokens[1])
             # Bond or double means add edge to residue graph
             elif tokens[0] == "BOND" or tokens[0] == "DOUBLE":
@@ -186,37 +187,83 @@ class MoleculeGraph(object):
                 for txn in range(1, len(tokens), 2):
                     node1 = tokens[txn]
                     node2 = tokens[txn+1]
-                    if "+" in node1 or "+" in node2 or \
-                       "-" in node1 or "-" in node2: # TODO: Handle +- 
-                           continue 
-                    elif node1 not in self.known_res[resname].nodes() or \
-                         node2 not in self.known_res[resname].nodes():
-                        raise ValueError("Atom name undefined. Line '%s'"
-                                         " Bond %s-%s" % (line, node1, node2))
-                    logging.info("Added bond %s-%s", node1, node2)
-                    self.known_res[resname].add_edge(node1, node2)
+                    self._define_bond(resname, node1, node2)
             # Check for atom definitions
             elif tokens[0] == 'MASS':
                 if self.nodenames.get(tokens[2]):
-                    logger.info("Skipping duplicate type %s" % tokens[2])
+                    logger.info("Skipping duplicate type %s", tokens[2])
                 else:
                     self.nodenames[tokens[2]] = get_element(float(tokens[3]))
-# TODO: Handle +- residues for amino acid chains
+
+        if self.known_res.get("CYP"):
+            nx.write_dot(self.known_res["CYP"], "CYP.dot")
+
+    #=========================================================================
+
+    def _define_bond(self, resname, node1, node2):
+        """
+        Process a bond defined in a psf file and adds it to the graph.
+        Checks for + or - in bonded atom name and sets the node "residue"
+        attribute accordingly if it is present.
+
+        Args:
+          resname (str): Residue name to add bond to
+          node1 (str): Atom name from psf file of first atom
+          node2 (str): Atom name from psf file of second atom
+
+        Returns:
+          True
+
+        Raises:
+            ValueError if a non +- atom name is not defined in the MASS
+              line dictionary
+        """
+
+        # Sanity check and process first atom name
+        if "+" in node1:
+            self.known_res[resname].add_node(node1, type="", residue="+")
+        elif "-" in node1:
+            self.known_res[resname].add_node(node1, type="", residue="-")
+        elif node1 not in self.known_res[resname].nodes():
+            raise ValueError("Atom name %s undefined. Bond %s-%s"
+                             % (node1, node1, node2))
+
+        # Now sanity check and process second atom name
+        if "+" in node2:
+            self.known_res[resname].add_node(node2, type="", residue="+")
+        elif "-" in node2:
+            self.known_res[resname].add_node(node2, type="", residue="-")
+        elif node2 not in self.known_res[resname].nodes():
+            raise ValueError("Atom name %s undefined. Bond %s-%s"
+                             % (node2, node1, node2))
+
+        logging.info("Added bond %s-%s", node1, node2)
+        self.known_res[resname].add_edge(node1, node2)
+        return True
+
     #=========================================================================
 
     def _assign_elements(self):
         """
         Assigns elements to parsed in residues. Called after all
-        rtf, str, and prm files are read in.
+        rtf, str, and prm files are read in. Element "_join" is assigned
+        to atoms from other residues (+- atoms), since these are only
+        defined by name.
+
+        Raises:
+            ValueError if an atom type can't be assigned an element
         """
         # Now that all atom and mass lines are read, get the element for each atom
         for res in self.known_res.keys():
             for node, data in self.known_res[res].nodes(data=True):
-                type = data.get('type')
-                element = self.nodenames.get(type)
-                if not element:
-                    raise ValueError("Unknown atom type %s in residue %s name %s" % (type, res, node))
-                data['element'] = element
+                if data.get('residue') != "self":
+                    data['element'] = "_join"
+                else:
+                    element = self.nodenames.get(data.get('type'))
+                    if not element:
+                        raise ValueError("Unknown atom type %s in residue %s "
+                                         "name %s" % (data.get('type'), res, node))
+                    data['element'] = element
 
     #=========================================================================
 
@@ -225,15 +272,34 @@ class MoleculeGraph(object):
 #++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
 
 def get_element(mass):
-    a = MASS_LOOKUP.get(int(mass+0.5))
-    if not a:
+    """
+    Returns the element corresponding to a given mass. Masses are rounded
+    up to get atomic number to control for varying numbers of decimal
+    places. If the mass isn't in the table (it's not complete), returns
+    "Other" which should be sufficient for our matching purposes.
+
+    Args:
+      mass (float): Mass to look up
+
+    Returns:
+      (str): Element corresponding to the mass, or "Other"
+    """
+
+    ele = MASS_LOOKUP.get(int(mass+0.5))
+    if not ele:
         return "Other"
     else:
-        return a
+        return ele
 #=========================================================================
 
-def _check_element(n1, n2):
-    return n1.get('element') == n2.get('element')
+def _check_atom_match(node1, node2):
+    """
+    Checks if two nodes match in our molecule graphs. Matching is defined
+    as being the same element and having the same residue membership
+    (self, +, or -)
+    """
+    return (node1.get('element') == node2.get('element')) and \
+           (node1.get('residue') == node2.get('residue'))
 
 #=========================================================================
 
@@ -252,9 +318,13 @@ def parse_vmd_graph(selection):
         LookupError if the residue couldn't be found in known templates
     """
 
-    # Check selection is an entire residue
+    # Check selection is an entire residue by both definitions
+    resid = set(selection.get('resid'))
     if len(set(selection.get('residue'))) > 1:
         raise ValueError("Selection %s is more than one residue!" % selection)
+    elif len(resid) > 1:
+        raise ValueError("Selection %s is more than one resid!" % selection)
+    resid = resid.pop()
 
     # Name nodes by atom index so duplicate names aren't a problem
     rgraph = nx.Graph()
@@ -268,14 +338,25 @@ def parse_vmd_graph(selection):
     # Dictionary translating index to element, set as known attribute
     rdict = {selection.get('index')[i]: selection.get('element')[i] \
             for i in range(len(selection))}
-    nx.set_node_attributes(rgraph, 'element', rdict)
+
+    # Set all atoms to belong to this residue by default
 
     # Loop through all nodes for indices that are not in this selection.
     # They were added to the graph from edges that go to other residues,
     # such as amino acid +N or -CA bonds. Mark these as special elements.
+    edict = {selection.get('index')[i]: "self" \
+             for i in range(len(selection))}
     others = set(rgraph.nodes()) - set(selection.get('index'))
-    if len(others):
-        raise NotImplementedError("Graph name checking for extra-residue bonded "
-                                  "atoms unsupported. Atoms were: %s" % others)
+    for oth in others:
+        rdict[oth] = "_join"
+        resido = atomsel('index %d' % oth, molid=selection.molid).get('resid')[0]
+        if resido > resid:
+            edict[oth] = "+"
+        else:
+            edict[oth] = "-"
+
+    # Set node attributes
+    nx.set_node_attributes(rgraph, 'element', rdict)
+    nx.set_node_attributes(rgraph, 'residue', edict)
 
     return rgraph
