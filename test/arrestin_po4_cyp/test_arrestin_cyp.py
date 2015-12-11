@@ -35,6 +35,7 @@ def test_multiligand_renaming(tmpdir):
                      extra_topos=[dir + "CYP_v1.str"])
     w.write(p+"/test")
     subprocess.check_call(["diff", "-q", "--ignore-matching-lines=REMARKS",
+                           "--ignore-matching-lines=NTITLE",
                            dir + "test_renamed_correct.psf",
                            p+"/test.psf"])
 

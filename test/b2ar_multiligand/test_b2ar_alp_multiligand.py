@@ -30,6 +30,7 @@ def test_multiligand_parameterizing(tmpdir):
                      extra_topos=[dir+"alprenolol.rtf"])
     w.write(p+"/test")
     subprocess.check_call(["diff", "-q", "--ignore-matching-lines=REMARKS",
+                           "--ignore-matching-lines=NTITLE",
                            dir + "test_multiligand_correct.psf", p+"/test.psf"])
     subprocess.check_call(["diff", "-q", dir + "test_multiligand_correct.pdb", p+"/test.pdb"])
 
@@ -62,6 +63,7 @@ def test_multiligand_renaming(tmpdir):
     w.write(p+"/test")
     subprocess.check_call(["diff", "-q", "--ignore-matching-lines=REMARKS",
                            dir + "test_renamed_correct.psf",
+                           "--ignore-matching-lines=NTITLE",
                            p+"/test.psf"])
     subprocess.check_call(["diff", "-q", dir + "test_renamed_correct.pdb",
                            p+"/test.pdb"])
