@@ -58,7 +58,7 @@ class DabbleBuilder(object):
       molids (dict str->int): Molecule IDs comprising system components
       size (array len 3 of floats): Size of the x, y, and z dimensions of the system
       solute_sel (str): VMD atom selection string for original solute
-      opts (argparse thing): All options passed to the system builder
+      opts (dictionary): All options passed to the system builder
       tmp_dir (str): Directory in which to save temporary files
       water_only (bool): If the solvent is just a water box
     """
@@ -72,23 +72,46 @@ class DabbleBuilder(object):
         self.size = [0., 0., 0.]
         self.solute_sel = ""
         self.water_only = False
-        self.tmp_dir = tempfile.mkdtemp(prefix='dabble', dir=os.getcwd())
+        if self.opts.get('tmp_dir'):
+            self.tmp_dir = self.opts.get('tmp_dir')
+            if not os.path.exists(self.tmp_dir):
+                os.mkdir(self.tmp_dir)
+        else:
+            self.tmp_dir = tempfile.mkdtemp(prefix='dabble', dir=os.getcwd())
 
         # Check for default lipid membrane
-        if self.opts['membrane_system'] == 'DEFAULT':
+        # Set some default options
+        if not self.opts.get('lipid_sel'): self.opts['lipid_sel'] = "lipid or resname POPS POPG"
+        if not self.opts.get('cation'): self.opts['cation'] = 'Na'
+        if not self.opts.get('salt_conc'): self.opts['salt_conc'] = 0.150
+        if not self.opts.get('wat_buffer'): self.opts['wat_buffer'] = 20.0
+        if not self.opts.get('xy_buf'): self.opts['xy_buf'] = 35.0
+        if not self.opts.get('lipid_dist'): self.opts['lipid_dist'] = 1.75
+        if not self.opts.get('membrane_system'):
+            self.opts['membrane_system'] =  resource_filename(__name__, \
+                    "lipid_membranes/popc.mae")
+
+        # Process input arguments
+        if self.opts.get('extra_topos'):
+            self.opts['extra_topos'] = self.opts['extra_topos'].split(',')
+        if self.opts.get('extra_params'):
+            self.opts['extra_params'] = self.opts['extra_params'].split(',')
+
+        if self.opts.get('membrane_system') == 'DEFAULT':
             self.opts['membrane_system'] = resource_filename(__name__, \
                     "lipid_membranes/popc.mae")
-        elif self.opts['membrane_system'] == 'TIP3':
+        elif self.opts.get('membrane_system') == 'TIP3':
             self.opts['membrane_system'] = resource_filename(__name__, \
                     "lipid_membranes/tip3pbox.mae")
 
+
         # Check the file output format is supported
-        self.out_fmt = fileutils.check_out_type(self.opts['output_filename'],
-                                                self.opts['hmassrepartition'])
+        self.out_fmt = fileutils.check_out_type(self.opts.get('output_filename'),
+                                                self.opts.get('hmassrepartition'))
 
     #==========================================================================
 
-    def build(self):
+    def _build(self):
         """
         Builds the system
 
@@ -98,14 +121,14 @@ class DabbleBuilder(object):
 
         # Load the solute (protein or ligand)
         print("Loading and orienting the solute...")
-        self.add_molecule(self.opts['solute_filename'], 'solute')
+        self.add_molecule(self.opts.get('solute_filename'), 'solute')
         self._set_solute_sel(self.molids['solute'])
 
         # Compute dimensions of the input system
         print("Computing the size of the input periodic cell...")
         dx_sol, dy_sol, dx_tm, dy_tm, dz_full = \
-                self.get_cell_size(mem_buf=self.opts['xy_buf'],
-                                   wat_buf=self.opts['wat_buffer'],
+                self.get_cell_size(mem_buf=self.opts.get('xy_buf'),
+                                   wat_buf=self.opts.get('wat_buffer'),
                                    molid=self.molids['solute'])
         print("Solute x diameter is %.2f (%.2f in TM region)\n"
               "Solute y diameter is %.2f (%.2f in TM region)\n"
@@ -129,8 +152,8 @@ class DabbleBuilder(object):
         self.molids['solute'] = self._orient_solute(self.molids['solute'])
 
         # Load, tile, and center the membrane system, check if it's water only
-        self.add_molecule(self.opts['membrane_system'], 'membrane')
-        if not len(atomsel(self.opts['lipid_sel'], molid=self.molids['membrane'])):
+        self.add_molecule(self.opts.get('membrane_system'), 'membrane')
+        if not len(atomsel(self.opts.get('lipid_sel'), molid=self.molids['membrane'])):
             self.water_only = True
             print("No lipid detected. Proceeding with pure liquid solvent")
         x_mem, y_mem, z_mem = \
@@ -177,13 +200,13 @@ class DabbleBuilder(object):
         # Remove extra lipids and print info about membrane
         if not self.water_only:
             print("\nInitial membrane composition:\n%s" %
-                  molutils.print_lipid_composition(self.opts['lipid_sel'],
+                  molutils.print_lipid_composition(self.opts.get('lipid_sel'),
                                                    molid=self.molids['combined']))
             self._remove_clashing_lipids(self.molids['combined'],
-                                         self.opts['lipid_sel'],
-                                         self.opts['lipid_friendly_sel'])
+                                         self.opts.get('lipid_sel'),
+                                         self.opts.get('lipid_friendly_sel'))
             print("\nFinal membrane composition:\n%s" %
-                  molutils.print_lipid_composition(self.opts['lipid_sel'],
+                  molutils.print_lipid_composition(self.opts.get('lipid_sel'),
                                                    self.molids['combined']))
 
         # Calculate charge
@@ -193,8 +216,8 @@ class DabbleBuilder(object):
                  molutils.get_system_net_charge(self.molids['combined'])))
 
         # Add ions as necessary
-        self.convert_ions(self.opts['salt_conc'],
-                          self.opts['cation'],
+        self.convert_ions(self.opts.get('salt_conc'),
+                          self.opts.get('cation'),
                           self.molids['combined'])
 
         # System is now built
@@ -202,7 +225,7 @@ class DabbleBuilder(object):
 
     #==========================================================================
 
-    def write(self, filename):
+    def write(self):
         """
         Writes the final built system.
 
@@ -210,23 +233,20 @@ class DabbleBuilder(object):
           filename (str): Name of file
         """
 
-        fileutils.check_write_ok(filename,
+        fileutils.check_write_ok(self.opts.get('output_filename'),
                                  self.out_fmt,
-                                 overwrite=self.opts['overwrite'])
-        final_id = self.build()
-        if self.opts.get('extra_topos'):
-            self.opts['extra_topos'] = self.opts['extra_topos'].split(',')
-        if self.opts.get('extra_params'):
-            self.opts['extra_params'] = self.opts['extra_params'].split(',')
+                                 overwrite=self.opts.get('overwrite'))
+        final_id = self._build()
 
         print("Writing system to %s with %d atoms comprising:\n"
               "  %d lipid molecules\n"
               "  %d water molecules\n"
-              % (filename,
+              % (self.opts.get('output_filename'),
                  molutils.num_atoms_remaining(molid=final_id),
-                 molutils.num_lipids_remaining(final_id, self.opts['lipid_sel']),
+                 molutils.num_lipids_remaining(final_id, self.opts.get('lipid_sel')),
                  molutils.num_waters_remaining(molid=final_id)))
-        fileutils.write_final_system(out_fmt=self.out_fmt, out_name=self.opts['output_filename'],
+        fileutils.write_final_system(out_fmt=self.out_fmt,
+                                     out_name=self.opts.get('output_filename'),
                                      molid=final_id, tmp_dir=self.tmp_dir,
                                      extra_topos=self.opts.get('extra_topos'),
                                      extra_params=self.opts.get('extra_params'))
@@ -295,7 +315,7 @@ class DabbleBuilder(object):
         """
 
         # Check cation
-        if self.opts['cation']not in ['Na', 'K']:
+        if self.opts.get('cation') not in ['Na', 'K']:
             raise ValueError("Invalid cation")
 
         # Give existing cations correct nomenclature
@@ -308,7 +328,7 @@ class DabbleBuilder(object):
                                                                     cation=cation)
 
         print("Solvent will be %d waters, %d %s (%.3f M), %d Cl (%.3f M)" %
-              (num_wat, total_cations, self.opts['cation'], cation_conc,
+              (num_wat, total_cations, self.opts.get('cation'), cation_conc,
                total_anions, anion_conc))
 
         print("Converting %d waters to %d %s ions and %d Cl ions..." %
@@ -499,11 +519,11 @@ class DabbleBuilder(object):
             raise ValueError("Water buffer undefined")
 
         # Check the +Z direction
-        zup = self.opts['wat_buffer']+ \
+        zup = self.opts['wat_buffer'] + \
               max(atomsel(self.solute_sel).get('z')) - \
               max(atomsel("not (%s or %s)" % (self.solute_sel, self.opts['lipid_sel'])).get('z'))
         # Check the -Z direction
-        zdo = self.opts['wat_buffer']+ \
+        zdo = self.opts['wat_buffer'] + \
               min(atomsel("not (%s or %s)" % (self.solute_sel, self.opts['lipid_sel'])).get('z')) \
               - min(atomsel(self.solute_sel).get('z'))
 
@@ -569,7 +589,7 @@ class DabbleBuilder(object):
           ValueError if water buffer is None
         """
 
-        if self.opts['wat_buffer']is None:
+        if not self.opts.get('wat_buffer'):
             raise ValueError("Water buffer undefined")
 
         # Remove waters in the Z direction
@@ -782,7 +802,7 @@ class DabbleBuilder(object):
         # TODO
         clash_lips = 0
         protein_lips = 0
-        if self.opts['clash_lipids']:
+        if self.opts.get('clash_lipids'):
             x_edge_dim = self.size[0]*0.5*0.9
             y_edge_dim = self.size[1]*0.5*0.9
             pointy_lipid_sel = '((%s) and not (%s)) and (abs(x) > %f or ' \

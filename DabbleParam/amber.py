@@ -49,11 +49,12 @@ class AmberWriter(object):
 
     def __init__(self, molid, tmp_dir,
                  forcefield='charmm', lipid_sel="lipid",
-                 hmr=False, extra_params=None):
+                 hmr=False, extra_topos=None, extra_params=None):
         self.lipid_sel = lipid_sel
         self.molid = molid
         self.tmp_dir = tmp_dir
         self.hmr = hmr
+        self.extra_topos = extra_topos
         if forcefield not in ['amber', 'charmm']:
             raise ValueError("Unsupported forcefield: %s" % forcefield)
         self.forcefield = forcefield
@@ -72,7 +73,7 @@ class AmberWriter(object):
             self.parameters = [] # TODO amber default parameters
 
         if extra_params is not None:
-            self.parameters.extend(extra_parms)
+            self.parameters.extend(extra_params)
             self.prompt_params = False
         else:
             self.prompt_params = True
@@ -88,7 +89,8 @@ class AmberWriter(object):
         if self.forcefield is 'charmm':
             psfgen = CharmmWriter(molid=self.molid, 
                                   tmp_dir=self.tmp_dir,
-                                  lipid_sel=self.lipid_sel)
+                                  lipid_sel=self.lipid_sel,
+                                  extra_topos=self.extra_topos)
             self.topologies = psfgen.write(self.prmtop_name)
             self._psf_to_charmm_amber()
         elif self.forcefield is 'amber':

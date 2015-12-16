@@ -1,0 +1,238 @@
+! topology file for CYP, cysteine bound to palmitoyl (PLM) group for insertion into lipid bilayer
+! PLM parameters obtained through paramchem
+DECL -CA  
+DECL -C  
+DECL -O  
+DECL +N  
+DECL +HN  
+DECL +CA  
+DEFA FIRS NTER LAST CTER   
+AUTO ANGLES DIHE
+
+
+RESI CYP          0.00
+GROUP   
+ATOM N    NH1    -0.47  !     |       
+ATOM HN   H       0.31  !  HN-N       
+ATOM CA   CT1     0.07  !     |   HB1
+ATOM HA   HB1     0.09  !     |   |  
+GROUP                   !  HA-CA--CB--SG--PLM
+ATOM CB   CT2    -0.11  !     |   |     
+ATOM HB1  HA2     0.09  !     |   HB2    
+ATOM HB2  HA2     0.09  !   O=C           
+! ATOM SG   S      -0.23!     |           
+! ATOM HG1  HS      0.16!
+ATOM SG   S      -0.07  ! = -0.23 + 0.16
+GROUP   
+ATOM C    C       0.51
+ATOM O    O      -0.51
+GROUP
+!PLM
+! ATOM C1     CG2O4   0.199 !    0.193
+ATOM C1     CG2O4   0.290 !    = 0.199 + 0.091
+ATOM O1     OG2D1  -0.400 !    0.045
+ATOM C2     CG321  -0.070 !    0.193
+ATOM C3     CG321  -0.180 !    0.081
+ATOM C4     CG321  -0.180 !    0.025
+ATOM C5     CG321  -0.180 !    0.000
+ATOM C6     CG321  -0.180 !    0.000
+ATOM C7     CG321  -0.180 !    0.000
+ATOM C8     CG321  -0.180 !    0.000
+ATOM C9     CG321  -0.180 !    0.000
+ATOM CY     CG321  -0.180 !    0.000
+ATOM CZ     CG321  -0.180 !    0.000
+ATOM CC     CG321  -0.180 !    0.000
+ATOM CD     CG321  -0.180 !    0.000
+ATOM CE     CG321  -0.180 !    0.000
+ATOM CF     CG321  -0.180 !    0.000
+ATOM CG     CG331  -0.270 !    0.000
+ATOM H21    HGA2    0.090 !    0.000
+ATOM H22    HGA2    0.090 !    0.000
+ATOM H31    HGA2    0.090 !    0.025
+ATOM H32    HGA2    0.090 !    0.025
+ATOM H41    HGA2    0.090 !    0.000
+ATOM H42    HGA2    0.090 !    0.000
+ATOM H51    HGA2    0.090 !    0.000
+ATOM H52    HGA2    0.090 !    0.000
+ATOM H61    HGA2    0.090 !    0.000
+ATOM H62    HGA2    0.090 !    0.000
+ATOM H71    HGA2    0.090 !    0.000
+ATOM H72    HGA2    0.090 !    0.000
+ATOM H81    HGA2    0.090 !    0.000
+ATOM H82    HGA2    0.090 !    0.000
+ATOM H91    HGA2    0.090 !    0.000
+ATOM H92    HGA2    0.090 !    0.000
+ATOM HY1    HGA2    0.090 !    0.000
+ATOM HY2    HGA2    0.090 !    0.000
+ATOM HZ1    HGA2    0.090 !    0.000
+ATOM HZ2    HGA2    0.090 !    0.000
+ATOM HC1    HGA2    0.090 !    0.000
+ATOM HC2    HGA2    0.090 !    0.000
+ATOM HD1    HGA2    0.090 !    0.000
+ATOM HD2    HGA2    0.090 !    0.000
+ATOM HF1    HGA2    0.090 !    0.000
+ATOM HF2    HGA2    0.090 !    0.000
+ATOM HE1    HGA2    0.090 !    0.000
+ATOM HE2    HGA2    0.090 !    0.000
+ATOM HG1    HGA3    0.090 !    0.000
+ATOM HG2    HGA3    0.090 !    0.000
+ATOM HG3    HGA3    0.090 !    0.000
+! ATOM H1     HGR52   0.091 !    0.045 
+
+BOND CB CA   SG CB   N HN  N  CA   
+BOND C  CA   C +N  CA HA  CB HB1   
+BOND CB HB2  
+! PLM
+BOND C1   O1  
+BOND C1   C2  
+! BOND C1   H1
+BOND C1   SG  ! added this in
+BOND C2   C3  
+BOND C2   H21 
+BOND C2   H22 
+BOND C3   C4  
+BOND C3   H31 
+BOND C3   H32 
+BOND C4   C5  
+BOND C4   H41 
+BOND C4   H42 
+BOND C5   C6  
+BOND C5   H51 
+BOND C5   H52 
+BOND C6   C7  
+BOND C6   H61 
+BOND C6   H62 
+BOND C7   C8  
+BOND C7   H71 
+BOND C7   H72 
+BOND C8   C9  
+BOND C8   H81 
+BOND C8   H82 
+BOND C9   CY  
+BOND C9   H91 
+BOND C9   H92 
+BOND CY   CZ  
+BOND CY   HY1 
+BOND CY   HY2 
+BOND CZ   CC  
+BOND CZ   HZ1 
+BOND CZ   HZ2 
+BOND CC   CD  
+BOND CC   HC1 
+BOND CC   HC2 
+BOND CD   CE  
+BOND CD   HD1 
+BOND CD   HD2 
+BOND CE   CF  
+BOND CE   HE1 
+BOND CE   HE2 
+BOND CF   CG  
+BOND CF   HF1 
+BOND CF   HF2 
+BOND CG   HG1 
+BOND CG   HG2 
+BOND CG   HG3 
+BOND N -C
+!IMPR C1     C2     O1     H1 
+
+DOUBLE O  C   
+IMPR N -C CA HN  C CA +N O   
+CMAP -C  N  CA  C   N  CA  C  +N
+DONOR HN N   
+
+ACCEPTOR O C   
+IC -C   CA   *N   HN    1.3479 123.9300  180.0000 114.7700  0.9982
+IC -C   N    CA   C     1.3479 123.9300  180.0000 105.8900  1.5202
+IC N    CA   C    +N    1.4533 105.8900  180.0000 118.3000  1.3498
+IC +N   CA   *C   O     1.3498 118.3000  180.0000 120.5900  1.2306
+IC CA   C    +N   +CA   1.5202 118.3000  180.0000 124.5000  1.4548
+IC N    C    *CA  CB    1.4533 105.8900  121.7900 111.9800  1.5584
+IC N    C    *CA  HA    1.4533 105.8900 -116.3400 107.7100  1.0837
+IC N    CA   CB   SG    1.4533 111.5600  180.0000 113.8700  1.8359
+IC SG   CA   *CB  HB1   1.8359 113.8700  119.9100 107.2400  1.1134
+IC SG   CA   *CB  HB2   1.8359 113.8700 -125.3200 109.8200  1.1124
+! IC CA   CB   SG   HG1   1.5584 113.8700  176.9600  97.1500  1.3341
+
+END
+
+! Penalties lower than 10 indicate the analogy is fair; penalties between 10
+! and 50 mean some basic validation is recommended; penalties higher than
+! 50 indicate poor analogy and mandate extensive validation/optimization.
+
+BONDS
+CG2O4  CG321   250.00     1.5000 ! PALD, propionaldehyde from AALD adm 11/08
+CG2O4  OG2D1   700.00     1.2150 ! ALDEHYDE acetaldehyde adm 11/08
+CG2O4  HGR52   330.00     1.1100 ! ALDEHYDE acetaldehyde adm 11/08
+CG321  CG321   222.50     1.5300 ! PROT alkane update, adm jr., 3/2/92
+CG321  CG331   222.50     1.5280 ! PROT alkane update, adm jr., 3/2/92
+CG321  HGA2    309.00     1.1110 ! PROT alkane update, adm jr., 3/2/92
+CG331  HGA3    322.00     1.1110 ! PROT alkane update, adm jr., 3/2/92
+! Added in for CYS-PLM (i.e. CYP)
+S      CG2O4   198.000    1.8180 ! ALLOW   ALI SUL ION ! fitted to C-S s   9/26/92 (FL)
+
+ANGLES
+CG321  CG2O4  OG2D1    45.00    126.00 ! ALDEHYDE propionaldehyde adm 11/08
+CG321  CG2O4  HGR52    65.00    116.00 ! ALDEHYDE propionaldehyde adm 11/08
+OG2D1  CG2O4  HGR52    65.00    118.00 ! ALDEHYDE acetaldehyde adm 11/08
+CG2O4  CG321  CG321    60.00    113.80 ! PLM , from CG2O5 CG321 CG321, PENALTY= 0.5
+CG2O4  CG321  HGA2     33.00    109.50   30.00   2.16300 ! PALD, propionaldehyde from PROT adm jr. 5/02/91, acetic acid pure solvent. Consistent with adm 11/08
+CG321  CG321  CG321    58.35    113.60   11.16   2.56100 ! PROT alkane update, adm jr., 3/2/92
+CG321  CG321  CG331    58.00    115.00    8.00   2.56100 ! PROT alkane update, adm jr., 3/2/92
+CG321  CG321  HGA2     26.50    110.10   22.53   2.17900 ! PROT alkane update, adm jr., 3/2/92
+CG331  CG321  HGA2     34.60    110.10   22.53   2.17900 ! PROT alkane update, adm jr., 3/2/92
+HGA2   CG321  HGA2     35.50    109.00    5.40   1.80200 ! PROT alkane update, adm jr., 3/2/92
+CG321  CG331  HGA3     34.60    110.10   22.53   2.17900 ! PROT alkane update, adm jr., 3/2/92
+HGA3   CG331  HGA3     35.50    108.40    5.40   1.80200 ! PROT alkane update, adm jr., 3/2/92
+! Added in for CYS-PLM (i.e. CYP)
+S      CT2    CT1      58.00    112.50 ! ALLOW   ALI SUL ION ! as in expt.MeEtS & DALC crystal,  5/15/92
+S      CT2    HA2      46.10    111.30 ! ALLOW   ALI SUL ION ! vib. freq. and HF/6-31G* geo. (DTN) 8/24/90
+CG2O4  S      CT2      60.00     96.00    ! CYP , from CG2O6 SG311 CG331, PENALTY= 5.4
+OG2D1  CG2O4  S        70.00    125.00   20.00   2.44200 ! CYP , from CG321 CG2O2 OG2D1, PENALTY= 113
+CG321  CG2O4  S        55.00    109.00   20.00   2.32600 ! CYP , from CG321 CG2O2 OG302, PENALTY= 119.5
+
+DIHEDRALS
+OG2D1  CG2O4  CG321  CG321      1.0500  1   180.00 ! PLM , from OG2D1 CG2O4 CG321 CG331, PENALTY= 0.9
+OG2D1  CG2O4  CG321  CG321      0.4000  2   180.00 ! PLM , from OG2D1 CG2O4 CG321 CG331, PENALTY= 0.9
+OG2D1  CG2O4  CG321  CG321      0.6000  3   180.00 ! PLM , from OG2D1 CG2O4 CG321 CG331, PENALTY= 0.9
+OG2D1  CG2O4  CG321  CG321      0.1000  4   180.00 ! PLM , from OG2D1 CG2O4 CG321 CG331, PENALTY= 0.9
+OG2D1  CG2O4  CG321  HGA2       0.0000  3   180.00 ! PALD, Propionaldehyde, PROT adm jr. 3/19/92, from lipid methyl acetate (unmodified because this may not be analogous to AALD)
+HGR52  CG2O4  CG321  CG321      0.0000  3   180.00 ! PLM , from HGR52 CG2O4 CG321 CG331, PENALTY= 0.9
+HGR52  CG2O4  CG321  HGA2       0.0000  3   180.00 ! acetaldehyde, adm 11/08
+CG2O4  CG321  CG321  CG321      0.2100  1   180.00 ! PLM , from CG2O5 CG321 CG321 CG321, PENALTY= 0.5
+CG2O4  CG321  CG321  CG321      0.3900  2     0.00 ! PLM , from CG2O5 CG321 CG321 CG321, PENALTY= 0.5
+CG2O4  CG321  CG321  CG321      0.3500  3   180.00 ! PLM , from CG2O5 CG321 CG321 CG321, PENALTY= 0.5
+CG2O4  CG321  CG321  CG321      0.1100  4     0.00 ! PLM , from CG2O5 CG321 CG321 CG321, PENALTY= 0.5
+CG2O4  CG321  CG321  CG321      0.0900  6   180.00 ! PLM , from CG2O5 CG321 CG321 CG321, PENALTY= 0.5
+CG2O4  CG321  CG321  HGA2       0.1950  3     0.00 ! PLM , from CG2O5 CG321 CG321 HGA2, PENALTY= 0.5
+CG321  CG321  CG321  CG321      0.0645  2     0.00 ! LIPID alkane, 4/04, jbk (Jeff Klauda)
+CG321  CG321  CG321  CG321      0.1497  3   180.00 ! LIPID alkane, 4/04, jbk
+CG321  CG321  CG321  CG321      0.0946  4     0.00 ! LIPID alkane, 4/04, jbk
+CG321  CG321  CG321  CG321      0.1125  5     0.00 ! LIPID alkane, 4/04, jbk
+CG321  CG321  CG321  CG331      0.1505  2     0.00 ! LIPID alkane, 4/04, jbk (Jeff Klauda)
+CG321  CG321  CG321  CG331      0.0813  3   180.00 ! LIPID alkane, 4/04, jbk
+CG321  CG321  CG321  CG331      0.1082  4     0.00 ! LIPID alkane, 4/04, jbk
+CG321  CG321  CG321  CG331      0.2039  5     0.00 ! LIPID alkane, 4/04, jbk
+CG321  CG321  CG321  HGA2       0.1950  3     0.00 ! LIPID alkanes
+CG331  CG321  CG321  HGA2       0.1800  3     0.00 ! LIPID alkane
+HGA2   CG321  CG321  HGA2       0.2200  3     0.00 ! LIPID alkanes
+CG321  CG321  CG331  HGA3       0.1600  3     0.00 ! PROT rotation barrier in Ethane (SF)
+HGA2   CG321  CG331  HGA3       0.1600  3     0.00 ! PROT rotation barrier in Ethane (SF)
+! Added in for CYS-PLM (i.e. CYP)
+HB1    CT1    CT2    S          0.1950  3     0.00 ! PROTNA sahc
+C      CT1    CT2    S          0.2000  3     0.00 ! CYP , from CG2O1 CG311 CG321 SG311, PENALTY= 3
+NH1    CT1    CT2    S          0.2000  3     0.00 ! CYP , from NG3P3 CG314 CG321 SG311, PENALTY= 37.9
+CT1    CT2    S      CG2O4      0.2400  1   180.00 ! CYP , from CG321 CG321 SG311 CG321, PENALTY= 71.6
+CT1    CT2    S      CG2O4      0.3700  3     0.00 ! CYP , from CG321 CG321 SG311 CG321, PENALTY= 71.6
+HA2    CT2    S      CG2O4      0.3600  3     0.00 ! CYP , from HGA3 CG331 SG311 CG2O6, PENALTY= 10.5
+OG2D1  CG2O4  S      CT2        1.4500  1     0.00 ! CYP , from NG2R61 CG2R64 SG311 CG331, PENALTY= 336.9
+CG321  CG2O4  S      CT2        0.1000  1     0.00 ! CYP , from SG311 CG2O6 SG311 CG331, PENALTY= 345.4
+CG321  CG2O4  S      CT2        2.1300  2   180.00 ! CYP , from SG311 CG2O6 SG311 CG331, PENALTY= 345.4
+S      CG2O4  CG321  CG321      0.5300  2   180.00 ! CYP , from OG302 CG2O2 CG321 CG321, PENALTY= 119.5
+S      CG2O4  CG321  HGA2       0.0000  3     0.00 ! CYP , from OG302 CG2O2 CG321 HGA2, PENALTY= 119.5
+
+IMPROPERS
+! Added in for CYS-PLM (i.e. CYP)
+CG2O4  CG321  OG2D1  S         65.0000  0     0.00 ! CYP , from CG2O2 CG321 OG2D1 OG311, PENALTY= 56.5
+
+END
+RETURN

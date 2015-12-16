@@ -7,4 +7,5 @@ __author__ = 'Robin Betz'
 
 from DabbleParam.charmm import *
 from DabbleParam.amber import *
+from DabbleParam.graph import *
 
