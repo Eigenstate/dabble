@@ -808,15 +808,18 @@ class CharmmWriter(object):
         molecule.set_top(molid)
 
         fileh = open(filename, 'w')
-        # Much much faster then get resids
-        resids = set(atomsel(sel).get('residue'))
+        # Use resids since order can be wrong when sorting by residue
+        # Then, use residue to pull out each one since it is much much
+        # faster then trying to pull out residues
+        resids = set(atomsel(sel).get('resid'))
         idx = 1
         # For renumbering capping groups
-        for rid in resids:
+        for resid in resids:
             # Handle bug where capping groups in same residue as the
             # neighboring amino acid Maestro writes it this way for some
             # reason but it causes problems down the line when psfgen doesn't
             # understand the weird combined residue
+            rid = atomsel('resid %d' % resid).get('residue')[0]
             names = set(atomsel('residue %d'% rid).get('resname'))
             assert len(names) < 3, ("More than 2 residues with same number... "
                                     "currently unhandled. Report a bug")

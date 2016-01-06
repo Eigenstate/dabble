@@ -101,7 +101,7 @@ class MoleculeGraph(object):
             KeyError: if no matching possible
         """
         resname = selection.get('resname')[0]
-        rgraph = parse_vmd_graph(selection)
+        (rgraph, is_covalent) = parse_vmd_graph(selection)
 
         # First check against matching residue names
         if resname in self.known_res.keys():
@@ -118,6 +118,25 @@ class MoleculeGraph(object):
             if matcher.is_isomorphic():
                 logger.info("Renaming resname %s -> %s", resname, matchname)
                 return (str(matchname), matcher.match())
+
+        # If that doesn't work and we have a covalently bonded residue, check
+        # for isomorphic subgraphs of that residue in the definitions (ie incompletely
+        # defined connectivity to other residues, which can occur
+        # Need to find the maximal subgraph match, not just any
+        logger.warning("Could not find an exact topology file for '%s'.\n"
+                       "Allowing subgraph matches. Check match is correct!" % resname)
+        if is_covalent:
+            matches = {}
+            for matchname in self.known_res.keys():
+                graph = self.known_res[matchname]
+                matcher = isomorphism.GraphMatcher(rgraph, graph, node_match=_check_atom_match)
+
+                if matcher.subgraph_is_isomorphic():
+                    matches[matchname] = matcher.match()
+
+            matchname = max(matches.keys(), key=(lambda x: len(self.known_res[x])))
+            logger.warning("Check %s -> %s is correct!" % (resname, matchname))
+            return (resname, matches[matchname])
 
         logger.error("No match in topologies for resname %s", resname)
         return (None, None)
@@ -312,6 +331,8 @@ def parse_vmd_graph(selection):
 
     Returns:
         graph representing the molecule, with nodes named indices
+        bool representing if the selection is covalently bonded to
+          another residue
 
     Raises:
         ValueError if atom selection is more than one residue
@@ -347,6 +368,7 @@ def parse_vmd_graph(selection):
     edict = {selection.get('index')[i]: "self" \
              for i in range(len(selection))}
     others = set(rgraph.nodes()) - set(selection.get('index'))
+    is_covalent = bool(len(others))
     for oth in others:
         rdict[oth] = "_join"
         resido = atomsel('index %d' % oth, molid=selection.molid).get('resid')[0]
@@ -359,4 +381,4 @@ def parse_vmd_graph(selection):
     nx.set_node_attributes(rgraph, 'element', rdict)
     nx.set_node_attributes(rgraph, 'residue', edict)
 
-    return rgraph
+    return (rgraph, is_covalent)

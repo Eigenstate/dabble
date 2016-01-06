@@ -25,7 +25,7 @@ def test_read_mol(capfd, tmpdir):
     from DabbleParam import parse_vmd_graph
 
     molid = molecule.load("mae", dir+"lsd_prot.mae")
-    rgraph = parse_vmd_graph(atomsel())
+    rgraph, dump = parse_vmd_graph(atomsel())
     nx.write_dot(rgraph, str(tmpdir)+"/test2.dot")
     subprocess.check_call(["diff", "-q", dir+"correct_mae.dot", str(tmpdir)+"/test2.dot"])
 
