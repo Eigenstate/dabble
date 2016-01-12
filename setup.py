@@ -23,7 +23,7 @@ package_data = {
         }
 
 setup(name='dabble',
-      version='1.0.0',
+      version='1.0.1',
       description='Membrane protein system builder',
       author='Robin Betz',
       author_email='robin@robinbetz.com',
