@@ -41,9 +41,9 @@ logger = logging.getLogger(__name__) # pylint: disable=invalid-name
 MASS_LOOKUP= { 1: "H",  12: "C",  14: "N",
               16: "O",  31: "P",  32: "S",
               35: "Cl", 80: "Br", 19: "F",
-             126: "I",  27: "Al",  4: "He",
+             127: "I",  27: "Al",  4: "He",
               20: "Ne",  0: "DU", 56: "Fe",
-             23: "Na",  7: "Li", 24: "Mg",
+              23: "Na",  7: "Li", 24: "Mg",
              137: "Ba", 40: "Ca", 85: "Rb",
              133: "Ce", 39: "K",  65: "Zn",
              112: "Cd" }
@@ -123,9 +123,9 @@ class MoleculeGraph(object):
         # for isomorphic subgraphs of that residue in the definitions (ie incompletely
         # defined connectivity to other residues, which can occur
         # Need to find the maximal subgraph match, not just any
-        logger.warning("Could not find an exact topology file for '%s'.\n"
-                       "Allowing subgraph matches. Check match is correct!" % resname)
         if is_covalent:
+            logger.warning("Could not find an exact topology file for '%s'.\n"
+                           "Allowing subgraph matches. Check match is correct!" % resname)
             matches = {}
             for matchname in self.known_res.keys():
                 graph = self.known_res[matchname]
@@ -317,8 +317,15 @@ def _check_atom_match(node1, node2):
     as being the same element and having the same residue membership
     (self, +, or -)
     """
-    return (node1.get('element') == node2.get('element')) and \
-           (node1.get('residue') == node2.get('residue'))
+    if node1.get('element') == "Other":
+        return (node2.get('element') not in MASS_LOOKUP.values()) and \
+               (node1.get('residue') == node2.get('residue'))
+    elif node2.get('element') == "Other":
+        return (node1.get('element') not in MASS_LOOKUP.values()) and \
+               (node1.get('residue') == node2.get('residue'))
+    else:
+        return (node1.get('element') == node2.get('element')) and \
+               (node1.get('residue') == node2.get('residue'))
 
 #=========================================================================
 
