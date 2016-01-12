@@ -359,6 +359,12 @@ class CharmmWriter(object):
                 elif charge == -2:
                     print("INFO: Found dianionic phosphoserine resid %d" % resid)
                     patches += 'patch SP2 %s:%d\n' % (seg, resid)
+
+                    # Need to set atom names
+                    oxygens = atomsel("(resid %s and element O and not name OG O)" % resid)
+                    if len(oxygens.get("index")) > 3:
+                        raise ValueError("More than 3 oxygens in resid %s" % resid)
+                    oxygens.set('name', ["O1P","OT","O2P"])
                 else: # Print just a warning in case user handles it later
                     print("WARNING: Unknown modification to Ser %d" % resid)
             elif "HG1" not in atomsel(ressel).get('name'): # Deprotonated
@@ -723,7 +729,7 @@ class CharmmWriter(object):
         resids = list(set(atomsel('user 1.0 and resname %s' % resname).get('resid')))
         if len(residues) != len(resids):
             raise ValueError("VMD found %d residues for resname %s, but there "
-                             "are %d resids! Check input." % (resname, len(residues),
+                             "are %d resids! Check input." % (len(residues), resname, 
                                                               len(resids)))
 
         for residue in residues:
