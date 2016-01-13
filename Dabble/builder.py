@@ -249,7 +249,8 @@ class DabbleBuilder(object):
                                      out_name=self.opts.get('output_filename'),
                                      molid=final_id, tmp_dir=self.tmp_dir,
                                      extra_topos=self.opts.get('extra_topos'),
-                                     extra_params=self.opts.get('extra_params'))
+                                     extra_params=self.opts.get('extra_params'),
+                                     hmassrepartition=self.opts.get('hmassrepartition'))
         molecule.delete(final_id)
 
     #==========================================================================
