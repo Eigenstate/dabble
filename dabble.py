@@ -26,7 +26,7 @@ from __future__ import print_function
 import argparse
 import signal
 import sys
-import Dabble
+from Dabble import __version__, DabbleBuilder
 
 WELCOME_SCREEN = '''
  ===============================================
@@ -43,7 +43,7 @@ WELCOME_SCREEN = '''
 |               Stanford University             |
 | %s |
  ===============================================
-''' % ('{0:^45}'.format("Version " + Dabble.__version__))
+''' % ('{0:^45}'.format("Version " + __version__))
 
 # Handle interrupts
 def signal_handler(*args, **kwargs): # pylint: disable=unused-argument
