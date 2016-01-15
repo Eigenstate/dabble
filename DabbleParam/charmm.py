@@ -105,9 +105,6 @@ class CharmmWriter(object):
         else:
             self.prompt_topos = True
 
-        # Initialize graph matcher with topologies we know about
-        self.matcher = MoleculeGraph(self.topologies)
-
     #=========================================================================
 
     def write(self, psf_name):
@@ -167,6 +164,9 @@ class CharmmWriter(object):
         self.file.write('\n')
         for top in self.topologies:
             self.file.write('   topology %s\n' % top)
+
+        # Initialize graph matcher with topologies we know about
+        self.matcher = MoleculeGraph(self.topologies)
 
         # Mark all atoms as unsaved with the user field
         atomsel('all', molid=self.molid).set('user', 1.0)
