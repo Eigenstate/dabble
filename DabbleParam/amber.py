@@ -32,6 +32,8 @@ import molecule
 from atomsel import atomsel
 
 from DabbleParam import CharmmWriter
+from ParmedTools import chamber, parmout, HMassRepartition, defineSolvent
+from chemistry.amber import AmberParm
 
 #++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
 
@@ -144,9 +146,6 @@ class AmberWriter(object):
         box = molecule.get_periodic(molid=self.molid)
         args += " -box %f,%f,%f" % (box['a'], box['b'], box['c'])
 
-        from ParmedTools import chamber, parmout, HMassRepartition
-        from chemistry.amber import AmberParm
-
         print("\nINFO: Running chamber. This may take a while...")
         sys.stdout.flush()
         parm = AmberParm()
@@ -158,7 +157,8 @@ class AmberWriter(object):
         if self.hmr:
             print("\nINFO: Repartitioning hydrogen masses...")
             parm = action.parm
-            action = HMassRepartition(parm)
+            action = HMassRepartition(parm, "dowater")
+            print(action)
             action.execute()
 
         print("\nINFO: Ran chamber")
