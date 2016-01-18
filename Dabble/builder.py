@@ -118,7 +118,16 @@ class DabbleBuilder(object):
         Returns:
          (int) VMD molecule id of built system
         """
-
+        # Load the membrane system, check if it's water only
+        self.add_molecule(self.opts.get('membrane_system'), 'membrane')
+        if not len(atomsel(self.opts.get('lipid_sel'), molid=self.molids['membrane'])):
+            self.water_only = True
+            print("No lipid detected. Proceeding with pure liquid solvent")
+        x_mem, y_mem, z_mem = \
+                molutils.get_system_dimensions(molid=self.molids['membrane'])
+        print("Solvent patch dimensions are %.2f x %.2f x %.2f" % (x_mem,
+                                                                   y_mem,
+                                                                   z_mem))
         # Load the solute (protein or ligand)
         print("Loading and orienting the solute...")
         self.add_molecule(self.opts.get('solute_filename'), 'solute')
@@ -151,16 +160,7 @@ class DabbleBuilder(object):
         # Orient the solute in the membrane so padding is equal on all sides
         self.molids['solute'] = self._orient_solute(self.molids['solute'])
 
-        # Load, tile, and center the membrane system, check if it's water only
-        self.add_molecule(self.opts.get('membrane_system'), 'membrane')
-        if not len(atomsel(self.opts.get('lipid_sel'), molid=self.molids['membrane'])):
-            self.water_only = True
-            print("No lipid detected. Proceeding with pure liquid solvent")
-        x_mem, y_mem, z_mem = \
-                molutils.get_system_dimensions(molid=self.molids['membrane'])
-        print("Solvent patch dimensions are %.2f x %.2f x %.2f" % (x_mem,
-                                                                   y_mem,
-                                                                   z_mem))
+        # Tile the membrane/solvent
         print("Tiling solvent...")
         self.molids['tiled_membrane'], times = \
                 tile_membrane_patch(self.molids['membrane'],
@@ -391,13 +391,17 @@ class DabbleBuilder(object):
             dy_tm = 0.0
         else:
             # Add dummy to the membrane boundaries in case protein is peripheral
+            # If protein is really far from protein then oops
             solute_z = atomsel(self.solute_sel, molid=molid).get('z') + \
                        [-zh_mem_full, zh_mem_full]
             tm_solute = atomsel('(%s) and z > %f and z < %f' % (self.solute_sel,
                                                                 -zh_mem_hyd,
                                                                 zh_mem_hyd), molid)
-            dx_tm = max(tm_solute.get('x')) - min(tm_solute.get('x'))
-            dy_tm = max(tm_solute.get('y')) - min(tm_solute.get('y'))
+            if len(tm_solute):
+                dx_tm = max(tm_solute.get('x')) - min(tm_solute.get('x'))
+                dy_tm = max(tm_solute.get('y')) - min(tm_solute.get('y'))
+            else:
+                dx_tm = dy_tm = 0
 
 # Old way of doing it- get diameter of protein in membrane
 #            dxy_tm = molutils.solute_xy_diameter('(%s) and z > %f and z < %f' %
