@@ -361,8 +361,12 @@ class CharmmWriter(object):
                     patches += 'patch SP2 %s:%d\n' % (seg, resid)
 
                     # Need to set atom names
+                    phosphate = atomsel("(resid %s and element P)" % resid)
+                    if len(phosphate) > 1:
+                        raise ValueError("More than 1 phosphate in resid %s" % resid)
+                    phosphate.set('name', ['P'])
                     oxygens = atomsel("(resid %s and element O and not name OG O)" % resid)
-                    if len(oxygens.get("index")) > 3:
+                    if len(oxygens) > 3:
                         raise ValueError("More than 3 oxygens in resid %s" % resid)
                     oxygens.set('name', ["O1P","OT","O2P"])
                 else: # Print just a warning in case user handles it later
@@ -376,14 +380,29 @@ class CharmmWriter(object):
         for resid in thrs:
             ressel = "(resid %s and resname THR THP1 THP2)" % resid
             atomsel(ressel).set('resname', 'THR')
+
             if "P" in atomsel(ressel).get('element'): # Phosphorylated
                 charge = int(sum(atomsel(ressel).get('charge')))
                 if charge == -1:
                     print("INFO: Found monoanionic phosphothreonine resid %d" % resid)
                     patches += 'patch THP1 %s:%d\n' % (seg, resid)
+
                 elif charge == -2:
                     print("INFO: Found dianionic phosphothreonine resid %d" % resid)
                     patches += 'patch THP2 %s:%d\n' % (seg, resid)
+
+                    # Need to set atom names- HACK to fix with amino acid graph matcher
+                    atomsel('resid %s and name OG' % resid).set('name', ['OG1'])
+                    phosphate = atomsel("(resid %s and element P)" % resid)
+                    if len(phosphate) > 1:
+                        raise ValueError("More than 1 phosphate in resid %s" % resid)
+                    phosphate.set('name', ['P'])
+                    oxygens = atomsel("(resid %s and element O and not name OG1 O)" % resid)
+                    if len(oxygens) > 3:
+                        print(oxygens.get('name'))
+                        raise ValueError("More than 3 oxygens in resid %s" % resid)
+                    oxygens.set('name', ["O1P","OT","O2P"])
+
                 else:
                     print("WARNING: Unknown modification to Thr %d" % resid)
 
@@ -400,6 +419,17 @@ class CharmmWriter(object):
                 elif charge == -2:
                     print("INFO: Found dianionic phosphotyrosine resid %d" % resid)
                     patches += 'patch TP2 %s:%d\n' % (seg, resid)
+
+                    # Need to set atom names
+                    phosphate = atomsel("(resid %s and element P)" % resid)
+                    if len(phosphate) > 1:
+                        raise ValueError("More than 1 phosphate in resid %s" % resid)
+                    phosphate.set('name', ['P1'])
+                    oxygens = atomsel("(resid %s and element O and not name OG1 O)" % resid)
+                    if len(oxygens) > 3:
+                        raise ValueError("More than 3 oxygens in resid %s" % resid)
+                    oxygens.set('name', ["O2","O3","O4"])
+
                 else:
                     print("WARNING: Unknown modification to Tyr %d" % resid)
 
@@ -904,23 +934,20 @@ class CharmmWriter(object):
                   "       Please see log above.\n")
             quit(1)
 
-        problem_lines = []
-        fileh = open('%s.pdb'% self.psf_name, 'r')
-        for line in iter(fileh):
-            # Use rsplit since some fields near beginning can mush together
-            # 3rd field from end not fourth since element name will be absent
-            words = line.rsplit()
-            if words[0] == 'ATOM' and words[-3] == '-1.00':
-                problem_lines.append(line[:-1])
-        fileh.close()
+        # Open the pdb file in VMD and check for atoms with no occupancy
+        fileh = molecule.load('pdb', '%s.pdb' % self.psf_name)
+        errors = atomsel("occupancy=-1", molid=fileh)
 
         # Print out error messages
-        if len(problem_lines):
-            print("\nERROR: Couldn't find the following atoms.\n"
-                  "Check if they are present in the original structure. "
+        if len(errors):
+            print("\nERROR: Couldn't find the following atoms.")
+            for i in range(len(errors)):
+                print("  %s%s:%s" % (errors.get("resname")[i], errors.get("resid")[i],
+                                   errors.get("name")[i]))
+
+            print("Check if they are present in the original structure.\n"
                   "If they are, check dabble name translation or file a "
                   "bug report to Robin.\n")
-            print('\n'.join(problem_lines))
             quit(1)
         else:
             print("\nINFO: Checked output pdb/psf has all atoms present "
