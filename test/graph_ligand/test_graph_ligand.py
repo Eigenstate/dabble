@@ -41,4 +41,14 @@ def test_compare_mol():
     names = mdict.next()
     assert(name == "LSD")
     assert(names == correctnames)
+
+def test_protein(tmpdir):
+    import vmd, molecule
+    import networkx as nx
+    from DabbleParam import MoleculeGraph
+    from pkg_resources import resource_filename
+
+    g = MoleculeGraph([resource_filename("DabbleParam", "charmm_parameters/top_all36_prot.rtf")])
+    nx.write_dot(g.known_res["TYR"], str(tmpdir)+"/tyr.dot")
+    subprocess.check_call(["diff", "-q", dir+"correct_tyr.dot", str(tmpdir)+"/tyr.dot"])
     
