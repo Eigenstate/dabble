@@ -32,8 +32,8 @@ import molecule
 from atomsel import atomsel
 
 from DabbleParam import CharmmWriter
-from ParmedTools import chamber, parmout, HMassRepartition, defineSolvent
-from chemistry.amber import AmberParm
+from parmed.tools import chamber, parmout, HMassRepartition, defineSolvent
+from parmed.amber import AmberParm
 
 #++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
 
