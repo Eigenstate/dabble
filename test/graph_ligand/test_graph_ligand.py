@@ -5,6 +5,9 @@ import pytest
 import subprocess
 import os
 
+import logging
+logging.basicConfig()
+
 dir = os.path.dirname(__file__) + "/"
 
 def test_read_str(capfd, tmpdir):
@@ -41,6 +44,20 @@ def test_compare_mol():
     names = mdict.next()
     assert(name == "LSD")
     assert(names == correctnames)
+
+def test_patches():
+    import vmd, molecule
+    from atomsel import atomsel
+    from DabbleParam import MoleculeGraph
+    from pkg_resources import resource_filename
+
+    molid = molecule.load("mae", dir+"phosphoserine.mae")
+    g = MoleculeGraph([dir+"phosphoserine.str"])
+    (name, patch, mdict) = g.get_patches(atomsel())
+    correctnames = {0: 'N', 1: 'CA', 2: 'C', 3: 'O', 4: 'CB', 5: 'OG', 6: 'P', 7: 'O1P', 8: 'O2P', 9: 'OT', 10: 'HN', 11: 'HA', 12: 'HB1', 13: 'HB2'}
+    assert(name == "SER")
+    assert(patch == "SP2")
+    assert(mdict.next() == correctnames)
 
 def test_protein(tmpdir):
     import vmd, molecule
