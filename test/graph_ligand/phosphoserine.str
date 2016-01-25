@@ -84,7 +84,11 @@ MASS    83 SS    32.06000 ! thiolate sulfur
 MASS 125  ON2  15.999400 O ! Nucleic acid phosphate ester oxygen
 MASS 126  ON3  15.999400 O ! Nucleic acid =O in phosphate 
 MASS 127  ON4  15.999400 O ! Nucleic acid phosphate hydroxyl oxygen
+MASS 128  ON5  15.999400 O ! Nucleic acid ribose hydroxyl oxygen
+MASS 129  ON6  15.999400 O ! Nucleic acid deoxyribose ring oxygen
+MASS 130  ON6B 15.999400 O ! Nucleic acid ribose ring oxygen
 MASS 131  P    30.974000 P ! phosphorus
+MASS 132  P2   30.974000 P ! phosphorus, adm, 2011 DNA update
 
 DECL -CA  
 DECL -C  
@@ -95,12 +99,9 @@ DECL +CA
 DEFA FIRS NTER LAST CTER   
 AUTO ANGLES DIHE
 
-! I modified this so there's no +- links
-! -- Robin
-
-RESI SER 0.00
+RESI SER          0.00
 GROUP   
-ATOM N    NH1    -0.47  !            
+ATOM N    NH1    -0.47  !     |       
 ATOM HN   H       0.31  !  HN-N       
 ATOM CA   CT1     0.07  !     |   HB1
 ATOM HA   HB1     0.09  !     |   |  
@@ -108,16 +109,17 @@ GROUP                   !  HA-CA--CB--OG
 ATOM CB   CT2     0.05  !     |   |     \
 ATOM HB1  HA2     0.09  !     |   HB2    HG1
 ATOM HB2  HA2     0.09  !   O=C           
-ATOM OG   OH1    -0.66  !                
+ATOM OG   OH1    -0.66  !     |           
 ATOM HG1  H       0.43
 GROUP   
 ATOM C    C       0.51
 ATOM O    O      -0.51
 BOND CB CA   OG CB  N HN  N  CA   
-BOND C  CA  CA HA  CB HB1   
+BOND C  CA  C +N  CA HA  CB HB1   
 BOND CB HB2  OG HG1  
 DOUBLE   O  C      
 IMPR N -C CA HN  C CA +N O   
+CMAP -C  N  CA  C   N  CA  C  +N
 DONOR HN N   
 DONOR HG1 OG   
 ACCEPTOR OG   
@@ -134,7 +136,8 @@ IC OG   CA   *CB  HB1   1.4341 112.4500  119.3200 108.1000  1.1140
 IC OG   CA   *CB  HB2   1.4341 112.4500 -123.8600 110.3800  1.1136
 IC CA   CB   OG   HG1   1.5585 112.4500  165.9600 107.0800  0.9655
 
-PRES SP2 -2.00  ! convert serine to dianionic phosphoserine
+
+PRES PSEP -2.00  ! convert serine to dianionic phosphoserine
                         ! use in a patch statement
 DELE ATOM 1HG1
 GROUP
@@ -152,4 +155,3 @@ BILD CA    CB   OG  P      0.0000  000.00  180.00   000.00   0.0000
 BILD CB    OG   P   OT     0.0000  000.00  180.00   000.00   0.0000
 BILD OG    OT   *P  O1P    0.0000  000.00 -120.00   000.00   0.0000
 BILD OG    OT   *P  O2P    0.0000  000.00  120.00   000.00   0.0000
-

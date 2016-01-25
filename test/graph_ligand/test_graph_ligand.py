@@ -53,10 +53,10 @@ def test_patches():
 
     molid = molecule.load("mae", dir+"phosphoserine.mae")
     g = MoleculeGraph([dir+"phosphoserine.str"])
-    (name, patch, mdict) = g.get_patches(atomsel())
-    correctnames = {0: 'N', 1: 'CA', 2: 'C', 3: 'O', 4: 'CB', 5: 'OG', 6: 'P', 7: 'O1P', 8: 'O2P', 9: 'OT', 10: 'HN', 11: 'HA', 12: 'HB1', 13: 'HB2'}
+    (name, patch, mdict) = g.get_patches(atomsel("resname SEP"))
+    correctnames = {5: '-C', 16: 'N', 17: 'CA', 18: 'CB', 19: 'OG', 20: 'C', 21: 'O', 22: 'P', 23: 'O1P', 24: 'O2P', 25: 'OT', 26: 'HN', 27: 'HA', 28: 'HB1', 29: 'HB2', 30: '+N'}
     assert(name == "SER")
-    assert(patch == "SP2")
+    assert(patch == "PSEP")
     assert(mdict.next() == correctnames)
 
 def test_protein(tmpdir):
