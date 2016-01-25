@@ -114,7 +114,7 @@ class MoleculeGraph(object):
         for matchname in self.known_res.keys():
             graph = self.known_res[matchname]
             matcher = isomorphism.GraphMatcher(rgraph, graph, node_match=_check_atom_match)
-
+            
             if matcher.is_isomorphic():
                 logger.info("Renaming resname %s -> %s", resname, matchname)
                 return (str(matchname), matcher.match())
@@ -138,7 +138,20 @@ class MoleculeGraph(object):
             logger.warning("Check %s -> %s is correct!" % (resname, matchname))
             return (resname, matches[matchname])
 
-        logger.error("No match in topologies for resname %s", resname)
+        # Try to print out a helpful error message here if matching failed
+        print("\nERROR: Couldn't find a topological match for resname %s" % resname)
+        if self.known_res.get(resname):
+            print("      I found a residue definition with the same name, but "
+                   "it didn't match up")
+            print("      That definition had %d atoms, and your residue had "
+                         "%d atoms" % (len(self.known_res[resname]), len(selection)))
+            print("      If that's the same, check the connectivity")
+            print("      If it's not, check your hydrogens")
+        else:
+            print("      I couldn't find any residues with that name. Did you "
+                         "forget to provide a topology file?")
+        exit(1)
+
         return (None, None)
 
     #=========================================================================
