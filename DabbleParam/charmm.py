@@ -90,14 +90,15 @@ class CharmmWriter(object):
         self.psf_name = ""
         # Default parameter sets
         self.topologies = [
-            resource_filename(__name__, "charmm_parameters/top_all36_caps.rtf"),
+            #resource_filename(__name__, "charmm_parameters/top_all36_caps.rtf"),
             resource_filename(__name__, "charmm_parameters/top_water_ions.rtf"),
             resource_filename(__name__, "charmm_parameters/top_all36_cgenff.rtf"),
             resource_filename(__name__, "charmm_parameters/top_all36_prot.rtf"),
             resource_filename(__name__, "charmm_parameters/top_all36_lipid.rtf"),
             resource_filename(__name__, "charmm_parameters/top_all36_carb.rtf"),
             resource_filename(__name__, "charmm_parameters/top_all36_na.rtf"),
-            resource_filename(__name__, "charmm_parameters/toppar_all36_prot_na_combined.str")
+            resource_filename(__name__, "charmm_parameters/toppar_all36_prot_na_combined.str"),
+            resource_filename(__name__, "charmm_parameters/toppar_all36_prot_fluoro_alkanes.str"),
             ]
         if extra_topos is not None:
             self.topologies.extend(extra_topos)
@@ -189,16 +190,7 @@ class CharmmWriter(object):
 
         # Pull out the protein, one fragment at a time
         for frag in set(atomsel('resname %s' % _acids).get('fragment')):
-            temp = tempfile.mkstemp(suffix='_P%s.mae' % frag,
-                                    prefix='psf_prot_', dir=self.tmp_dir)[1]
-            fragment = atomsel('fragment %s' % frag, molid=self.molid)
-            fragment.write('mae', temp)
-            prot_molid = molecule.load('mae', temp)
-
-            self._write_protein_blocks(seg='P%s'%frag,
-                                       prot_molid=prot_molid)
-            molecule.delete(prot_molid)
-            fragment.set('user', 0.0)
+            self._write_protein_blocks(frag=frag)
 
         # Detect disulfide bridges and add appropriate patch lines
         print("Checking cysteines...")
@@ -208,7 +200,7 @@ class CharmmWriter(object):
         # Check if there is anything else and let the user know about it
         leftovers = atomsel('user 1.0', molid=self.molid)
         for lig in set(leftovers.get('resname')):
-            residues = self._find_residue_names(resname=lig, molid=self.molid)
+            residues = self._find_single_residue_names(resname=lig, molid=self.molid)
             self._write_generic_block(residues)
 
         # Write the output files and run
@@ -229,304 +221,6 @@ class CharmmWriter(object):
     #=========================================================================
     #                           Private methods                              #
     #=========================================================================
-
-    def _write_protein_blocks(self, seg, prot_molid):
-        """
-        Writes a temporary protein PDB file with correct atom names for psfgen,
-        in atom order.
-
-        Args:
-          seg (str): VMD segment to write
-          protmolid (int): VMD molecule ID to write, usually a temp protein
-        """
-
-        # Put molid on top to simplify atom selections
-        old_top = molecule.get_top()
-        molecule.set_top(prot_molid)
-        print("Writing protein file\n")
-
-        atomsel('all').set('user', 1.0)
-
-        # Check the protein has hydrogens
-        if len(atomsel('element H')) == 0:
-            print("\n\nERROR: There are no hydrogens on your protein")
-            print("       You need to add them before parameterizing "
-                  "because psfgen cannot be trusted to do it correctly\n")
-            quit(1)
-
-        # Terminal residue ACE
-        ace_names = {'CH3' :'CAY', 'O'   :'OY',
-                     'HH31':'HY1', 'HH32':'HY2', 'HH33':'HY3',
-                     'H1'  :'HY1', 'H2'  :'HY2', 'H3'  :'HY3',
-                     '1H'  :'HY1', '2H'  :'HY2', '3H'  :'HY3'}
-        for name in ace_names:
-            atomsel('resname ACE and name %s'%name).set('name', ace_names[name])
-
-        # Terminal residue NMA
-        nma_names = {'HN'  :'HNT', 'H'   :'HNT',
-                     'CT3' :'CAT', 'CA'  :'CAT', 'CH3' :'CAT',
-                     'HA1' :'HT1', 'HA2' :'HT2', 'HA3' :'HT3',
-                     '1HA' :'HT1', '2HA' :'HT2', '3HA' :'HT3',
-                     'HH31':'HT1', 'HH32':'HT2', 'HH33':'HT3'}
-        for name in nma_names:
-            atomsel('resname NMA and name %s'%name).set('name', nma_names[name])
-
-        # Determine protonation states of those called HIS based on atom names
-        atomsel('resname HIS and same residue as name HE2').set('resname',
-                                                                'HSE')
-        atomsel('resname HIS and same residue as name HD1').set('resname',
-                                                                'HSD')
-        # NOTE: This atomsel MUST come after the previous two!
-        atomsel('resname HIS and same residue as name HE2 '
-                'and same residue as name HD1').set('resname', 'HSP')
-
-        # Isoleucine
-        iso_names = {'CD1' :  'CD',
-                     'HD11': 'HD1', 'HD12':'HD2', 'HD13':'HD3',
-                     'HG12':'HG11', 'HG13':'HG12'}
-        for name in iso_names:
-            atomsel('resname ILE and name %s'%name).set('name', iso_names[name])
-
-        # Lysine last atom
-        atomsel('resname LYS and name HZ').set('name', 'HZ3')
-
-        patches = ''
-
-        # Histidine naming convention
-        atomsel('resname HID').set('resname', 'HSD')
-        atomsel('resname HIE').set('resname', 'HSE')
-        atomsel('resname HIP').set('resname', 'HSP')
-
-        # Glutamine check all residues for protonation
-        # Can't use dictionary for names since two of them must be swapped
-        # Must loop by resid, not residue, to get correct PATCH statement index
-        glups = set(atomsel('resname GLU GLH GLUP').get('resid'))
-        for resid in glups:
-            # Need to specify resname here in case this residue
-            # is attached to a NMA which will have the same resid
-            # because of the way Maestro does things. Otherwise we will
-            # rename the NMA to GLU or whatever when we standardize
-            # residue name
-            ressel = "(resid %s and resname GLU GLH GLUP)" % resid
-            atomsel(ressel).set('resname', 'GLU')
-            if "HE1" in atomsel(ressel).get('name'):
-                atomsel('%s and name HE1'% ressel).set('name', 'HE2')
-                atomsel('%s and name OE1'% ressel).set('name', 'temp')
-                atomsel('%s and name OE2'% ressel).set('name', 'OE1')
-                atomsel('%s and name temp'% ressel).set('name', 'OE2')
-                patches += 'patch GLUP %s:%d\n' % (seg, resid)
-            elif "HE2" in atomsel(ressel).get('name'):
-                patches += 'patch GLUP %s:%d\n' % (seg, resid)
-            elif "HXT" in atomsel(ressel).get('name'):
-                atomsel('%s and name HXT' % ressel).set('name', 'HE2')
-                patches += 'patch GLUP %s:%d\n' % (seg, resid)
-
-        # Aspartate check each residue to see if it's protonated
-        # Can't use dictionary for names since two of them must be swapped
-        # Must loop by resid, not residue, to get correct PATCH statement index
-        asps = set(atomsel('resname ASP ASH ASPP').get('resid'))
-        for resid in asps:
-            # Again use ressel to shorten long selection
-            ressel = "(resid %s and resname ASP ASH ASPP)" % resid
-            atomsel(ressel).set('resname', 'ASP')
-            if "HD1" in atomsel(ressel).get('name'):
-                atomsel('%s and name HD1' % ressel).set('name', 'HD2')
-                atomsel('%s and name OD1' % ressel).set('name', 'temp')
-                atomsel('%s and name OD2' % ressel).set('name', 'OD1')
-                atomsel('%s and name temp' % ressel).set('name', 'OD2')
-                patches += 'patch ASPP %s:%d\n' % (seg, resid)
-            if "HD2" in atomsel(ressel).get('name'):
-                patches += 'patch ASPP %s:%d\n' % (seg, resid)
-
-        # Methionine hydrogen names
-        atomsel('name H2 H1 and resname MET').set('name', 'HN')
-
-        # Serine and cysteine hydrogen names
-        atomsel('name HG and resname SER CYS').set('name', 'HG1')
-
-        # Check for deprotonated or phosphorylated serine
-        # Check by element count for stuff, so names don't matter
-        sers = set(atomsel('resname SER SP1 SP2').get('resid'))
-        for resid in sers:
-            # Specify resname here in case attached to NMA
-            ressel = "(resid %s and resname SER SERD SP1 SP2)" % resid
-            atomsel(ressel).set('resname', 'SER')
-            if "P" in atomsel(ressel).get('element'): # Phosphorylated
-                charge = int(sum(atomsel(ressel).get('charge')))
-                if charge == -1:
-                    print("INFO: Found monoanionic phosphoserine resid %d" % resid)
-                    patches += 'patch SP1 %s:%d\n' % (seg, resid)
-                elif charge == -2:
-                    print("INFO: Found dianionic phosphoserine resid %d" % resid)
-                    patches += 'patch SP2 %s:%d\n' % (seg, resid)
-
-                    # Need to set atom names
-                    phosphate = atomsel("(resid %s and element P)" % resid)
-                    if len(phosphate) > 1:
-                        raise ValueError("More than 1 phosphate in resid %s" % resid)
-                    phosphate.set('name', ['P'])
-                    oxygens = atomsel("(resid %s and element O and not name OG O)" % resid)
-                    if len(oxygens) > 3:
-                        raise ValueError("More than 3 oxygens in resid %s" % resid)
-                    oxygens.set('name', ["O1P","OT","O2P"])
-                else: # Print just a warning in case user handles it later
-                    print("WARNING: Unknown modification to Ser %d" % resid)
-            elif "HG1" not in atomsel(ressel).get('name'): # Deprotonated
-                print("INFO: Found deprotonated serine resid %d" % resid)
-                patches += 'patch SERD %s%d\n' % (seg, resid)
-
-        # Check for phosphorylated threonine
-        thrs = set(atomsel('resname THR THP1 THP2').get('resid'))
-        for resid in thrs:
-            ressel = "(resid %s and resname THR THP1 THP2)" % resid
-            atomsel(ressel).set('resname', 'THR')
-
-            if "P" in atomsel(ressel).get('element'): # Phosphorylated
-                charge = int(sum(atomsel(ressel).get('charge')))
-                if charge == -1:
-                    print("INFO: Found monoanionic phosphothreonine resid %d" % resid)
-                    patches += 'patch THP1 %s:%d\n' % (seg, resid)
-
-                elif charge == -2:
-                    print("INFO: Found dianionic phosphothreonine resid %d" % resid)
-                    patches += 'patch THP2 %s:%d\n' % (seg, resid)
-
-                    # Need to set atom names- HACK to fix with amino acid graph matcher
-                    atomsel('resid %s and name OG' % resid).set('name', ['OG1'])
-                    phosphate = atomsel("(resid %s and element P)" % resid)
-                    if len(phosphate) > 1:
-                        raise ValueError("More than 1 phosphate in resid %s" % resid)
-                    phosphate.set('name', ['P'])
-                    oxygens = atomsel("(resid %s and element O and not name OG1 O)" % resid)
-                    if len(oxygens) > 3:
-                        print(oxygens.get('name'))
-                        raise ValueError("More than 3 oxygens in resid %s" % resid)
-                    oxygens.set('name', ["O1P","OT","O2P"])
-
-                else:
-                    print("WARNING: Unknown modification to Thr %d" % resid)
-
-        # Check for phosophorylated tyrosine
-        tyrs = set(atomsel('resname TYR TP1 TP2').get('resid'))
-        for resid in tyrs:
-            ressel = "(resid %s and resname TYR TP1 TP2)" % resid
-            atomsel(ressel).set('resname', 'TYR')
-            if "P" in atomsel(ressel).get('element'): # Phosphorylated
-                charge = int(sum(atomsel(ressel).get('charge')))
-                if charge == -1:
-                    print("INFO: Found monoanionic phosphotyrosine resid %d" % resid)
-                    patches += 'patch TP1 %s:%d\n' % (seg, resid)
-                elif charge == -2:
-                    print("INFO: Found dianionic phosphotyrosine resid %d" % resid)
-                    patches += 'patch TP2 %s:%d\n' % (seg, resid)
-
-                    # Need to set atom names
-                    phosphate = atomsel("(resid %s and element P)" % resid)
-                    if len(phosphate) > 1:
-                        raise ValueError("More than 1 phosphate in resid %s" % resid)
-                    phosphate.set('name', ['P1'])
-                    oxygens = atomsel("(resid %s and element O and not name OG1 O)" % resid)
-                    if len(oxygens) > 3:
-                        raise ValueError("More than 3 oxygens in resid %s" % resid)
-                    oxygens.set('name', ["O2","O3","O4"])
-
-                else:
-                    print("WARNING: Unknown modification to Tyr %d" % resid)
-
-        # Deprotonated cysteines handled in disulfide bonds section
-
-        # Hydrogens can be somewhat residue-dependent, but only check Hs
-        # on known amino acid residues so that the names on nonstandard amino
-        # acids are never changed
-        h_names = {'H'  : 'HN', 'H2' :'HN', 'H1' : 'HN',
-                   'HA2':'HA1',
-                   'HA3':'HA2', 'HG2':'HG1',
-                   'HG3':'HG2'}
-        for hyd in h_names:
-            atomsel('resname %s and name %s'
-                    % (_acids, hyd)).set('name', h_names[hyd])
-
-        # These two statements must execute in this specific order
-        atomsel('resname %s and name HB2 and '
-                'not resname ALA'% _acids).set('name', 'HB1')
-        atomsel('resname %s and name HB3 and '
-                'not resname ALA'% _acids).set('name', 'HB2')
-
-        # Some residue-specific stuff
-        atomsel('resname %s and name HD2 and not (resname '
-                'TYR ILE HSP HSE HSD ASP PHE)' % _acids).set('name', 'HD1')
-        atomsel('resname %s and name HD3 and not (resname '
-                'TYR ILE HIS HSE HSD ASP PHE)'% _acids).set('name', 'HD2')
-        atomsel('resname %s and name HE2 and not (resname '
-                'TYR MET TRP HSP HSE HSD GLU PHE)'% _acids).set('name', 'HE1')
-        atomsel('resname %s and name HE3 and not (resname '
-                'TYR MET TRP HSP HSE HSD PHE)'% _acids).set('name', 'HE2')
-
-        # Final chance to fix unrecognized atom names for non-protein residues
-        others = set(atomsel('not resname %s' % _acids).get('resname'))
-        if len(others):
-            print("WARNING: Found non-protein residues in protein...")
-
-        for resname in others:
-            self._find_residue_names(resname, molid=prot_molid)
-
-        # If ACE and NMA aren't present, prompt for the residue name of the patch to
-        # apply, since auto-detecting it can be dangerous and the user may want
-        # to define their own
-        if "ACE" not in atomsel().get('resname'):
-            minid = min(atomsel().get('resid'))
-            minresname = set(atomsel('resid %d' % minid).get('resname'))
-            # Sanity check
-            if len(minresname) != 1:
-                raise ValueError("Duplicate residue numbering for C-terminal"
-                                 " resid %d names %s"
-                                 % (minid, " ".join([x for x in minresname])))
-            else: minresname = minresname.pop()
-
-            print("\n\nINFO: Didn't find a C-terminal ACE for segment beginning"
-                  " with %s%d" % (minresname, minid))
-            patches += self._get_patch(seg, minid)
-
-        if "NMA" not in atomsel().get('resname'):
-            maxid = max(atomsel().get('resid'))
-            maxresname = set(atomsel('resid %d' % maxid).get('resname'))
-
-            # Sanity check
-            if len(maxresname) != 1:
-                raise ValueError("Duplicate residue numbering for C-terminal"
-                                 " resid %d names %s"
-                                 % (minid, " ".join([x for x in minresname])))
-            else: maxresname = maxresname.pop()
-
-            print("\n\nINFO: Didn't find a N-terminal NMA for segment ending"
-                  " with %s%d" % (maxresname, maxid))
-            patches += self._get_patch(seg, maxid)
-
-        # Now protein
-        filename = self.tmp_dir + '/psf_protein_%s.pdb'% seg
-        self._write_ordered_pdb(filename, 'all', prot_molid)
-        print("Wrote %d atoms to the protein segment %s"
-              % (len(atomsel('all')), seg))
-
-        molecule.set_top(old_top)
-
-        # Now write to psfgen input file
-        string = '''
-        pdbalias residue CYX CYS
-        set protnam %s
-        segment %s {
-          first none
-          last none
-          pdb $protnam
-        } 
-        ''' % (filename, seg)
-        self.file.write(string)
-        self.file.write(patches)
-        self.file.write('   coordpdb $protnam %s\n' % seg)
-
-        return filename
-
-    #==========================================================================
 
     def _write_water_blocks(self):
         """
@@ -727,7 +421,7 @@ class CharmmWriter(object):
 
     #==========================================================================
 
-    def _find_residue_names(self, resname, molid):
+    def _find_single_residue_names(self, resname, molid):
         """
         Uses graph matcher and available topologies to match up
         ligand names automatically. Tries to use graphs, and if there's an
@@ -764,17 +458,19 @@ class CharmmWriter(object):
 
         for residue in residues:
             sel = atomsel('residue %s and resname %s and user 1.0' % (residue, resname))
-            (name, mdict) = self.matcher.get_names(sel)
+            (name, mdict) = self.matcher.get_names(sel, print_warning=True)
             if not name:
-                print("ERROR: Could not find a residue definition for %s:%s"
-                      % (resname, residue))
-                raise NotImplementedError("No residue definition for %s:%s" % (resname, residue))
-                # TODO attempt to match up
+                (name, patch, mdict) = self.matcher.get_patches(sel)
+                if not name:
+                    print("ERROR: Could not find a residue definition for %s:%s"
+                          % (resname, residue))
+                    raise NotImplementedError("No residue definition for %s:%s" % (resname, residue))
+                print("Applying patch %s to ligand %s" % (patch, name))
 
             # Set the resname correctly
             sel.set('resname', name)
 
-            # Do the renaming
+            # Do the eenaming
             newnames = mdict.next()
             for idx in newnames.keys():
                 atom = atomsel('index %s' % idx)
@@ -824,7 +520,152 @@ class CharmmWriter(object):
         alig.write('pdb', temp)
         alig.set('user', 0.0)
         self.file.write(string)
-        molecule.set_top(old_top)
+        if old_top != -1:
+            molecule.set_top(old_top)
+        return True
+
+    #==========================================================================
+
+    def _write_protein_blocks(self, frag):
+        """
+        Writes a protein fragment to a pdb file for input to psfgen
+        Automatically assigns amino acid names
+
+        Args:
+            frag (str): Fragment to write
+
+        Returns:
+#TODO
+          (int) The number of atoms renamed, or -1 if unsuccessful
+       """
+        # Put our molecule on top to simplify atom selection language
+        old_top = molecule.get_top()
+        molecule.set_top(self.molid)
+        patches = ""
+        seg = "P%s" % frag
+
+        # Handle bug where capping groups in same residue as the
+        # neighboring amino acid Maestro writes it this way for some
+        # reason but it causes problems down the line when psfgen doesn't
+        # understand the weird combined residue
+        resids = set(atomsel("fragment %s" % frag).get('resid'))
+        while resids:
+            resid = resids.pop()
+            names = set(atomsel("fragment %s and resid %d" % (frag, resid)).get("resname"))
+            assert len(names) < 3, ("More than 2 residues with same number... "
+                                    "currently unhandled. Report a bug")
+
+            if not ('ACE' in names or 'NMA' in names):
+                continue
+
+            oldresid = resid 
+            if 'ACE' in names:
+                print("ACE: %s" % names)
+                if len(names) == 1:
+                    # ACE increment residue number so it matches next one
+                    resid += 1
+                    resids.remove(resid)
+                    if not len(atomsel('fragment %s and resid %d' % (frag, resid))):
+                        raise ValueError('ACE resid no neighbor number %d' % resid)
+
+            elif 'NMA' in names:
+                if len(names) == 1:
+                    # Set NMA residue number as one less, so it matches previous
+                    resid -= 1
+                    resids.remove(resid)
+                    if not len(atomsel('fragment %s and resid %d' % (frag, resid))):
+                        raise ValueError('NMA resid no neighbor number %d' % resid)
+
+            # Actually do renaming and renumbering
+            atomsel('fragment %s and resid %d and resname ACE NMA'
+                    % (frag, oldresid)).set('resid', resid)
+            resname = atomsel("fragment %s and resid %d and not resname ACE NMA"
+                              % (frag, resid)).get("resname")[0]
+            print("Renaming %d -> %s:%d" % (oldresid, resname, resid))
+            atomsel("fragment %s and resid %d" % (frag, resid)).set("resname", resname)
+
+        ## Save and reload so residue looping is correct
+        temp = tempfile.mkstemp(suffix='_P%s.mae' % frag,
+                                prefix='psf_prot_', dir=self.tmp_dir)[1]
+        fragment = atomsel('fragment %s' % frag, molid=self.molid)
+        fragment.write('mae', temp)
+        prot_molid = molecule.load('mae', temp)
+        molecule.set_top(prot_molid)
+
+        # Manually set some atom names since disulfide bridges not handled.... TODO
+        atomsel("resname CYS CYX and name HG").set('name', "HG1")
+        atomsel("resname CYS CYX and name HB2").set('name', "HB1")
+        atomsel("resname CYS CYX and name HB3").set('name', "HB2")
+        atomsel("resname CYS CYX and name H").set('name', "HN")
+
+        # Sanity check that there is no discrepancy between defined resids and
+        # residues as interpreted by VMD.
+        residues = list(set(atomsel('all').get('residue')))
+        resids = list(set(atomsel('all').get('resid')))
+        #if len(residues) != len(resids):
+        #    raise ValueError("VMD found %d residues for resname %s, but there "
+        #                     "are %d resids! Check input." % (len(residues), resname, 
+        #                                                      len(resids)))
+
+        for resid in resids:
+            sel = atomsel('resid %s' % resid)
+            resid = sel.get('resid')[0]
+            (name, mdict) = self.matcher.get_names(sel, print_warning=False)
+
+            # Couldn't find a match. See if it's a patched residue
+            if not name:
+                # Hack for now, cyx handled elsewhere
+                if sel.get('resname')[0] == "CYX": continue
+
+                (name, patch, mdict) = self.matcher.get_patches(sel)
+
+                if not name:
+                    raise ValueError("Couldn't find a patch for %s:%s"
+                                     % (sel.get('resname')[0], resid))
+                print("INFO: Applying patch %s to  %s%d" % (patch, name, resid))
+                patches += 'patch %s %s:%d\n' % (patch, seg, resid)
+
+            # Set the resname correctly
+            sel.set('resname', name)
+
+            # Do the renaming
+            newnames = mdict.next()
+            for idx in newnames.keys():
+                atom = atomsel('index %s' % idx)
+                if atom.get('name')[0] != newnames[idx] and "+" not in newnames[idx] and \
+                   "-" not in newnames[idx]:
+                    #print("Renaming %s:%s: %s -> %s" % (atom.get('resname')[0],
+                    #                                    resid,
+                    #                                    atom.get('name')[0],
+                    #                                    newnames[idx]))
+                    atom.set('name', [newnames[idx]])
+
+        # Save protein chain in the correct order
+        filename = self.tmp_dir + '/psf_protein_%s.pdb' % seg 
+        self._write_ordered_pdb(filename, 'all', prot_molid)
+        print("Wrote %d atoms to the protein segment %s"
+              % (len(atomsel('all')), seg))
+
+        # Now write to psfgen input file
+        string = '''
+        pdbalias residue CYX CYS
+        set protnam %s
+        segment %s {
+          first none
+          last none
+          pdb $protnam
+        } 
+        ''' % (filename, seg)
+        self.file.write(string)
+        self.file.write(patches)
+        self.file.write('   coordpdb $protnam %s\n' % seg)
+
+        if old_top != -1:
+            molecule.set_top(old_top)
+        molecule.delete(prot_molid)
+        atomsel("fragment %s" % frag, molid=self.molid).set('user', 0.0)
+
+        return filename
 
     #==========================================================================
 
@@ -1097,6 +938,7 @@ class CharmmWriter(object):
         # Rename cysteines to indicate we dont know what they are
         # Complicated selection to avoid resid bug with next to ACE or NMA
         cyss = set(atomsel('resname CYS CYX CYD CYSD').get('resid'))
+
         if len(cyss):
             atomsel("resname CYS CYX CYD CYSD and resid %s"
                     % " ".join([str(x) for x in cyss])).set('resname', 'baa')
@@ -1104,6 +946,7 @@ class CharmmWriter(object):
         while len(toupdate):
             resid = toupdate.pop()
             ressel = "(resid %d and resname baa)" % resid
+
             seg1 = atomsel(ressel).get('fragment')[0]
             sulfidx = atomsel("%s and name SG" % ressel).get('index')
             if len(sulfidx) > 1:
