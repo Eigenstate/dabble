@@ -23,7 +23,6 @@ Boston, MA 02111-1307, USA.
 """
 
 from __future__ import print_function
-import logging
 import networkx as nx
 from networkx.algorithms import isomorphism
 from itertools import product
@@ -31,7 +30,10 @@ from itertools import product
 import vmd
 from atomsel import atomsel
 # pylint: enable=import-error, unused-import
+
+import logging
 logger = logging.getLogger(__name__) # pylint: disable=invalid-name
+
 
 #++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
 #                                CONSTANTS                                    #
@@ -49,6 +51,10 @@ MASS_LOOKUP= { 1: "H",  12: "C",  14: "N",
              112: "Cd" }
 # pylint: enable=bad-whitespace,bad-continuation
 
+# For checking which residues can have patchs
+_acids = "ALA ARG ASN ASP CYS GLN GLU GLY HSD HSE HSP ILE LEU LYS MET " \
+         "PHE PRO SER THR TRP TYR VAL".split()
+
 #++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
 #                                   CLASSES                                   #
 #++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
@@ -63,6 +69,8 @@ class MoleculeGraph(object):
         rtffiles (list of str): The topology files this molecule graph
             knows about
         known_res (dict str resname -> networkx graph): The molecule graphs
+        known_pres (dict tuple (str resname, patchname) -> networkx graph)
+        patches (dict patchname -> str instructions): Known patches
         nodenames (dict name -> element): Translates charmm atom names to
             elements
     """
@@ -76,22 +84,41 @@ class MoleculeGraph(object):
         """
         self.rtffiles = rtffiles
         self.nodenames = {}
+        self.patches = {}
         self.known_res = {}
-
+        self.known_pres = {}
+       
+        # Parse input rtf files
         for filename in rtffiles:
             self._parse_rtf(filename)
-        self._assign_elements()
+
+        # Assign elements
+        for res in self.known_res.keys():
+            self._assign_elements(self.known_res[res])
+
+        # Create dictionary of patched amino acids
+        for res in _acids:
+        #for res in self.known_res.keys():
+            # Skip amino acids that haven't been defined this run
+            if not self.known_res.get(res): continue
+            for patch in self.patches.keys():
+                applied = self._apply_patch(res, patch)
+                if applied:
+                    self.known_pres[(res, patch)] = applied
+                    self._assign_elements(self.known_pres[(res,patch)])
 
     #=========================================================================
     #                            Public methods                              #
     #=========================================================================
 
-    def get_names(self, selection):
+    def get_names(self, selection, print_warning=False):
         """
         Obtains a name mapping for the current selection
 
         Args:
             selection (VMD atomsel): Selection to set names for
+            print_warning (bool): Whether or not to print matching suggestions
+                if matching fails. Set to false if you'll try patches later.
 
         Returns:
             resname matched
@@ -105,7 +132,7 @@ class MoleculeGraph(object):
 
         # First check against matching residue names
         if resname in self.known_res.keys():
-            matcher = isomorphism.GraphMatcher(rgraph, self.known_res.get(resname),
+            matcher = isomorphism.GraphMatcher(self.known_res.get(resname), rgraph,
                                                node_match=_check_atom_match)
             if matcher.is_isomorphic():
                 return (resname, matcher.match())
@@ -113,47 +140,144 @@ class MoleculeGraph(object):
         # If that didn't work, loop through all known residues
         for matchname in self.known_res.keys():
             graph = self.known_res[matchname]
-            matcher = isomorphism.GraphMatcher(rgraph, graph, node_match=_check_atom_match)
+            matcher = isomorphism.GraphMatcher(graph, rgraph, node_match=_check_atom_match)
             
             if matcher.is_isomorphic():
                 logger.info("Renaming resname %s -> %s", resname, matchname)
                 return (str(matchname), matcher.match())
 
-        # If that doesn't work and we have a covalently bonded residue, check
-        # for isomorphic subgraphs of that residue in the definitions (ie incompletely
-        # defined connectivity to other residues, which can occur
-        # Need to find the maximal subgraph match, not just any
-        if is_covalent:
-            logger.warning("Could not find an exact topology file for '%s'.\n"
-                           "Allowing subgraph matches. Check match is correct!" % resname)
-            matches = {}
-            for matchname in self.known_res.keys():
-                graph = self.known_res[matchname]
-                matcher = isomorphism.GraphMatcher(rgraph, graph, node_match=_check_atom_match)
-
-                if matcher.subgraph_is_isomorphic():
-                    matches[matchname] = matcher.match()
-
-            matchname = max(matches.keys(), key=(lambda x: len(self.known_res[x])))
-            logger.warning("Check %s -> %s is correct!" % (resname, matchname))
-            return (resname, matches[matchname])
-
         # Try to print out a helpful error message here if matching failed
-        print("\nERROR: Couldn't find a topological match for resname %s" % resname)
-        if self.known_res.get(resname):
-            print("      I found a residue definition with the same name, but "
-                   "it didn't match up")
-            print("      That definition had %d atoms, and your residue had "
-                         "%d atoms" % (len(self.known_res[resname]), len(selection)))
-            print("      If that's the same, check the connectivity")
-            print("      If it's not, check your hydrogens")
-        else:
-            print("      I couldn't find any residues with that name. Did you "
-                         "forget to provide a topology file?")
-        exit(1)
+        if print_warning:
+            print("\nERROR: Couldn't find a topological match for resname %s" % resname)
+            if self.known_res.get(resname):
+                print("      I found a residue definition with the same name, but "
+                       "it didn't match up")
+                print("      That definition had %d atoms, and your residue had "
+                             "%d atoms" % (len(self.known_res[resname]), len(selection)))
+                print("      If that's the same, check the connectivity")
+                print("      If it's not, check your hydrogens")
+            else:
+                print("      I couldn't find any residues with that name. Did you "
+                             "forget to provide a topology file?")
 
         return (None, None)
 
+    #=========================================================================
+
+    def get_patches(self, selection):
+        """
+        Obtains names and patch info for a modified residue in a selection.
+        Identifies which amino acid is patched by finding which amino acid
+        this one is a maximal subgraph of. Then, builds a library of graphs
+        representing all valid patches applied to this amino acid.
+        
+        Note that this does NOT handle multiple-residue patches such as
+        disulfides!
+
+        Args:
+            selection (VMD atomsel): Selection that is patched
+
+        Returns:
+            (str, str, dict) resname matched, patch applied,
+              name translation dictionary
+        """
+        resname = selection.get('resname')[0]
+        (rgraph, dump) = parse_vmd_graph(selection)
+
+        # Check this residue against all possible patches applied to the
+        candidate_graphs = []
+        for names in self.known_pres.keys():
+            graph = self.known_pres[names]
+            matcher = isomorphism.GraphMatcher(graph, rgraph, node_match=_check_atom_match)
+            if matcher.is_isomorphic():
+                logger.info("Detected patch %s" % names[1])
+                return (names[0], names[1], matcher.match())
+
+        logger.error("Couldn't find a patch for resname %s. Dumping as 'rgraph.dot'" % resname)
+        nx.write_dot(rgraph, "rgraph.dot")
+        return (None, None, None)
+
+    #=========================================================================
+
+    def get_disulfide(self, selstring, fragment, molid, frag_molid):
+        """
+        Checks if the selection corresponds to a cysteine in a disulfide bond.
+        Sets the patch line appropriately and matches atom names using 
+        a subgraph match to the normal cysteine residue
+
+        Args:
+            selstring (str): Selection to check
+            fragment (str): Fragment ID (to narrow down selection)
+            molid (int): VMD molecule of entire system (needed for disu partner)
+            frag_molid (int): VMD molecule ID to which names will be applied
+
+        Returns:
+            (str, str, dict) resname matched, patch line to put directly
+              into psfgen, name translation dictionary
+       """
+        selection = atomsel(selstring, molid=frag_molid)
+        whole_sel = atomsel("%s and fragment %s" % (selstring, fragment),
+                            molid=molid)
+        resname = selection.get('resname')[0]
+        (rgraph, dump) = parse_vmd_graph(selection)
+        (whole, dump) = parse_vmd_graph(whole_sel)
+ 
+        # Check for the 3 join atoms corresponding to the disulfide bonds
+        externs = [n for n in whole.nodes() \
+                   if whole.node[n]["residue"] != "self"]
+        if len(externs) != 3: return (None, None, None)
+ 
+        # Check that it is a cysteine in some way shape or form
+        # ie that it this residue is a subgraph of a cysteine
+        truncated = nx.Graph(rgraph)
+        truncated.remove_nodes_from([n for n in rgraph.nodes() if \
+                                     rgraph.node[n]["residue"] != "self"])
+        matches = {}
+        for matchname in _acids:
+            graph = self.known_res.get(matchname)
+            if not graph: continue
+
+            matcher = isomorphism.GraphMatcher(graph, truncated, node_match=_check_atom_match)
+            if matcher.subgraph_is_isomorphic():
+                matches[matchname] = matcher.match()
+
+        if not matches: return (None, None, None)
+        matchname = max(matches.keys(), key=(lambda x: len(self.known_res[x])))
+        if matchname != "CYS": return (None, None, None)
+ 
+        # Now we know it's a cysteine in a disulfide bond 
+        # Identify which resid and fragment corresponds to the other cysteine
+        partners = [n for n in externs if \
+                    atomsel("index %d" % n,
+                            molid=molid).get("element")[0] == "S"]
+        if not partners:
+            raise ValueError("3 bonded Cys %d isn't a valid disulfide!"
+                             % selection.get('resid')[0])
+        osel = atomsel("index %d" % partners[0], molid=molid)
+
+        f1 = osel.get("fragment")[0]
+
+        if f1 < fragment:
+            first = osel
+            second = whole_sel 
+        elif f1 > fragment:
+            first = whole_sel
+            second = osel
+        else:
+            if osel.get("resid")[0] < selection.get("resid")[0]:
+                first = osel
+                second = whole_sel
+            else:
+                first = whole_sel
+                second = osel
+
+        patchline = "patch DISU P%d:%d P%d:%d\n" % (first.get("fragment")[0],
+                                                    first.get("resid")[0],
+                                                    second.get("fragment")[0],
+                                                    second.get("resid")[0])
+ 
+        return (matchname, patchline, matches[matchname])
+ 
     #=========================================================================
     #                           Private methods                              #
     #=========================================================================
@@ -169,12 +293,15 @@ class MoleculeGraph(object):
             filename (str): The file to parse
 
         Returns:
-            (int): Number of molecules parsed
+            True if successful
 
         Raises:
             ValueError if rtf file is malformed in various ways
         """
         resname = ""
+        data = ""
+        patch = False
+
         for line in open(filename, 'r'):
             # Remove comments
             if "!" in line:
@@ -185,66 +312,157 @@ class MoleculeGraph(object):
             if not len(tokens):
                 continue
 
+            # Handle previous data
+            if data and (tokens[0] == "RESI" or tokens[0] == "PRES"):
+                if patch:
+                    self.patches[resname] = data
+                else:
+                    self.known_res[resname] = self._rtf_to_graph(data)
+                data = ""
+
             # Handle new residue definition
             if tokens[0] == "RESI":
                 resname = tokens[1]
+                patch = False
                 if self.known_res.get(resname):
-                    logging.warning("Skipping duplicate residue %s", resname)
+                    logging.info("Skipping duplicate residue %s", resname)
                     # TODO define as a different residue name???
                     # Currently reads in first file's definition, ignores others
                     resname = "_skip"
-                self.known_res[resname] = nx.Graph()
-                logging.info("Found resname %s in file %s", resname, filename)
-            # PRES is a patch. Currently unimplemented TODO
+            # PRES is a patch
             elif tokens[0] == "PRES":
-                resname = "_skip"
+                resname = tokens[1] # prefix with _ so we can tell it's a patch
+                patch = True
+                if self.patches.get(resname):
+                    logging.warning("Skipping duplicate patch %s", resname[1:])
+            # Check for atom definitions
+            elif tokens[0] == "MASS":
+                if self.nodenames.get(tokens[2]):
+                    logger.info("Skipping duplicate type %s", tokens[2])
+                else:
+                    self.nodenames[tokens[2]] = get_element(float(tokens[3]))
+            elif resname and resname != "_skip":
+                data += ' '.join(tokens) + '\n'
+
+        # Write out final residue
+        if data:
+            if patch:
+                self.patches[resname] = data
+            else:
+                self.known_res[resname] = self._rtf_to_graph(data)
+
+        return True
+
+    #=========================================================================
+
+    def _rtf_to_graph(self, data, patch=None):
+        """
+        Parses rtf text to a graph representation. If a graph to patch
+        is provided, then patches that graph with this rtf data
+
+        Args:
+            data (str): The rtf data for this residue or patch
+            patch (networkx graph): The graph to apply patches to,
+              or None if just parsing a residue. Will not be modified.
+
+        Returns:
+            (networkx graph): Graph representation of molecule, or None
+              if it could not be converted (invalid patch)
+
+        Raises:
+            ValueError if rtf file is malformed in various ways
+        """
+
+        graph = nx.Graph(data=patch)
+        firstcmap = True
+      
+        for line in data.splitlines():
+            tokens = [i.strip() for i in line.split()]
+
             # Atoms mean add node to current residue
-            elif tokens[0] == "ATOM":
-                if resname == "_skip": # patches unimplemented
-                    continue
-                elif not resname:
-                    raise ValueError("Atom added but no residue defined!")
-                self.known_res[resname].add_node(tokens[1], type=tokens[2],
-                                                 residue="self")
-                logging.info("Added node %s", tokens[1])
+            if tokens[0] == "ATOM":
+                # Patches can change atom type>
+                # Technically re-adding the node will just change the type and
+                # not add a duplicate, but this is more correct and clear.
+                if tokens[1] in graph.nodes():
+                    graph.node[tokens[1]]["type"] = tokens[2]
+                else:
+                    graph.add_node(tokens[1], type=tokens[2], residue="self")
+
             # Bond or double means add edge to residue graph
             elif tokens[0] == "BOND" or tokens[0] == "DOUBLE":
-                if resname == "_skip": # patches unimplemented
-                    continue
-                elif not resname:
-                    raise ValueError("Bond added but no residue defined!")
                 if len(tokens) % 2 == 0:
                     raise ValueError("Unequal number of atoms in bond terms\n"
                                      "Line was:\n%s" % line)
                 for txn in range(1, len(tokens), 2):
                     node1 = tokens[txn]
                     node2 = tokens[txn+1]
-                    self._define_bond(resname, node1, node2)
+                    if not self._define_bond(graph, node1, node2):
+                        return None
+            # CMAP terms add edges. This makes amino acids work since the
+            # next and previous amino acids aren't defined as bonds usually
+            elif tokens[0] == "CMAP":
+                if firstcmap:
+                    # Remove all +- join nodes on patching
+                    joins = [ n for n in graph.nodes() if graph.node[n]["residue"] != "self" ]
+                    graph.remove_nodes_from(joins)
+                    firstcmap = False
+
+                if len(tokens) != 9: # CMAP requires 2 dihedrals
+                    raise ValueError("Incorrect CMAP line\n"
+                                     "Line was:\n%s" % line)
+                tokens = tokens[1:]
+                nodes = [(tokens[3*j+i],tokens[3*j+i+1]) \
+                         for j in range(len(tokens)/4) \
+                         for i in range (j,j+3)]  # oo i love one liners
+                for (node1, node2) in nodes:
+                    if not self._define_bond(graph, node1, node2):
+                        return None
+
             # Check for atom definitions
-            elif tokens[0] == 'MASS':
+            elif tokens[0] == "MASS":
                 if self.nodenames.get(tokens[2]):
                     logger.info("Skipping duplicate type %s", tokens[2])
                 else:
                     self.nodenames[tokens[2]] = get_element(float(tokens[3]))
 
-        if self.known_res.get("CYP"):
-            nx.write_dot(self.known_res["CYP"], "CYP.dot")
+            # Patches can delete atoms
+            elif tokens[0] == "DELETE" or tokens[0] == "DELE":
+                if not patch:
+                    raise ValueError("DELETE only supported in patches!\n"
+                                     "Line was:\n%s" % line)
+
+                # Sometimes delete has a number in front of the atom name
+                try:
+                    if tokens[1] == "ATOM":
+                        if tokens[2][0].isdigit(): tokens[2] = tokens[2][1:]
+                        graph.remove_node(tokens[2])
+                    elif tokens[1] == "BOND":
+                        if tokens[2][0].isdigit(): tokens[2] = tokens[2][1:]
+                        if tokens[3][0].isdigit(): tokens[3] = tokens[3][1:]
+
+                        graph.remove_edge(tokens[2], tokens[3])
+
+                except nx.NetworkXError: # Atom or bond did not exist, ie this patch is invalid
+                    return None
+
+        return graph
 
     #=========================================================================
 
-    def _define_bond(self, resname, node1, node2):
+    def _define_bond(self, graph, node1, node2):
         """
         Process a bond defined in a psf file and adds it to the graph.
         Checks for + or - in bonded atom name and sets the node "residue"
         attribute accordingly if it is present.
 
         Args:
-          resname (str): Residue name to add bond to
+          graph (networkx graph): Graph to add bond to
           node1 (str): Atom name from psf file of first atom
           node2 (str): Atom name from psf file of second atom
 
         Returns:
-          True
+          (bool) if bond could be defined
 
         Raises:
             ValueError if a non +- atom name is not defined in the MASS
@@ -253,51 +471,68 @@ class MoleculeGraph(object):
 
         # Sanity check and process first atom name
         if "+" in node1:
-            self.known_res[resname].add_node(node1, type="", residue="+")
+            graph.add_node(node1, type="", residue="+")
         elif "-" in node1:
-            self.known_res[resname].add_node(node1, type="", residue="-")
-        elif node1 not in self.known_res[resname].nodes():
-            raise ValueError("Atom name %s undefined. Bond %s-%s"
-                             % (node1, node1, node2))
+            graph.add_node(node1, type="", residue="-")
+        elif node1 not in graph.nodes():
+            return False
 
         # Now sanity check and process second atom name
         if "+" in node2:
-            self.known_res[resname].add_node(node2, type="", residue="+")
+            graph.add_node(node2, type="", residue="+")
         elif "-" in node2:
-            self.known_res[resname].add_node(node2, type="", residue="-")
-        elif node2 not in self.known_res[resname].nodes():
-            raise ValueError("Atom name %s undefined. Bond %s-%s"
-                             % (node2, node1, node2))
+            graph.add_node(node2, type="", residue="-")
+        elif node2 not in graph.nodes():
+            return False
 
-        logging.info("Added bond %s-%s", node1, node2)
-        self.known_res[resname].add_edge(node1, node2)
+        graph.add_edge(node1, node2)
         return True
 
     #=========================================================================
 
-    def _assign_elements(self):
+    def _assign_elements(self, graph):
         """
         Assigns elements to parsed in residues. Called after all
         rtf, str, and prm files are read in. Element "_join" is assigned
         to atoms from other residues (+- atoms), since these are only
         defined by name.
 
+        Args:
+            graph (networkx graph): The graph to assign elements to
+
         Raises:
             ValueError if an atom type can't be assigned an element
         """
         # Now that all atom and mass lines are read, get the element for each atom
-        for res in self.known_res.keys():
-            for node, data in self.known_res[res].nodes(data=True):
-                if data.get('residue') != "self":
-                    data['element'] = "_join"
-                else:
-                    element = self.nodenames.get(data.get('type'))
-                    if not element:
-                        raise ValueError("Unknown atom type %s in residue %s "
-                                         "name %s" % (data.get('type'), res, node))
-                    data['element'] = element
+        for node, data in graph.nodes(data=True):
+            if data.get('residue') != "self":
+                data['element'] = "_join"
+            else:
+                element = self.nodenames.get(data.get('type'))
+                if not element:
+                    raise ValueError("Unknown atom type %s, name %s"
+                                     % (data.get('type'), node))
+                data['element'] = element
 
     #=========================================================================
+
+    def _apply_patch(self, matchname, patch):
+        """
+        Applies a patch to a graph, returning a modified graph
+
+        Args:
+          matchname (str): The key of the graph to modify
+          patch (str): The patch to apply
+
+        Returns:
+          networkx graph that's the patched residue, or None
+          if the patch did not apply correctly
+        """
+        patched = self._rtf_to_graph(self.patches.get(patch),
+                                     patch=self.known_res[matchname])
+        if not patched: return None
+        self._assign_elements(patched)
+        return patched
 
 #++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
 #                            PUBLIC FUNCTIONS                             #
@@ -359,11 +594,12 @@ def parse_vmd_graph(selection):
         LookupError if the residue couldn't be found in known templates
     """
 
-    # Check selection is an entire residue by both definitions
+    # Check selection is an entire resid by both definitions
+    # Ignore VMD's residue definition since it messes up
+    # capping groups
     resid = set(selection.get('resid'))
-    if len(set(selection.get('residue'))) > 1:
-        raise ValueError("Selection %s is more than one residue!" % selection)
-    elif len(resid) > 1:
+    if len(resid) > 1:
+        print(resid)
         raise ValueError("Selection %s is more than one resid!" % selection)
     resid = resid.pop()
 

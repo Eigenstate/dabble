@@ -32,7 +32,7 @@ import molecule
 from atomsel import atomsel
 
 from DabbleParam import CharmmWriter
-from parmed.tools import chamber, parmout, HMassRepartition, defineSolvent
+from parmed.tools import chamber, parmout, HMassRepartition
 from parmed.amber import AmberParm
 
 #++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
@@ -76,9 +76,8 @@ class AmberWriter(object):
 
         if extra_params is not None:
             self.parameters.extend(extra_params)
-            self.prompt_params = False
-        else:
-            self.prompt_params = True
+
+        self.prompt_params = False
 
     #==========================================================================
 
@@ -134,17 +133,14 @@ class AmberWriter(object):
         args = "-crd %s.pdb -psf %s.psf" % (self.prmtop_name, self.prmtop_name)
 
         # Add topology and parameter arguments
-        for top in self.topologies:
-            args += ' -top %s' % top
-        for prm in self.parameters:
-            if 'toppar' in prm:
-                args += ' -toppar %s' % prm
-            else:
-                args += ' -param %s' % prm
+        for inp in self.topologies + self.parameters:
+            args += ' -toppar %s' % inp
 
         # Add box information since it is not in the pdb
         box = molecule.get_periodic(molid=self.molid)
         args += " -box %f,%f,%f" % (box['a'], box['b'], box['c'])
+
+        print(args)
 
         print("\nINFO: Running chamber. This may take a while...")
         sys.stdout.flush()

@@ -5,6 +5,9 @@ import pytest
 import subprocess
 import os
 
+import logging
+logging.basicConfig()
+
 dir = os.path.dirname(__file__) + "/"
 
 def test_read_str(capfd, tmpdir):
@@ -41,4 +44,28 @@ def test_compare_mol():
     names = mdict.next()
     assert(name == "LSD")
     assert(names == correctnames)
+
+def test_patches():
+    import vmd, molecule
+    from atomsel import atomsel
+    from DabbleParam import MoleculeGraph
+    from pkg_resources import resource_filename
+
+    molid = molecule.load("mae", dir+"phosphoserine.mae")
+    g = MoleculeGraph([dir+"phosphoserine.str"])
+    (name, patch, mdict) = g.get_patches(atomsel("resname SEP"))
+    correctnames = {5: '-C', 16: 'N', 17: 'CA', 18: 'CB', 19: 'OG', 20: 'C', 21: 'O', 22: 'P', 23: 'O1P', 24: 'O2P', 25: 'OT', 26: 'HN', 27: 'HA', 28: 'HB1', 29: 'HB2', 30: '+N'}
+    assert(name == "SER")
+    assert(patch == "PSEP")
+    assert(mdict.next() == correctnames)
+
+def test_protein(tmpdir):
+    import vmd, molecule
+    import networkx as nx
+    from DabbleParam import MoleculeGraph
+    from pkg_resources import resource_filename
+
+    g = MoleculeGraph([resource_filename("DabbleParam", "charmm_parameters/top_all36_prot.rtf")])
+    nx.write_dot(g.known_res["TYR"], str(tmpdir)+"/tyr.dot")
+    subprocess.check_call(["diff", "-q", dir+"correct_tyr.dot", str(tmpdir)+"/tyr.dot"])
     
