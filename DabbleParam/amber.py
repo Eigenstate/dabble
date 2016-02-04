@@ -134,17 +134,14 @@ class AmberWriter(object):
         args = "-crd %s.pdb -psf %s.psf" % (self.prmtop_name, self.prmtop_name)
 
         # Add topology and parameter arguments
-        for top in self.topologies:
-            args += ' -top %s' % top
-        for prm in self.parameters:
-            if 'toppar' in prm:
-                args += ' -toppar %s' % prm
-            else:
-                args += ' -param %s' % prm
+        for inp in self.topologies + self.parameters:
+            args += ' -toppar %s' % inp
 
         # Add box information since it is not in the pdb
         box = molecule.get_periodic(molid=self.molid)
         args += " -box %f,%f,%f" % (box['a'], box['b'], box['c'])
+
+        print(args)
 
         print("\nINFO: Running chamber. This may take a while...")
         sys.stdout.flush()

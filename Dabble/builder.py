@@ -92,11 +92,6 @@ class DabbleBuilder(object):
                     "lipid_membranes/popc.mae")
 
         # Process input arguments
-        if self.opts.get('extra_topos'):
-            self.opts['extra_topos'] = self.opts['extra_topos'].split(',')
-        if self.opts.get('extra_params'):
-            self.opts['extra_params'] = self.opts['extra_params'].split(',')
-
         if self.opts.get('membrane_system') == 'DEFAULT':
             self.opts['membrane_system'] = resource_filename(__name__, \
                     "lipid_membranes/popc.mae")
@@ -250,6 +245,7 @@ class DabbleBuilder(object):
                                      molid=final_id, tmp_dir=self.tmp_dir,
                                      extra_topos=self.opts.get('extra_topos'),
                                      extra_params=self.opts.get('extra_params'),
+                                     extra_streams=self.opts.get('extra_streams'),
                                      hmassrepartition=self.opts.get('hmassrepartition'))
         molecule.delete(final_id)
 

@@ -93,14 +93,18 @@ group = parser.add_argument_group('Parameterization Options')
 group.add_argument('--hmr', dest='hmassrepartition', default=False,
                    action='store_true', help='Repartition Hydrogen masses'
                    'to allow up to 4fs time steps. Currently amber only')
-group.add_argument('-top', '--topology', default=None,
+group.add_argument('-top', '--topology', default=None, action='append',
                     type=str, metavar='<topologies>', dest='extra_topos',
-                    help='Additional topology (rtf or str) files to'
-                    'include in parameterization, separated by commas')
-group.add_argument('-par', '--parameters', default=None,
+                    help='Additional topology (rtf) file to '
+                    'include in parameterization')
+group.add_argument('-par', '--parameters', default=None, action='append',
                    type=str, metavar='<parameters>', dest='extra_params',
-                   help='Additional parameter (prm or str) files to'
-                   'include in parameterization, separated by commas')
+                   help='Additional parameter (prm) file to '
+                   'include in parameterization')
+group.add_argument('-str', '--stream', default=None, action='append',
+                   type=str, metavar='<streams>', dest='extra_streams',
+                   help='Additional stream (str) file to include in '
+                   'parameterization')
 
 group = parser.add_argument_group('Lipid Membrane Options')
 group.add_argument('-L', '--lipid-selection', dest='lipid_sel',

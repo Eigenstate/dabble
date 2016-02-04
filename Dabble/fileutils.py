@@ -169,6 +169,7 @@ def write_final_system(out_fmt, out_name, molid, **kwargs):
       tmp_dir (str): Directory to put temporary files in
       extra_topos (list of str): Extra topology files to use
       extra_params (list of str): Extra parameter files to use
+      extra_streams (list of str): Extra stream files to use
       lipid_sel (str): Lipid selection
       hmassrepartition (bool): Whether or not to repartition hydrogen
         masses
@@ -206,13 +207,24 @@ def write_final_system(out_fmt, out_name, molid, **kwargs):
 
     # If we want a parameterized format like amber or charmm, a psf must
     # first be written which does the atom typing, etc
+
+    tops = []; pars = []
+    if kwargs.get('extra_topos'):
+        tops.extend(kwargs.get('extra_topos'))
+    if kwargs.get('extra_params'):
+        pars.extend(kwargs.get('extra_params'))
+    if kwargs.get('extra_streams'):
+        tops.extend(kwargs.get('extra_streams'))
+        pars.extend(kwargs.get('extra_streams'))
+
+
     if out_fmt == 'charmm':
         temp_mol = molecule.load('mae', mae_name)
         write_psf_name = mae_name.replace('.mae', '')
         writer = CharmmWriter(molid=temp_mol,
                               tmp_dir=kwargs['tmp_dir'],
                               lipid_sel=kwargs.get('lipid_sel'),
-                              extra_topos=kwargs.get('extra_topos'))
+                              extra_topos=tops)
         writer.write(write_psf_name)
 
     # For amber format files, invoke the parmed chamber routine
@@ -225,8 +237,8 @@ def write_final_system(out_fmt, out_name, molid, **kwargs):
                              tmp_dir=kwargs['tmp_dir'],
                              lipid_sel=kwargs.get('lipid_sel'),
                              hmr=kwargs.get('hmassrepartition'),
-                             extra_topos=kwargs.get('extra_topos'),
-                             extra_params=kwargs.get('extra_params'))
+                             extra_topos=tops,
+                             extra_params=pars)
         writer.write(write_psf_name)
 
     return out_name
