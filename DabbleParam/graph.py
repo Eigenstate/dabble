@@ -132,7 +132,7 @@ class MoleculeGraph(object):
 
         # First check against matching residue names
         if resname in self.known_res.keys():
-            matcher = isomorphism.GraphMatcher(rgraph, self.known_res.get(resname),
+            matcher = isomorphism.GraphMatcher(self.known_res.get(resname), rgraph,
                                                node_match=_check_atom_match)
             if matcher.is_isomorphic():
                 return (resname, matcher.match())
@@ -140,7 +140,7 @@ class MoleculeGraph(object):
         # If that didn't work, loop through all known residues
         for matchname in self.known_res.keys():
             graph = self.known_res[matchname]
-            matcher = isomorphism.GraphMatcher(rgraph, graph, node_match=_check_atom_match)
+            matcher = isomorphism.GraphMatcher(graph, rgraph, node_match=_check_atom_match)
             
             if matcher.is_isomorphic():
                 logger.info("Renaming resname %s -> %s", resname, matchname)
@@ -188,7 +188,7 @@ class MoleculeGraph(object):
         candidate_graphs = []
         for names in self.known_pres.keys():
             graph = self.known_pres[names]
-            matcher = isomorphism.GraphMatcher(rgraph, graph, node_match=_check_atom_match)
+            matcher = isomorphism.GraphMatcher(graph, rgraph, node_match=_check_atom_match)
             if matcher.is_isomorphic():
                 logger.info("Detected patch %s" % names[1])
                 return (names[0], names[1], matcher.match())
@@ -197,6 +197,87 @@ class MoleculeGraph(object):
         nx.write_dot(rgraph, "rgraph.dot")
         return (None, None, None)
 
+    #=========================================================================
+
+    def get_disulfide(self, selstring, fragment, molid, frag_molid):
+        """
+        Checks if the selection corresponds to a cysteine in a disulfide bond.
+        Sets the patch line appropriately and matches atom names using 
+        a subgraph match to the normal cysteine residue
+
+        Args:
+            selstring (str): Selection to check
+            fragment (str): Fragment ID (to narrow down selection)
+            molid (int): VMD molecule of entire system (needed for disu partner)
+            frag_molid (int): VMD molecule ID to which names will be applied
+
+        Returns:
+            (str, str, dict) resname matched, patch line to put directly
+              into psfgen, name translation dictionary
+       """
+        selection = atomsel(selstring, molid=frag_molid)
+        whole_sel = atomsel("%s and fragment %s" % (selstring, fragment),
+                            molid=molid)
+        resname = selection.get('resname')[0]
+        (rgraph, dump) = parse_vmd_graph(selection)
+        (whole, dump) = parse_vmd_graph(whole_sel)
+ 
+        # Check for the 3 join atoms corresponding to the disulfide bonds
+        externs = [n for n in whole.nodes() \
+                   if whole.node[n]["residue"] != "self"]
+        if len(externs) != 3: return (None, None, None)
+ 
+        # Check that it is a cysteine in some way shape or form
+        # ie that it this residue is a subgraph of a cysteine
+        truncated = nx.Graph(rgraph)
+        truncated.remove_nodes_from([n for n in rgraph.nodes() if \
+                                     rgraph.node[n]["residue"] != "self"])
+        matches = {}
+        for matchname in _acids:
+            graph = self.known_res.get(matchname)
+            if not graph: continue
+
+            matcher = isomorphism.GraphMatcher(graph, truncated, node_match=_check_atom_match)
+            if matcher.subgraph_is_isomorphic():
+                matches[matchname] = matcher.match()
+
+        if not matches: return (None, None, None)
+        matchname = max(matches.keys(), key=(lambda x: len(self.known_res[x])))
+        if matchname != "CYS": return (None, None, None)
+ 
+        # Now we know it's a cysteine in a disulfide bond 
+        # Identify which resid and fragment corresponds to the other cysteine
+        partners = [n for n in externs if \
+                    atomsel("index %d" % n,
+                            molid=molid).get("element")[0] == "S"]
+        if not partners:
+            raise ValueError("3 bonded Cys %d isn't a valid disulfide!"
+                             % selection.get('resid')[0])
+        osel = atomsel("index %d" % partners[0], molid=molid)
+
+        f1 = osel.get("fragment")[0]
+
+        if f1 < fragment:
+            first = osel
+            second = whole_sel 
+        elif f1 > fragment:
+            first = whole_sel
+            second = osel
+        else:
+            if osel.get("resid")[0] < selection.get("resid")[0]:
+                first = osel
+                second = whole_sel
+            else:
+                first = whole_sel
+                second = osel
+
+        patchline = "patch DISU P%d:%d P%d:%d\n" % (first.get("fragment")[0],
+                                                    first.get("resid")[0],
+                                                    second.get("fragment")[0],
+                                                    second.get("resid")[0])
+ 
+        return (matchname, patchline, matches[matchname])
+ 
     #=========================================================================
     #                           Private methods                              #
     #=========================================================================
