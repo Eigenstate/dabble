@@ -76,9 +76,8 @@ class AmberWriter(object):
 
         if extra_params is not None:
             self.parameters.extend(extra_params)
-            self.prompt_params = False
-        else:
-            self.prompt_params = True
+
+        self.prompt_params = False
 
     #==========================================================================
 
