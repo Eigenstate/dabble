@@ -684,54 +684,8 @@ class CharmmWriter(object):
         resids = set(atomsel(sel).get('resid'))
         idx = 1
         # For renumbering capping groups
-        for resid in resids:
-            # Handle bug where capping groups in same residue as the
-            # neighboring amino acid Maestro writes it this way for some
-            # reason but it causes problems down the line when psfgen doesn't
-            # understand the weird combined residue
-            rid = atomsel('resid %d' % resid).get('residue')[0]
-            names = set(atomsel('residue %d'% rid).get('resname'))
-            assert len(names) < 3, ("More than 2 residues with same number... "
-                                    "currently unhandled. Report a bug")
-
-            if len(names) > 1:
-                if 'ACE' in names and 'NMA' in names:
-                    print("ERROR: Both ACE and NMA were given the same resid"
-                          "Check your input structure")
-                    quit(1)
-
-                if 'ACE' in names:
-                    # Set ACE residue number as one less
-                    resid = atomsel('residue %d and not resname ACE' % rid).get('resid')[0]
-                    if len(atomsel('(%s) and resid %d' % (sel, resid-1))):
-                        raise ValueError('ACE resid collision number %d' % resid-1)
-                    atomsel('residue %d and resname ACE'
-                            % rid).set('resid', resid-1)
-
-                    # Handle all of the ACE atoms before the others
-                    atoms = atomsel('residue %d and resname ACE'
-                                    % rid).get('index')
-                    atoms.extend(atomsel('residue %d and not resname ACE'
-                                         % rid).get('index'))
-
-                elif 'NMA' in names:
-                    # Set NMA residue number as one more
-                    resid = atomsel('residue %d and not resname NMA' % rid).get('resid')[0]
-                    if len(atomsel('(%s) and resid %d' % (sel, resid+1))):
-                        raise ValueError('NMA resid collision number %d' % resid+1)
-
-                    atomsel('residue %d and resname NMA'
-                            % rid).set('resid', resid+1)
-                    # Handle all the NMA atoms after the others
-                    atoms = atomsel('residue %d and not resname NMA'
-                                    % rid).get('index')
-                    atoms.extend(atomsel('residue %d and resname NMA'
-                                         % rid).get('index'))
-
-            else:
-                atoms = atomsel('residue %d' % rid).get('index')
-
-            for i in atoms:
+        for resid in sorted(resids):
+            for i in atomsel("resid %d" % resid).get("index"):
 
                 a = atomsel('index %d' % i) # pylint: disable=invalid-name
                 entry = ('%-6s%5d %-5s%-4s%c%4d    %8.3f%8.3f%8.3f%6.2f%6.2f'
