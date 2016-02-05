@@ -91,7 +91,7 @@ class CharmmWriter(object):
         self.psf_name = ""
         # Default parameter sets
         self.topologies = [
-            #resource_filename(__name__, "charmm_parameters/top_all36_caps.rtf"),
+            resource_filename(__name__, "charmm_parameters/top_all36_caps.rtf"),
             resource_filename(__name__, "charmm_parameters/top_water_ions.rtf"),
             resource_filename(__name__, "charmm_parameters/top_all36_cgenff.rtf"),
             resource_filename(__name__, "charmm_parameters/top_all36_prot.rtf"),
@@ -541,45 +541,6 @@ class CharmmWriter(object):
         patches = set()
         seg = "P%s" % frag
 
-        # Handle bug where capping groups in same residue as the
-        # neighboring amino acid Maestro writes it this way for some
-        # reason but it causes problems down the line when psfgen doesn't
-        # understand the weird combined residue
-        resids = set(atomsel("fragment %s" % frag).get('resid'))
-        while resids:
-            resid = resids.pop()
-            names = set(atomsel("fragment %s and resid %d" % (frag, resid)).get("resname"))
-            assert len(names) < 3, ("More than 2 residues with same number... "
-                                    "currently unhandled. Report a bug")
-
-            if not ('ACE' in names or 'NMA' in names):
-                continue
-
-            oldresid = resid 
-            if 'ACE' in names:
-                if len(names) == 1:
-                    # ACE increment residue number so it matches next one
-                    resid += 1
-                    resids.remove(resid)
-                    if not len(atomsel('fragment %s and resid %d' % (frag, resid))):
-                        raise ValueError('ACE resid no neighbor number %d' % resid)
-
-            elif 'NMA' in names:
-                if len(names) == 1:
-                    # Set NMA residue number as one less, so it matches previous
-                    resid -= 1
-                    resids.remove(resid)
-                    if not len(atomsel('fragment %s and resid %d' % (frag, resid))):
-                        raise ValueError('NMA resid no neighbor number %d' % resid)
-
-            # Actually do renaming and renumbering
-            atomsel('fragment %s and resid %d and resname ACE NMA'
-                    % (frag, oldresid)).set('resid', resid)
-            resname = atomsel("fragment %s and resid %d and not resname ACE NMA"
-                              % (frag, resid)).get("resname")[0]
-            print("Renaming %d -> %s:%d" % (oldresid, resname, resid))
-            atomsel("fragment %s and resid %d" % (frag, resid)).set("resname", resname)
-
         ## Save and reload so residue looping is correct
         temp = tempfile.mkstemp(suffix='_P%s.mae' % frag,
                                 prefix='psf_prot_', dir=self.tmp_dir)[1]
@@ -684,7 +645,7 @@ class CharmmWriter(object):
         resids = set(atomsel(sel).get('resid'))
         idx = 1
         # For renumbering capping groups
-        for resid in resids:
+        for resid in sorted(resids):
             # Handle bug where capping groups in same residue as the
             # neighboring amino acid Maestro writes it this way for some
             # reason but it causes problems down the line when psfgen doesn't
