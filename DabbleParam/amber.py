@@ -140,13 +140,10 @@ class AmberWriter(object):
         box = molecule.get_periodic(molid=self.molid)
         args += " -box %f,%f,%f" % (box['a'], box['b'], box['c'])
 
-        print(args)
-
         print("\nINFO: Running chamber. This may take a while...")
         sys.stdout.flush()
         parm = AmberParm()
         action = chamber(parm, args)
-        print(action)
         action.execute()
 
         # Do hydrogen mass repartitioning if requested
