@@ -303,7 +303,13 @@ class MoleculeGraph(object):
         patch = False
 
         for line in open(filename, 'r'):
-            # Remove comments
+            # Remove comments except "special" graphmatcher directives
+            # This directive is only really used to parse the bond on NMA
+            # that attaches to the previous residue, in order for its extra
+            # connection to be properly registered since chamber fails
+            # if a connection is listed twice
+            if "!GraphMatcher:" in line:
+                line = line.replace("!GraphMatcher:","")
             if "!" in line:
                 line = line[:line.index("!")]
             if not len(line):
