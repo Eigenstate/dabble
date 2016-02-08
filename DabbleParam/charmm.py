@@ -542,11 +542,7 @@ class CharmmWriter(object):
         seg = "P%s" % frag
 
         ## Save and reload so residue looping is correct
-        temp = tempfile.mkstemp(suffix='_P%s.mae' % frag,
-                                prefix='psf_prot_', dir=self.tmp_dir)[1]
-        fragment = atomsel('fragment %s' % frag, molid=self.molid)
-        fragment.write('mae', temp)
-        prot_molid = molecule.load('mae', temp)
+        prot_molid = self._number_protein_fragment(frag=frag, molid=self.molid)
         molecule.set_top(prot_molid)
 
         # Sanity check that there is no discrepancy between defined resids and
@@ -623,7 +619,71 @@ class CharmmWriter(object):
 
     #==========================================================================
 
-    def _write_ordered_pdb(self, filename, sel, molid=0):
+    def _number_protein_fragment(self, frag, molid):
+        """
+        Pulls out the indicated protein fragment and renumbers the residues
+        so that ACE and NMA caps appear to be different residues to VMD.
+        This is necessary so that they don't appear as patches. Proteins with
+        non standard capping groups will have the patches applied.
+        
+        Args:
+            fragment (int): Fragment to consider
+            molid (int): VMD molecule ID of entire system
+        Returns:
+            (int): Molid of loaded fragment
+        """
+        # Put our molecule on top and grab selection
+        old_top = molecule.get_top()
+        molecule.set_top(molid)
+        fragment = atomsel('fragment %s' % frag, molid=molid)
+
+        for resid in sorted(set(fragment.get("resid"))):
+            # Handle bug where capping groups in same residue as the
+            # neighboring amino acid Maestro writes it this way for some
+            # reason but it causes problems down the line when psfgen doesn't
+            # understand the weird combined residue
+            rid = atomsel('resid %d' % resid).get('residue')[0]
+            names = set(atomsel('residue %d'% rid).get('resname'))
+            assert len(names) < 3, ("More than 2 residues with same number... "
+                                    "currently unhandled. Report a bug")
+
+            if len(names) > 1:
+                if 'ACE' in names and 'NMA' in names:
+                    print("ERROR: Both ACE and NMA were given the same resid"
+                          "Check your input structure")
+                    quit(1)
+
+                if 'ACE' in names:
+                    # Set ACE residue number as one less
+                    resid = atomsel('residue %d and not resname ACE' % rid).get('resid')[0]
+                    if len(atomsel('fragment %s and resid %d' % (frag, resid-1))):
+                        raise ValueError('ACE resid collision number %d' % resid-1)
+                    atomsel('residue %d and resname ACE'
+                            % rid).set('resid', resid-1)
+
+                elif 'NMA' in names:
+                    # Set NMA residue number as one more
+                    resid = atomsel('residue %d and not resname NMA' % rid).get('resid')[0]
+                    if len(atomsel('fragment %s and resid %d' % (frag, resid+1))):
+                        raise ValueError('NMA resid collision number %d' % resid+1)
+
+                    atomsel('residue %d and resname NMA'
+                            % rid).set('resid', resid+1)
+
+        # Have to save and reload so residues are parsed correctly by VMD
+        temp = tempfile.mkstemp(suffix='_P%s.mae' % frag,
+                                prefix='psf_prot_', dir=self.tmp_dir)[1]
+        fragment.write('mae', temp)
+        prot_molid = molecule.load('mae', temp)
+
+        # Put things back the way they were
+        if old_top != -1:
+            molecule.set_top(old_top)
+        return prot_molid
+
+    #==========================================================================
+
+    def _write_ordered_pdb(self, filename, sel, molid):
         """
         Writes a pdb file in order of residues, renumbering the atoms
         accordingly, since psfgen wants each residue sequentially while
@@ -646,54 +706,51 @@ class CharmmWriter(object):
         idx = 1
         # For renumbering capping groups
         for resid in sorted(resids):
-            # Handle bug where capping groups in same residue as the
-            # neighboring amino acid Maestro writes it this way for some
-            # reason but it causes problems down the line when psfgen doesn't
-            # understand the weird combined residue
             rid = atomsel('resid %d' % resid).get('residue')[0]
-            names = set(atomsel('residue %d'% rid).get('resname'))
-            assert len(names) < 3, ("More than 2 residues with same number... "
-                                    "currently unhandled. Report a bug")
+#            names = set(atomsel('residue %d'% rid).get('resname'))
+#            assert len(names) < 3, ("More than 2 residues with same number... "
+#                                    "currently unhandled. Report a bug")
+#
+#            if len(names) > 1:
+#                if 'ACE' in names and 'NMA' in names:
+#                    print("ERROR: Both ACE and NMA were given the same resid"
+#                          "Check your input structure")
+#                    quit(1)
+#
+#                if 'ACE' in names:
+#                    # Set ACE residue number as one less
+#                    resid = atomsel('residue %d and not resname ACE' % rid).get('resid')[0]
+#                    if len(atomsel('(%s) and resid %d' % (sel, resid-1))):
+#                        raise ValueError('ACE resid collision number %d' % resid-1)
+#                    atomsel('residue %d and resname ACE'
+#                            % rid).set('resid', resid-1)
+#
+#                    # Handle all of the ACE atoms before the others
+#                    atoms = atomsel('residue %d and resname ACE'
+#                                    % rid).get('index')
+#                    atoms.extend(atomsel('residue %d and not resname ACE'
+#                                         % rid).get('index'))
+#
+#                elif 'NMA' in names:
+#                    # Set NMA residue number as one more
+#                    resid = atomsel('residue %d and not resname NMA' % rid).get('resid')[0]
+#                    if len(atomsel('(%s) and resid %d' % (sel, resid+1))):
+#                        raise ValueError('NMA resid collision number %d' % resid+1)
+#
+#                    atomsel('residue %d and resname NMA'
+#                            % rid).set('resid', resid+1)
+#                    # Handle all the NMA atoms after the others
+#                    atoms = atomsel('residue %d and not resname NMA'
+#                                    % rid).get('index')
+#                    atoms.extend(atomsel('residue %d and resname NMA'
+#                                         % rid).get('index'))
+#
+#            else:
+#                atoms = atomsel('residue %d' % rid).get('index')
 
-            if len(names) > 1:
-                if 'ACE' in names and 'NMA' in names:
-                    print("ERROR: Both ACE and NMA were given the same resid"
-                          "Check your input structure")
-                    quit(1)
-
-                if 'ACE' in names:
-                    # Set ACE residue number as one less
-                    resid = atomsel('residue %d and not resname ACE' % rid).get('resid')[0]
-                    if len(atomsel('(%s) and resid %d' % (sel, resid-1))):
-                        raise ValueError('ACE resid collision number %d' % resid-1)
-                    atomsel('residue %d and resname ACE'
-                            % rid).set('resid', resid-1)
-
-                    # Handle all of the ACE atoms before the others
-                    atoms = atomsel('residue %d and resname ACE'
-                                    % rid).get('index')
-                    atoms.extend(atomsel('residue %d and not resname ACE'
-                                         % rid).get('index'))
-
-                elif 'NMA' in names:
-                    # Set NMA residue number as one more
-                    resid = atomsel('residue %d and not resname NMA' % rid).get('resid')[0]
-                    if len(atomsel('(%s) and resid %d' % (sel, resid+1))):
-                        raise ValueError('NMA resid collision number %d' % resid+1)
-
-                    atomsel('residue %d and resname NMA'
-                            % rid).set('resid', resid+1)
-                    # Handle all the NMA atoms after the others
-                    atoms = atomsel('residue %d and not resname NMA'
-                                    % rid).get('index')
-                    atoms.extend(atomsel('residue %d and resname NMA'
-                                         % rid).get('index'))
-
-            else:
-                atoms = atomsel('residue %d' % rid).get('index')
-
-            for i in atoms:
+            for i in atomsel('residue %d' % rid).get('index'):
                 a = atomsel('index %d' % i) # pylint: disable=invalid-name
+#            for i in atoms:
                 entry = ('%-6s%5d %-5s%-4s%c%4d    %8.3f%8.3f%8.3f%6.2f%6.2f'
                          '     %-4s%2s\n' % ('ATOM', idx, a.get('name')[0],
                                              a.get('resname')[0],
