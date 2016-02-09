@@ -607,8 +607,11 @@ class CharmmWriter(object):
         ''' % (filename, seg)
         self.file.write(string)
         self.file.write(''.join(patches))
-        self.file.write('\n')
-        self.file.write('   coordpdb $protnam %s\n' % seg)
+
+        # Angles must be regenerated FIRST!
+        # See http://www.ks.uiuc.edu/Research/namd/mailing_list/namd-l.2009-2010/4137.html
+        self.file.write("regenerate angles\nregenerate dihedrals\n")
+        self.file.write("coordpdb $protnam %s\n" % seg)
 
         if old_top != -1:
             molecule.set_top(old_top)
