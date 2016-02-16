@@ -1,6 +1,6 @@
 """ Builds membrane protein systems """
 
-__version__ = '1.2.5'
+__version__ = '1.2.6'
 __author__ = 'Robin Betz'
 
 from Dabble.builder import *
