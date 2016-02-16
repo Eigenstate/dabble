@@ -645,7 +645,7 @@ class CharmmWriter(object):
             # neighboring amino acid Maestro writes it this way for some
             # reason but it causes problems down the line when psfgen doesn't
             # understand the weird combined residue
-            rid = atomsel('resid %d' % resid).get('residue')[0]
+            rid = atomsel('fragment %d and resid %d' % (frag, resid)).get('residue')[0]
             names = set(atomsel('residue %d'% rid).get('resname'))
             assert len(names) < 3, ("More than 2 residues with same number... "
                                     "currently unhandled. Report a bug")
@@ -663,6 +663,7 @@ class CharmmWriter(object):
                         raise ValueError('ACE resid collision number %d' % resid-1)
                     atomsel('residue %d and resname ACE'
                             % rid).set('resid', resid-1)
+                    print("INFO: ACE %d -> %d" % (resid, resid-1))
 
                 elif 'NMA' in names:
                     # Set NMA residue number as one more
@@ -672,6 +673,7 @@ class CharmmWriter(object):
 
                     atomsel('residue %d and resname NMA'
                             % rid).set('resid', resid+1)
+                    print("INFO: NMA %d -> %d" % (resid, resid+1))
 
         # Have to save and reload so residues are parsed correctly by VMD
         temp = tempfile.mkstemp(suffix='_P%s.mae' % frag,
