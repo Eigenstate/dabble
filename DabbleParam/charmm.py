@@ -29,7 +29,7 @@ import os
 import tempfile
 from pkg_resources import resource_filename
 
-from .graph import MoleculeGraph
+from DabbleParam import CharmmMatcher
 
 # pylint: disable=import-error, unused-import
 import vmd
@@ -73,7 +73,7 @@ class CharmmWriter(object):
       topologies (list of str): Topology files that were used in creating the
           psf
       prompt_topos (bool): Whether to ask for more topology files
-      matcher (MoleculeGraph): Molecular graph matcher object
+      matcher (CharmmMatcher): Molecular graph matcher object
 
     """
 
@@ -167,7 +167,7 @@ class CharmmWriter(object):
             self.file.write('   topology %s\n' % top)
 
         # Initialize graph matcher with topologies we know about
-        self.matcher = MoleculeGraph(self.topologies)
+        self.matcher = CharmmMatcher(self.topologies)
 
         # Mark all atoms as unsaved with the user field
         atomsel('all', molid=self.molid).set('user', 1.0)

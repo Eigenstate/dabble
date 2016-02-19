@@ -23,145 +23,63 @@ Boston, MA 02111-1307, USA.
 """
 
 from __future__ import print_function
+import logging
 import networkx as nx
 from networkx.algorithms import isomorphism
-from itertools import product
+
 # pylint: disable=import-error, unused-import
 import vmd
 from atomsel import atomsel
 # pylint: enable=import-error, unused-import
 
-import logging
+from DabbleParam import MoleculeMatcher
 logger = logging.getLogger(__name__) # pylint: disable=invalid-name
-
-
-#++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
-#                                CONSTANTS                                    #
-#++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
-
-# pylint: disable=bad-whitespace,bad-continuation
-MASS_LOOKUP= { 1: "H",  12: "C",  14: "N",
-              16: "O",  31: "P",  32: "S",
-              35: "Cl", 80: "Br", 19: "F",
-             127: "I",  27: "Al",  4: "He",
-              20: "Ne",  0: "DU", 56: "Fe",
-              23: "Na",  7: "Li", 24: "Mg",
-             137: "Ba", 40: "Ca", 85: "Rb",
-             133: "Ce", 39: "K",  65: "Zn",
-             112: "Cd" }
-# pylint: enable=bad-whitespace,bad-continuation
-
-# For checking which residues can have patchs
-_acids = "ALA ARG ASN ASP CYS GLN GLU GLY HSD HSE HSP ILE LEU LYS MET " \
-         "PHE PRO SER THR TRP TYR VAL".split()
 
 #++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
 #                                   CLASSES                                   #
 #++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
 
-class MoleculeGraph(object):
+class CharmmMatcher(MoleculeMatcher):
     """
     Represents a collection of graphs of all residues defined in the
     topology files. Can pass in VMD molecules to be checked and atom
     names corrected
 
     Attributes:
-        rtffiles (list of str): The topology files this molecule graph
-            knows about
-        known_res (dict str resname -> networkx graph): The molecule graphs
+        topologies (list of str): The topology files this molecule graph
+            knows about, from parent class
+        known_res (dict str resname -> networkx graph): The molecule graphs,
+            from parent class
+        nodenames (dict name -> element): Translates atom names to
+            elements, from parent class
         known_pres (dict tuple (str resname, patchname) -> networkx graph)
         patches (dict patchname -> str instructions): Known patches
-        nodenames (dict name -> element): Translates charmm atom names to
-            elements
     """
 
     #==========================================================================
 
-    def __init__(self, rtffiles):
+    def __init__(self, topologies):
         """
         Initializes a graph parser with the given rtf files
         as known molecules
         """
-        self.rtffiles = rtffiles
-        self.nodenames = {}
         self.patches = {}
-        self.known_res = {}
         self.known_pres = {}
-       
-        # Parse input rtf files
-        for filename in rtffiles:
-            self._parse_rtf(filename)
 
-        # Assign elements
-        for res in self.known_res.keys():
-            self._assign_elements(self.known_res[res])
+        # Parent assigns and parses topologies, and assigns
+        # elements
+        super(CharmmMatcher, self).__init__(topologies)
 
-        # Create dictionary of patched amino acids
-        for res in _acids:
-        #for res in self.known_res.keys():
-            # Skip amino acids that haven't been defined this run
-            if not self.known_res.get(res): continue
+        # Create dictionary of patched amino acids that we know about
+        for res in [s for s in self.known_res.keys() if s in self._acids]:
             for patch in self.patches.keys():
                 applied = self._apply_patch(res, patch)
                 if applied:
                     self.known_pres[(res, patch)] = applied
-                    self._assign_elements(self.known_pres[(res,patch)])
+                    self._assign_elements(self.known_pres[(res, patch)])
 
     #=========================================================================
     #                            Public methods                              #
-    #=========================================================================
-
-    def get_names(self, selection, print_warning=False):
-        """
-        Obtains a name mapping for the current selection
-
-        Args:
-            selection (VMD atomsel): Selection to set names for
-            print_warning (bool): Whether or not to print matching suggestions
-                if matching fails. Set to false if you'll try patches later.
-
-        Returns:
-            resname matched
-            translation dictionary
-
-        Raises:
-            KeyError: if no matching possible
-        """
-        resname = selection.get('resname')[0]
-        (rgraph, is_covalent) = parse_vmd_graph(selection)
-
-        # First check against matching residue names
-        if resname in self.known_res.keys():
-            matcher = isomorphism.GraphMatcher(self.known_res.get(resname), rgraph,
-                                               node_match=_check_atom_match)
-            if matcher.is_isomorphic():
-                return (resname, matcher.match())
-
-        # If that didn't work, loop through all known residues
-        for matchname in self.known_res.keys():
-            graph = self.known_res[matchname]
-            matcher = isomorphism.GraphMatcher(graph, rgraph, node_match=_check_atom_match)
-            
-            if matcher.is_isomorphic():
-                logger.info("Renaming resname %s -> %s", resname, matchname)
-                return (str(matchname), matcher.match())
-
-        # Try to print out a helpful error message here if matching failed
-        if print_warning:
-            print("\nERROR: Couldn't find a topological match for resname %s" % resname)
-            if self.known_res.get(resname):
-                print("      I found a residue definition with the same name, but "
-                       "it didn't match up")
-                print("      That definition had %d atoms, and your residue had "
-                             "%d atoms" % (len(self.known_res[resname]), len(selection)))
-                print("      If that's the same, check the connectivity")
-                print("      If it's not, check your hydrogens")
-            else:
-                print("      I couldn't find any residues with that name. Did you "
-                             "forget to provide a topology file?")
-
-        return (None, None)
-
     #=========================================================================
 
     def get_patches(self, selection):
@@ -170,7 +88,7 @@ class MoleculeGraph(object):
         Identifies which amino acid is patched by finding which amino acid
         this one is a maximal subgraph of. Then, builds a library of graphs
         representing all valid patches applied to this amino acid.
-        
+
         Note that this does NOT handle multiple-residue patches such as
         disulfides!
 
@@ -182,27 +100,27 @@ class MoleculeGraph(object):
               name translation dictionary
         """
         resname = selection.get('resname')[0]
-        (rgraph, dump) = parse_vmd_graph(selection)
+        rgraph = self.parse_vmd_graph(selection)[0]
 
         # Check this residue against all possible patches applied to the
-        candidate_graphs = []
         for names in self.known_pres.keys():
             graph = self.known_pres[names]
-            matcher = isomorphism.GraphMatcher(graph, rgraph, node_match=_check_atom_match)
+            matcher = isomorphism.GraphMatcher(graph, rgraph, \
+                        node_match=super(CharmmMatcher, self)._check_atom_match)
             if matcher.is_isomorphic():
-                logger.info("Detected patch %s" % names[1])
+                logger.info("Detected patch %s", names[1])
                 return (names[0], names[1], matcher.match())
 
-        logger.error("Couldn't find a patch for resname %s. Dumping as 'rgraph.dot'" % resname)
+        logger.error("Couldn't find a patch for resname %s. Dumping as 'rgraph.dot'", resname)
         nx.write_dot(rgraph, "rgraph.dot")
         return (None, None, None)
 
     #=========================================================================
 
-    def get_disulfide(self, selstring, fragment, molid, frag_molid):
+    def get_disulfide(self, selstring, fragment, molid, frag_molid): #pylint: disable=too-many-locals
         """
         Checks if the selection corresponds to a cysteine in a disulfide bond.
-        Sets the patch line appropriately and matches atom names using 
+        Sets the patch line appropriately and matches atom names using
         a subgraph match to the normal cysteine residue
 
         Args:
@@ -218,34 +136,38 @@ class MoleculeGraph(object):
         selection = atomsel(selstring, molid=frag_molid)
         whole_sel = atomsel("%s and fragment %s" % (selstring, fragment),
                             molid=molid)
-        resname = selection.get('resname')[0]
-        (rgraph, dump) = parse_vmd_graph(selection)
-        (whole, dump) = parse_vmd_graph(whole_sel)
- 
+        (rgraph, dump) = self.parse_vmd_graph(selection)
+        (whole, dump) = self.parse_vmd_graph(whole_sel)
+
         # Check for the 3 join atoms corresponding to the disulfide bonds
         externs = [n for n in whole.nodes() \
                    if whole.node[n]["residue"] != "self"]
-        if len(externs) != 3: return (None, None, None)
- 
+        if len(externs) != 3:
+            return (None, None, None)
+
         # Check that it is a cysteine in some way shape or form
         # ie that it this residue is a subgraph of a cysteine
         truncated = nx.Graph(rgraph)
         truncated.remove_nodes_from([n for n in rgraph.nodes() if \
                                      rgraph.node[n]["residue"] != "self"])
         matches = {}
-        for matchname in _acids:
+        for matchname in self._acids:
             graph = self.known_res.get(matchname)
-            if not graph: continue
+            if not graph:
+                continue
 
-            matcher = isomorphism.GraphMatcher(graph, truncated, node_match=_check_atom_match)
+            matcher = isomorphism.GraphMatcher(graph, truncated, \
+                        node_match=super(CharmmMatcher, self)._check_atom_match)
             if matcher.subgraph_is_isomorphic():
                 matches[matchname] = matcher.match()
 
-        if not matches: return (None, None, None)
+        if not matches:
+            return (None, None, None)
         matchname = max(matches.keys(), key=(lambda x: len(self.known_res[x])))
-        if matchname != "CYS": return (None, None, None)
- 
-        # Now we know it's a cysteine in a disulfide bond 
+        if matchname != "CYS":
+            return (None, None, None)
+
+        # Now we know it's a cysteine in a disulfide bond
         # Identify which resid and fragment corresponds to the other cysteine
         partners = [n for n in externs if \
                     atomsel("index %d" % n,
@@ -255,12 +177,12 @@ class MoleculeGraph(object):
                              % selection.get('resid')[0])
         osel = atomsel("index %d" % partners[0], molid=molid)
 
-        f1 = osel.get("fragment")[0]
+        fr1 = osel.get("fragment")[0]
 
-        if f1 < fragment:
+        if fr1 < fragment:
             first = osel
-            second = whole_sel 
-        elif f1 > fragment:
+            second = whole_sel
+        elif fr1 > fragment:
             first = whole_sel
             second = osel
         else:
@@ -275,19 +197,20 @@ class MoleculeGraph(object):
                                                     first.get("resid")[0],
                                                     second.get("fragment")[0],
                                                     second.get("resid")[0])
- 
+
         return (matchname, patchline, matches[matchname])
- 
+
     #=========================================================================
     #                           Private methods                              #
     #=========================================================================
 
-    def _parse_rtf(self, filename):
+    def _parse_topology(self, filename): #pylint: disable=too-many-branches
         """
-        Parses an rtf file and pulls out the defined residues into
+        Parses a topology file and pulls out the defined residues into
         graph representation.
         First pulls out atom types that are defined and updates nodenames,
-        then pulls out defined residues and upduates known_res
+        then pulls out defined residues and updates known_res.
+        Also pulls out known patches as it goes
 
         Args:
             filename (str): The file to parse
@@ -296,7 +219,7 @@ class MoleculeGraph(object):
             True if successful
 
         Raises:
-            ValueError if rtf file is malformed in various ways
+            ValueError if topology file is malformed in various ways
         """
         resname = ""
         data = ""
@@ -309,7 +232,7 @@ class MoleculeGraph(object):
             # connection to be properly registered since chamber fails
             # if a connection is listed twice
             if "!GraphMatcher:" in line:
-                line = line.replace("!GraphMatcher:","")
+                line = line.replace("!GraphMatcher:", "")
             if "!" in line:
                 line = line[:line.index("!")]
             if not len(line):
@@ -346,7 +269,8 @@ class MoleculeGraph(object):
                 if self.nodenames.get(tokens[2]):
                     logger.info("Skipping duplicate type %s", tokens[2])
                 else:
-                    self.nodenames[tokens[2]] = get_element(float(tokens[3]))
+                    self.nodenames[tokens[2]] = \
+                            MoleculeMatcher.get_element(float(tokens[3]))
             elif resname and resname != "_skip":
                 data += ' '.join(tokens) + '\n'
 
@@ -361,7 +285,7 @@ class MoleculeGraph(object):
 
     #=========================================================================
 
-    def _rtf_to_graph(self, data, patch=None):
+    def _rtf_to_graph(self, data, patch=None): #pylint: disable=too-many-branches
         """
         Parses rtf text to a graph representation. If a graph to patch
         is provided, then patches that graph with this rtf data
@@ -381,7 +305,7 @@ class MoleculeGraph(object):
 
         graph = nx.Graph(data=patch)
         firstcmap = True
-      
+
         for line in data.splitlines():
             tokens = [i.strip() for i in line.split()]
 
@@ -410,7 +334,7 @@ class MoleculeGraph(object):
             elif tokens[0] == "CMAP":
                 if firstcmap:
                     # Remove all +- join nodes on patching
-                    joins = [ n for n in graph.nodes() if graph.node[n]["residue"] != "self" ]
+                    joins = [n for n in graph.nodes() if graph.node[n]["residue"] != "self"]
                     graph.remove_nodes_from(joins)
                     firstcmap = False
 
@@ -418,9 +342,9 @@ class MoleculeGraph(object):
                     raise ValueError("Incorrect CMAP line\n"
                                      "Line was:\n%s" % line)
                 tokens = tokens[1:]
-                nodes = [(tokens[3*j+i],tokens[3*j+i+1]) \
+                nodes = [(tokens[3*j+i], tokens[3*j+i+1]) \
                          for j in range(len(tokens)/4) \
-                         for i in range (j,j+3)]  # oo i love one liners
+                         for i in range(j, j+3)]  # oo i love one liners
                 for (node1, node2) in nodes:
                     if not self._define_bond(graph, node1, node2):
                         return None
@@ -430,7 +354,8 @@ class MoleculeGraph(object):
                 if self.nodenames.get(tokens[2]):
                     logger.info("Skipping duplicate type %s", tokens[2])
                 else:
-                    self.nodenames[tokens[2]] = get_element(float(tokens[3]))
+                    self.nodenames[tokens[2]] = \
+                            MoleculeMatcher.get_element(float(tokens[3]))
 
             # Patches can delete atoms
             elif tokens[0] == "DELETE" or tokens[0] == "DELE":
@@ -441,11 +366,14 @@ class MoleculeGraph(object):
                 # Sometimes delete has a number in front of the atom name
                 try:
                     if tokens[1] == "ATOM":
-                        if tokens[2][0].isdigit(): tokens[2] = tokens[2][1:]
+                        if tokens[2][0].isdigit():
+                            tokens[2] = tokens[2][1:]
                         graph.remove_node(tokens[2])
                     elif tokens[1] == "BOND":
-                        if tokens[2][0].isdigit(): tokens[2] = tokens[2][1:]
-                        if tokens[3][0].isdigit(): tokens[3] = tokens[3][1:]
+                        if tokens[2][0].isdigit():
+                            tokens[2] = tokens[2][1:]
+                        if tokens[3][0].isdigit():
+                            tokens[3] = tokens[3][1:]
 
                         graph.remove_edge(tokens[2], tokens[3])
 
@@ -496,32 +424,6 @@ class MoleculeGraph(object):
 
     #=========================================================================
 
-    def _assign_elements(self, graph):
-        """
-        Assigns elements to parsed in residues. Called after all
-        rtf, str, and prm files are read in. Element "_join" is assigned
-        to atoms from other residues (+- atoms), since these are only
-        defined by name.
-
-        Args:
-            graph (networkx graph): The graph to assign elements to
-
-        Raises:
-            ValueError if an atom type can't be assigned an element
-        """
-        # Now that all atom and mass lines are read, get the element for each atom
-        for node, data in graph.nodes(data=True):
-            if data.get('residue') != "self":
-                data['element'] = "_join"
-            else:
-                element = self.nodenames.get(data.get('type'))
-                if not element:
-                    raise ValueError("Unknown atom type %s, name %s"
-                                     % (data.get('type'), node))
-                data['element'] = element
-
-    #=========================================================================
-
     def _apply_patch(self, matchname, patch):
         """
         Applies a patch to a graph, returning a modified graph
@@ -536,111 +438,10 @@ class MoleculeGraph(object):
         """
         patched = self._rtf_to_graph(self.patches.get(patch),
                                      patch=self.known_res[matchname])
-        if not patched: return None
+        if not patched:
+            return None
         self._assign_elements(patched)
         return patched
 
-#++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
-#                            PUBLIC FUNCTIONS                             #
-#++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+    #=========================================================================
 
-def get_element(mass):
-    """
-    Returns the element corresponding to a given mass. Masses are rounded
-    up to get atomic number to control for varying numbers of decimal
-    places. If the mass isn't in the table (it's not complete), returns
-    "Other" which should be sufficient for our matching purposes.
-
-    Args:
-      mass (float): Mass to look up
-
-    Returns:
-      (str): Element corresponding to the mass, or "Other"
-    """
-
-    ele = MASS_LOOKUP.get(int(mass+0.5))
-    if not ele:
-        return "Other"
-    else:
-        return ele
-#=========================================================================
-
-def _check_atom_match(node1, node2):
-    """
-    Checks if two nodes match in our molecule graphs. Matching is defined
-    as being the same element and having the same residue membership
-    (self, +, or -)
-    """
-    if node1.get('element') == "Other":
-        return (node2.get('element') not in MASS_LOOKUP.values()) and \
-               (node1.get('residue') == node2.get('residue'))
-    elif node2.get('element') == "Other":
-        return (node1.get('element') not in MASS_LOOKUP.values()) and \
-               (node1.get('residue') == node2.get('residue'))
-    else:
-        return (node1.get('element') == node2.get('element')) and \
-               (node1.get('residue') == node2.get('residue'))
-
-#=========================================================================
-
-def parse_vmd_graph(selection):
-    """
-    Takes a VMD atom selection, translates it to a graph representation
-
-    Args:
-        selection (VMD atomsel): Atom selection to verify, modified.
-
-    Returns:
-        graph representing the molecule, with nodes named indices
-        bool representing if the selection is covalently bonded to
-          another residue
-
-    Raises:
-        ValueError if atom selection is more than one residue
-        LookupError if the residue couldn't be found in known templates
-    """
-
-    # Check selection is an entire resid by both definitions
-    # Ignore VMD's residue definition since it messes up
-    # capping groups
-    resid = set(selection.get('resid'))
-    if len(resid) > 1:
-        print(resid)
-        raise ValueError("Selection %s is more than one resid!" % selection)
-    resid = resid.pop()
-
-    # Name nodes by atom index so duplicate names aren't a problem
-    rgraph = nx.Graph()
-    rgraph.add_nodes_from(selection.get('index'))
-
-    # Edges. This adds each bond twice but it's no big deal
-    for i in range(len(selection)):
-        gen = product([selection.get('index')[i]], selection.bonds[i])
-        rgraph.add_edges_from([bnd for bnd in gen])
-
-    # Dictionary translating index to element, set as known attribute
-    rdict = {selection.get('index')[i]: selection.get('element')[i] \
-            for i in range(len(selection))}
-
-    # Set all atoms to belong to this residue by default
-
-    # Loop through all nodes for indices that are not in this selection.
-    # They were added to the graph from edges that go to other residues,
-    # such as amino acid +N or -CA bonds. Mark these as special elements.
-    edict = {selection.get('index')[i]: "self" \
-             for i in range(len(selection))}
-    others = set(rgraph.nodes()) - set(selection.get('index'))
-    is_covalent = bool(len(others))
-    for oth in others:
-        rdict[oth] = "_join"
-        resido = atomsel('index %d' % oth, molid=selection.molid).get('resid')[0]
-        if resido > resid:
-            edict[oth] = "+"
-        else:
-            edict[oth] = "-"
-
-    # Set node attributes
-    nx.set_node_attributes(rgraph, 'element', rdict)
-    nx.set_node_attributes(rgraph, 'residue', edict)
-
-    return (rgraph, is_covalent)
