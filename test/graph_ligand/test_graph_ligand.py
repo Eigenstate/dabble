@@ -1,4 +1,4 @@
-# Tests the MoleculeGraph functionality by readin in the 
+# Tests the MoleculeMatcher functionality by readin in the 
 # mae and str file, and matching up atoms
 
 import pytest
@@ -14,10 +14,10 @@ def test_read_str(capfd, tmpdir):
     """
     Tests if a str file can be properly read in
     """
-    from DabbleParam import MoleculeGraph
+    from DabbleParam import CharmmMatcher
     import networkx as nx
 
-    g = MoleculeGraph([dir+"lsd_prot_trunc.str", dir+"masses.rtf"])
+    g = CharmmMatcher([dir+"lsd_prot_trunc.str", dir+"masses.rtf"])
     nx.write_dot(g.known_res["LSD"], str(tmpdir)+"/test.dot")
     subprocess.check_call(["diff", "-q", dir+"correct_str.dot", str(tmpdir)+"/test.dot"])
 
@@ -25,22 +25,22 @@ def test_read_mol(capfd, tmpdir):
     import vmd, molecule
     import networkx as nx
     from atomsel import atomsel
-    from DabbleParam import parse_vmd_graph
+    from DabbleParam import MoleculeMatcher
 
     molid = molecule.load("mae", dir+"lsd_prot.mae")
-    rgraph, dump = parse_vmd_graph(atomsel())
+    rgraph, dump = MoleculeMatcher.parse_vmd_graph(atomsel())
     nx.write_dot(rgraph, str(tmpdir)+"/test2.dot")
     subprocess.check_call(["diff", "-q", dir+"correct_mae.dot", str(tmpdir)+"/test2.dot"])
 
 def test_compare_mol():
     import vmd, molecule
     from atomsel import atomsel
-    from DabbleParam import MoleculeGraph
+    from DabbleParam import CharmmMatcher
 
     molid = molecule.load("mae", dir+"lsd_prot.mae")
-    g = MoleculeGraph([dir+"lsd_prot_trunc.str", dir+"masses.rtf"])
+    g = CharmmMatcher([dir+"lsd_prot_trunc.str", dir+"masses.rtf"])
     (name, mdict) = g.get_names(atomsel())
-    correctnames = {0: 'C13', 1: 'N20', 2: 'C12', 3: 'C11', 4: 'C15', 5: 'C7', 6: 'C3', 7: 'C8', 8: 'N1', 9: 'C1', 10: 'C4', 11: 'C5', 12: 'C2', 13: 'C6', 14: 'C9', 15: 'C10', 16: 'C14', 17: 'C16', 18: 'O1', 19: 'N3', 20: 'C17', 21: 'C18', 22: 'C19', 23: 'C20', 24: 'H131', 25: 'H132', 26: 'H121', 27: 'H122', 28: 'H123', 29: 'H11', 30: 'H151', 31: 'H8', 32: 'H4', 33: 'H5', 34: 'H2', 35: 'H10', 36: 'H14', 37: 'H171', 38: 'H172', 39: 'H181', 40: 'H182', 41: 'H183', 42: 'H191', 43: 'H192', 44: 'H201', 45: 'H202', 46: 'H203', 47: 'H152', 48: 'HN1', 49: 'HN2'}
+    correctnames = {'C19': 20, 'C18': 23, 'H132': 24, 'C13': 0, 'C12': 2, 'C11': 3, 'C10': 15, 'C17': 22, 'C16': 17, 'O1': 18, 'C14': 16, 'H192': 37, 'H202': 39, 'H123': 26, 'H122': 27, 'H121': 28, 'H203': 40, 'C9': 14, 'C8': 7, 'C15': 4, 'H191': 38, 'C3': 6, 'C2': 12, 'C1': 9, 'N20': 1, 'C7': 5, 'C6': 13, 'C5': 11, 'C4': 10, 'C20': 21, 'H10': 35, 'H11': 29, 'H14': 36, 'H171': 42, 'H172': 43, 'N1': 8, 'N3': 19, 'H152': 30, 'H151': 47, 'H8': 31, 'H2': 34, 'H181': 44, 'H201': 41, 'H131': 25, 'H4': 32, 'H5': 33, 'HN1': 48, 'HN2': 49, 'H183': 45, 'H182': 46}
     names = mdict.next()
     assert(name == "LSD")
     assert(names == correctnames)
@@ -48,13 +48,13 @@ def test_compare_mol():
 def test_patches():
     import vmd, molecule
     from atomsel import atomsel
-    from DabbleParam import MoleculeGraph
+    from DabbleParam import CharmmMatcher 
     from pkg_resources import resource_filename
 
     molid = molecule.load("mae", dir+"phosphoserine.mae")
-    g = MoleculeGraph([dir+"phosphoserine.str"])
+    g = CharmmMatcher([dir+"phosphoserine.str"])
     (name, patch, mdict) = g.get_patches(atomsel("resname SEP"))
-    correctnames = {5: '-C', 16: 'N', 17: 'CA', 18: 'CB', 19: 'OG', 20: 'C', 21: 'O', 22: 'P', 23: 'O1P', 24: 'O2P', 25: 'OT', 26: 'HN', 27: 'HA', 28: 'HB1', 29: 'HB2', 30: '+N'}
+    correctnames = {'C': 20, '-C': 5, 'O1P': 24, 'CB': 18, 'CA': 17, '+N': 30, 'O': 21, 'N': 16, 'P': 22, 'HN': 26, 'O2P': 25, 'HA': 27, 'OG': 19, 'OT': 23, 'HB1': 28, 'HB2': 29}
     assert(name == "SER")
     assert(patch == "PSEP")
     assert(mdict.next() == correctnames)
@@ -62,10 +62,10 @@ def test_patches():
 def test_protein(tmpdir):
     import vmd, molecule
     import networkx as nx
-    from DabbleParam import MoleculeGraph
+    from DabbleParam import CharmmMatcher 
     from pkg_resources import resource_filename
 
-    g = MoleculeGraph([resource_filename("DabbleParam", "charmm_parameters/top_all36_prot.rtf")])
+    g = CharmmMatcher([resource_filename("DabbleParam", "charmm_parameters/top_all36_prot.rtf")])
     nx.write_dot(g.known_res["TYR"], str(tmpdir)+"/tyr.dot")
     subprocess.check_call(["diff", "-q", dir+"correct_tyr.dot", str(tmpdir)+"/tyr.dot"])
     
