@@ -16,7 +16,8 @@ class PyTest(Command):
         raise SystemExit(errno)
 
 packages = ['Dabble', 'DabbleParam']
-scripts = ['dabble.py', 'get_restraint_mask.py', 'convert_step5_to_dabble.py']
+scripts = ['dabble.py', 'get_restraint_mask.py', 'convert_step5_to_dabble.py',
+           'amber_rst2cms_v_noparams.py']
 package_data = {
         'Dabble' : ['lipid_membranes/*.mae'],
         'DabbleParam' : ['charmm_parameters/*'],
