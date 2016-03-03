@@ -27,7 +27,7 @@ def test_hmr_param(tmpdir):
     Tests phosphorylations on Ser, Thr
     Also checks HMR
     """
-    from DabbleParam import AmberWriter 
+    from Dabble.param import AmberWriter 
     import vmd, molecule
 
     p = str(tmpdir.mkdir("hmr_param"))

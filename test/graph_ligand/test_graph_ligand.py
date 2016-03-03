@@ -14,7 +14,7 @@ def test_read_str(capfd, tmpdir):
     """
     Tests if a str file can be properly read in
     """
-    from DabbleParam import CharmmMatcher
+    from Dabble.param import CharmmMatcher
     import networkx as nx
 
     g = CharmmMatcher([dir+"lsd_prot_trunc.str", dir+"masses.rtf"])
@@ -25,7 +25,7 @@ def test_read_mol(capfd, tmpdir):
     import vmd, molecule
     import networkx as nx
     from atomsel import atomsel
-    from DabbleParam import MoleculeMatcher
+    from Dabble.param import MoleculeMatcher
 
     molid = molecule.load("mae", dir+"lsd_prot.mae")
     rgraph, dump = MoleculeMatcher.parse_vmd_graph(atomsel())
@@ -35,7 +35,7 @@ def test_read_mol(capfd, tmpdir):
 def test_compare_mol():
     import vmd, molecule
     from atomsel import atomsel
-    from DabbleParam import CharmmMatcher
+    from Dabble.param import CharmmMatcher
 
     molid = molecule.load("mae", dir+"lsd_prot.mae")
     g = CharmmMatcher([dir+"lsd_prot_trunc.str", dir+"masses.rtf"])
@@ -46,7 +46,7 @@ def test_compare_mol():
 def test_patches():
     import vmd, molecule
     from atomsel import atomsel
-    from DabbleParam import CharmmMatcher 
+    from Dabble.param import CharmmMatcher 
     from pkg_resources import resource_filename
 
     molid = molecule.load("mae", dir+"phosphoserine.mae")
@@ -59,10 +59,10 @@ def test_patches():
 def test_protein(tmpdir):
     import vmd, molecule
     import networkx as nx
-    from DabbleParam import CharmmMatcher 
+    from Dabble.param import CharmmMatcher 
     from pkg_resources import resource_filename
 
-    g = CharmmMatcher([resource_filename("DabbleParam", "charmm_parameters/top_all36_prot.rtf")])
+    g = CharmmMatcher([resource_filename("Dabble.param", "charmm_parameters/top_all36_prot.rtf")])
     nx.write_dot(g.known_res["TYR"], str(tmpdir)+"/tyr.dot")
     subprocess.check_call(["diff", "-q", dir+"correct_tyr.dot", str(tmpdir)+"/tyr.dot"])
     

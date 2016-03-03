@@ -26,7 +26,7 @@ def test_multiligand_renaming(tmpdir):
     hydrogen atom should be renamed in the palmitoylcysteine.
     Also tests for detection of phosphorylations on amino acids.
     """
-    from DabbleParam import CharmmWriter
+    from Dabble.param import CharmmWriter
     import vmd, molecule
 
     p = str(tmpdir.mkdir("multiligand_rename"))

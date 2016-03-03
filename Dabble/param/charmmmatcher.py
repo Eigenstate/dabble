@@ -32,7 +32,7 @@ import vmd
 from atomsel import atomsel
 # pylint: enable=import-error, unused-import
 
-from DabbleParam import MoleculeMatcher
+from . import MoleculeMatcher
 logger = logging.getLogger(__name__) # pylint: disable=invalid-name
 
 #++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++

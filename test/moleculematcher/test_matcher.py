@@ -26,7 +26,7 @@ def test_atom_naming(tmpdir):
     """
     Tests if atom names are read in correctly from a leaprc file
     """
-    from DabbleParam import AmberMatcher
+    from Dabble.param import AmberMatcher
 
     # Generate a leaprc file with correct paths
     a = AmberMatcher([create_leaprc(str(tmpdir), "ala.lib")])
@@ -41,7 +41,7 @@ def test_residue_parsing(tmpdir):
     Checks that a residue is assigned the correct names when read
     from an off file
     """
-    from DabbleParam import AmberMatcher
+    from Dabble.param import AmberMatcher
     tmpdir = str(tmpdir)
 
     a = AmberMatcher([create_leaprc(tmpdir, "ala.lib")])
@@ -67,7 +67,7 @@ def test_residue_renaming(tmpdir):
     """
     import vmd, molecule
     from atomsel import atomsel
-    from DabbleParam import AmberMatcher, MoleculeMatcher
+    from Dabble.param import AmberMatcher, MoleculeMatcher
 
     # Generate a leaprc file with correct paths
     tmpdir = str(tmpdir)

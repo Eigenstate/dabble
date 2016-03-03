@@ -29,7 +29,7 @@ import os
 import tempfile
 from pkg_resources import resource_filename
 
-from DabbleParam import CharmmMatcher
+from Dabble.param import CharmmMatcher
 
 # pylint: disable=import-error, unused-import
 import vmd

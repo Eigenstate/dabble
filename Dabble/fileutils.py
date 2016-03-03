@@ -31,7 +31,7 @@ import molecule
 from atomsel import atomsel
 # pylint: enable=import-error, unused-import
 
-from DabbleParam import AmberWriter, CharmmWriter
+from Dabble.param import AmberWriter, CharmmWriter
 
 #++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
 

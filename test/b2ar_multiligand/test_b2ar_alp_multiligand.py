@@ -21,7 +21,7 @@ def test_multiligand_building(tmpdir):
 #==============================================================================
 
 def test_multiligand_parameterizing(tmpdir):
-    from DabbleParam import CharmmWriter
+    from Dabble.param import CharmmWriter
     import vmd, molecule
 
     p = str(tmpdir.mkdir("multiligand_parameterize"))
@@ -36,7 +36,7 @@ def test_multiligand_parameterizing(tmpdir):
 #==============================================================================
 # Commented out because really slow and chamber has its own tests
 #def test_multiligand_chamber(tmpdir):
-#    from DabbleParam import AmberWriter
+#    from Dabble.param import AmberWriter
 #    import vmd, molecule
 #
 #    p = str(tmpdir.mkdir("multiligand_chamber"))
@@ -52,7 +52,7 @@ def test_multiligand_parameterizing(tmpdir):
 #==============================================================================
 
 def test_multiligand_renaming(tmpdir):
-    from DabbleParam import CharmmWriter
+    from Dabble.param import CharmmWriter
     import vmd, molecule
 
     p = str(tmpdir.mkdir("multiligand_rename"))

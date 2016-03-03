@@ -5,5 +5,5 @@ include molecule_to_psf.py
 recursive-include Dabble *.py
 recursive-include Dabble/lipid_membranes *.mae
 
-recursive-include DabbleParam *.py
-recursive-include DabbleParam/charmm_parameters *_all36_*
+recursive-include Dabble/param *.py
+recursive-include Dabble/param/charmm_parameters *_all36_*

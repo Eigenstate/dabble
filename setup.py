@@ -15,11 +15,11 @@ class PyTest(Command):
         errno = subprocess.call([sys.executable, os.path.abspath('test/runtests.py')])
         raise SystemExit(errno)
 
-packages = ['Dabble', 'DabbleParam']
+packages = ['Dabble', 'Dabble.param']
 scripts = ['dabble.py', 'get_restraint_mask.py', 'convert_step5_to_dabble.py']
 package_data = {
         'Dabble' : ['lipid_membranes/*.mae'],
-        'DabbleParam' : ['charmm_parameters/*'],
+        'Dabble.param' : ['charmm_parameters/*'],
         }
 
 setup(name='dabble',

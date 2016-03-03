@@ -31,7 +31,7 @@ import vmd
 import molecule
 from atomsel import atomsel
 
-from DabbleParam import CharmmWriter
+from Dabble.param import CharmmWriter
 from parmed.tools import chamber, parmout, HMassRepartition
 from parmed.amber import AmberParm
 
