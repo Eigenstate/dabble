@@ -15,15 +15,17 @@ class PyTest(Command):
         errno = subprocess.call([sys.executable, os.path.abspath('test/runtests.py')])
         raise SystemExit(errno)
 
+<<<<<<< HEAD
 packages = ['Dabble', 'Dabble.param']
-scripts = ['dabble.py', 'get_restraint_mask.py', 'convert_step5_to_dabble.py']
+scripts = ['dabble.py', 'get_restraint_mask.py', 'convert_step5_to_dabble.py',
+           'amber_rst2cms_v_noparams.py']
 package_data = {
         'Dabble' : ['lipid_membranes/*.mae'],
         'Dabble.param' : ['charmm_parameters/*'],
         }
 
 setup(name='dabble',
-      version='1.2.6',
+      version='1.3.0',
       description='Membrane protein system builder',
       author='Robin Betz',
       author_email='robin@robinbetz.com',
