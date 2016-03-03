@@ -455,28 +455,27 @@ class CharmmWriter(object):
 
         for residue in residues:
             sel = atomsel('residue %s and resname %s and user 1.0' % (residue, resname))
-            (name, mdict) = self.matcher.get_names(sel, print_warning=True)
-            if not name:
-                (name, patch, mdict) = self.matcher.get_patches(sel)
-                if not name:
+            (newname, atomnames) = self.matcher.get_names(sel, print_warning=True)
+            if not newname:
+                (resname, patch, atomnames) = self.matcher.get_patches(sel)
+                if not newname:
                     print("ERROR: Could not find a residue definition for %s:%s"
                           % (resname, residue))
-                    raise NotImplementedError("No residue definition for %s:%s" % (resname, residue))
+                    raise NotImplementedError("No residue definition for %s:%s"
+                                              % (resname, residue))
                 print("Applying patch %s to ligand %s" % (patch, name))
 
-            # Set the resname correctly
-            sel.set('resname', name)
-
-            # Do the eenaming
-            newnames = mdict.next()
-            for name, idx in newnames.iteritems():
+            # Do the renaming
+            for idx, name in atomnames.iteritems():
                 atom = atomsel('index %s' % idx)
-                if atom.get('name')[0] != name and "+" not in name  and \
+                if atom.get('name')[0] != name and "+" not in name and \
                    "-" not in name:
                     print("Renaming %s:%s: %s -> %s" % (resname, residue,
                                                         atom.get('name')[0],
                                                         name))
-                    atom.set('name', [name])
+                    atom.set('name', name)
+            sel.set('resname', newname)
+
         #logger.info("Renamed %d atoms for all resname %s->%s" % (num_renamed, resname, name))
         molecule.set_top(old_top)
 
@@ -550,45 +549,44 @@ class CharmmWriter(object):
         residues = list(set(atomsel('all').get('residue')))
         resids = list(set(atomsel('all').get('resid')))
 
-        for resid in resids:
-            sel = atomsel('resid %s' % resid)
+        for residue in residues:
+            sel = atomsel('residue %s' % residue)
             resid = sel.get('resid')[0]
-            (resname, mdict) = self.matcher.get_names(sel, print_warning=False)
+            (newname, atomnames) = self.matcher.get_names(sel,
+                                                           print_warning=False)
 
             # Couldn't find a match. See if it's a disulfide bond participant
-            if not resname:
-                (resname, patchline, mdict) = \
+            # Need to do this selection by resid, not residue since it is
+            # done in whole molecule and protein fragment, across which
+            # residue number is not preserved
+            if not newname:
+                (newname, patchline, atomnames) = \
                         self.matcher.get_disulfide("resid %s" % resid, frag,
                                                    self.molid, prot_molid)
-                if resname:
+                if newname:
                     print("INFO: Applying disulfide patch: %s" % patchline)
                     patches.add(patchline)
 
             # Couldn't find a match. See if it's a patched residue
-            if not resname:
-                (resname, patch, mdict) = self.matcher.get_patches(sel)
-                if resname:
-                    print("INFO: Applying patch %s to %s%d" % (patch, resname, resid))
+            if not newname:
+                (newname, patch, atomnames) = self.matcher.get_patches(sel)
+                if newname:
+                    print("INFO: Applying patch %s to %s%d"
+                          % (patch, newname, resid))
                     patches.add("patch %s %s:%d\n" % (patch, seg, resid))
 
             # Fall through to error condition
-            if not resname:
+            if not newname:
                 raise ValueError("Couldn't find a patch for %s:%s"
                                  % (sel.get('resname')[0], resid))
 
-            # Set the resname correctly
-            sel.set('resname', resname)
-
             # Do the renaming
-            for name, idx in mdict.next().iteritems():
+            for idx, name in atomnames.iteritems():
                 atom = atomsel('index %s' % idx)
                 if atom.get('name')[0] != name and "+" not in name and \
                    "-" not in name:
-                    #print("Renaming %s:%s: %s -> %s" % (atom.get('resname')[0],
-                    #                                    resid,
-                    #                                    atom.get('name')[0],
-                    #                                    newnames[idx]))
-                    atom.set('name', [name])
+                    atom.set('name', name)
+            sel.set('resname', newname)
 
         # Save protein chain in the correct order
         filename = self.tmp_dir + '/psf_protein_%s.pdb' % seg 

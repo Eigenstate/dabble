@@ -35,7 +35,10 @@ def test_hmr_param(tmpdir):
     w = AmberWriter(tmp_dir=p, molid=molid, hmr=True,
                     extra_topos=[], extra_params=[])
     w.write(p+"/test")
-    subprocess.check_call(["diff", "-q", "--ignore-matching-lines=VERSION",
+    subprocess.check_call(["diff", "-q",
+                           "--ignore-matching-lines=VERSION",
+                           "--ignore-matching-lines=REMARKS",
+                           "--ignore-matching-lines=NTITLE",
                            dir + "test_rho_correct.psf",
                            p+"/test.psf"])
 

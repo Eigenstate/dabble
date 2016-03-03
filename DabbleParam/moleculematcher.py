@@ -1,5 +1,5 @@
 """
-This module contains the MoleculeGraph class. It is used to apply
+This module contains the MoleculeMatcher class. It is used to apply
 atom names from known topologies to the molecule by using a graph-based
 representation of each molecule.
 
@@ -71,7 +71,7 @@ class MoleculeMatcher(object): # pylint: disable=too-few-public-methods
                   23: "Na",  7: "Li", 24: "Mg",
                  137: "Ba", 40: "Ca", 85: "Rb",
                  133: "Ce", 39: "K",  65: "Zn",
-                 112: "Cd" }
+                 112: "Cd",132: "Cs" }
     # pylint: enable=bad-whitespace,bad-continuation
 
     # For checking which residues can have patchs
@@ -82,22 +82,33 @@ class MoleculeMatcher(object): # pylint: disable=too-few-public-methods
 
     #==========================================================================
 
-    def __init__(self, topologies):
+    def __init__(self, **kwargs):
         """
-        Initializes a graph parser with the given topology files
-        as known molecules
+        Initializes a graph parser.
+
+        Args:
+            topologies (list of str): Topologies to initialize
+            matcher (MoleculeMatcher): 
+                Copy constructor that can be used to convert between classes.
+                For example, can create an AmberMatcher using the known_res and
+                nodenames from CharmmMatcher, then write amber off files with it
+
         """
-        self.topologies = topologies
-        self.nodenames = {}
-        self.known_res = {}
+        if kwargs.get("topologies"):
+            self.topologies = kwargs.get("topologies")
+            self.nodenames = {}
+            self.known_res = {}
 
-        # Parse input topology files
-        for filename in topologies:
-            self._parse_topology(filename)
+            # Parse input topology files
+            for filename in self.topologies:
+                self._parse_topology(filename)
 
-        # Assign elements
-        for res in self.known_res.keys():
-            self._assign_elements(self.known_res[res])
+        elif kwargs.get("matcher"):
+            assert(isinstance(matcher, MoleculeMatcher))
+            self.known_res = matcher.known_res
+            self.nodenames = matcher.nodenames
+        else:
+            raise ValueError("No valid constructor for %s" % kwargs)
 
     #=========================================================================
     #                            Public methods                              #
@@ -113,8 +124,8 @@ class MoleculeMatcher(object): # pylint: disable=too-few-public-methods
                 if matching fails. Set to false if you'll try patches later.
 
         Returns:
-            resname matched
-            translation dictionary
+            (dict int->str) Atom index to resname matched
+            (dict int->str) Atom index to atom name matched up
 
         Raises:
             KeyError: if no matching possible
@@ -124,20 +135,26 @@ class MoleculeMatcher(object): # pylint: disable=too-few-public-methods
 
         # First check against matching residue names
         if resname in self.known_res.keys():
-            matcher = isomorphism.GraphMatcher(self.known_res.get(resname), rgraph,
+            graph = self.known_res.get(resname)
+            matcher = isomorphism.GraphMatcher(rgraph, graph,
                                                node_match=self._check_atom_match)
             if matcher.is_isomorphic():
-                return (resname, matcher.match())
+                match = matcher.match().next()
+                resmatch = dict((i, graph.node[match[i]].get("resname")) \
+                                for i in match.keys())
+                return (resmatch, match)
 
         # If that didn't work, loop through all known residues
         for matchname in self.known_res.keys():
             graph = self.known_res[matchname]
-            matcher = isomorphism.GraphMatcher(graph, rgraph,
+            matcher = isomorphism.GraphMatcher(rgraph, graph,
                                                node_match=self._check_atom_match)
 
             if matcher.is_isomorphic():
-                logger.info("Renaming resname %s -> %s", resname, matchname)
-                return (str(matchname), matcher.match())
+                match = matcher.match().next()
+                resmatch = dict((i,graph.node[match[i]].get("resname")) \
+                                for i in match.keys())
+                return (resmatch, match)
 
         # Try to print out a helpful error message here if matching failed
         if print_warning:
@@ -180,31 +197,6 @@ class MoleculeMatcher(object): # pylint: disable=too-few-public-methods
         """
         pass
 
-    #=========================================================================
-
-    def _assign_elements(self, graph):
-        """
-        Assigns elements to parsed in residues. Called after all
-        topology files are read in. Element "_join" is assigned
-        to atoms from other residues (+- atoms), since these are only
-        defined by name.
-
-        Args:
-            graph (networkx graph): The graph to assign elements to
-
-        Raises:
-            ValueError if an atom type can't be assigned an element
-        """
-        # Now that all atom and mass lines are read, get the element for each atom
-        for node, data in graph.nodes(data=True):
-            if data.get('residue') != "self":
-                data['element'] = "_join"
-            else:
-                element = self.nodenames.get(data.get('type'))
-                if not element:
-                    raise ValueError("Unknown atom type %s, name %s"
-                                     % (data.get('type'), node))
-                data['element'] = element
 
     #++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
     #                            STATIC FUNCTIONS                             #
@@ -275,8 +267,9 @@ class MoleculeMatcher(object): # pylint: disable=too-few-public-methods
         # capping groups
         resid = set(selection.get('resid'))
         if len(resid) > 1:
-            print(resid)
             raise ValueError("Selection %s is more than one resid!" % selection)
+        if not len(resid):
+            raise ValueError("Empty selection %s to vmd graph!" % selection)
         resid = resid.pop()
 
         # Name nodes by atom index so duplicate names aren't a problem

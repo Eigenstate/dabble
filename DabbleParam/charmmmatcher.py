@@ -1,5 +1,5 @@
 """
-This module contains the MoleculeGraph class. It is used to apply
+This module contains the CharmmMatcher class. It is used to apply
 atom names from known topologies to the molecule by using a graph-based
 representation of each molecule.
 
@@ -66,9 +66,12 @@ class CharmmMatcher(MoleculeMatcher):
         self.patches = {}
         self.known_pres = {}
 
-        # Parent assigns and parses topologies, and assigns
-        # elements
-        super(CharmmMatcher, self).__init__(topologies)
+        # Parent assigns and parses topologies
+        super(CharmmMatcher, self).__init__(topologies=topologies)
+
+        # Assign elements
+        for res in self.known_res.keys():
+            self._assign_elements(self.known_res[res])
 
         # Create dictionary of patched amino acids that we know about
         for res in [s for s in self.known_res.keys() if s in self._acids]:
@@ -105,11 +108,11 @@ class CharmmMatcher(MoleculeMatcher):
         # Check this residue against all possible patches applied to the
         for names in self.known_pres.keys():
             graph = self.known_pres[names]
-            matcher = isomorphism.GraphMatcher(graph, rgraph, \
+            matcher = isomorphism.GraphMatcher(rgraph, graph, \
                         node_match=super(CharmmMatcher, self)._check_atom_match)
             if matcher.is_isomorphic():
                 logger.info("Detected patch %s", names[1])
-                return (names[0], names[1], matcher.match())
+                return (names[0], names[1], matcher.match().next())
 
         logger.error("Couldn't find a patch for resname %s. Dumping as 'rgraph.dot'", resname)
         nx.write_dot(rgraph, "rgraph.dot")
@@ -136,6 +139,7 @@ class CharmmMatcher(MoleculeMatcher):
         selection = atomsel(selstring, molid=frag_molid)
         whole_sel = atomsel("%s and fragment %s" % (selstring, fragment),
                             molid=molid)
+
         (rgraph, dump) = self.parse_vmd_graph(selection)
         (whole, dump) = self.parse_vmd_graph(whole_sel)
 
@@ -166,6 +170,10 @@ class CharmmMatcher(MoleculeMatcher):
         matchname = max(matches.keys(), key=(lambda x: len(self.known_res[x])))
         if matchname != "CYS":
             return (None, None, None)
+
+        # Invert mapping so it's idx->name. It's currently backwards
+        # because of the need to find a subgraph. 
+        atomnames = dict((v,k) for (k,v) in matches[matchname].next().iteritems())
 
         # Now we know it's a cysteine in a disulfide bond
         # Identify which resid and fragment corresponds to the other cysteine
@@ -198,7 +206,44 @@ class CharmmMatcher(MoleculeMatcher):
                                                     second.get("fragment")[0],
                                                     second.get("resid")[0])
 
-        return (matchname, patchline, matches[matchname])
+        return (matchname, patchline, atomnames)
+
+    #=========================================================================
+
+    def get_names(self, selection, print_warning=False):
+        """
+        Returns at atom name matching up dictionary.
+        Does the generic moleculematcher algorithm then checks that only
+        one resname matched since for CHARMM there is no concept
+        of a unit and only one named residue is defined per topology.
+
+        Args:
+            selection (VMD atomsel): Selection to rename
+            print_warning (bool): Debug output
+
+        Returns:
+            (str) resname matched
+            (dict int->str) translation dictionary from index to atom name
+
+        Raises:
+            ValueError if more than one residue name is matched
+        """
+        (resnames, atomnames) = super(CharmmMatcher,self).get_names(selection,
+                                                                    print_warning)
+        if not resnames:
+            return (None, None)
+
+        # Set the resname correctly after checking only one resname
+        # matched since this is charmm
+        resname = set(resnames.values())
+        if len(resname) > 1:
+            raise ValueError("More than one residue name was returned as "
+                             "belonging to a single residue in CHARMM matching."
+                             " Not sure how this happened; something is really "
+                             "really wrong. Residue was: %s:%d" %
+                             (sel.get("resname")[0], sel.get("resid")[0]))
+
+        return (resname.pop(), atomnames)
 
     #=========================================================================
     #                           Private methods                              #
@@ -225,73 +270,75 @@ class CharmmMatcher(MoleculeMatcher):
         data = ""
         patch = False
 
-        for line in open(filename, 'r'):
-            # Remove comments except "special" graphmatcher directives
-            # This directive is only really used to parse the bond on NMA
-            # that attaches to the previous residue, in order for its extra
-            # connection to be properly registered since chamber fails
-            # if a connection is listed twice
-            if "!GraphMatcher:" in line:
-                line = line.replace("!GraphMatcher:", "")
-            if "!" in line:
-                line = line[:line.index("!")]
-            if not len(line):
-                continue
-            tokens = [i.strip() for i in line.split()]
-            if not len(tokens):
-                continue
+        with open(filename, 'r') as fh:
+            for line in fh:
+                # Remove comments except "special" graphmatcher directives
+                # This directive is only really used to parse the bond on NMA
+                # that attaches to the previous residue, in order for its extra
+                # connection to be properly registered since chamber fails
+                # if a connection is listed twice
+                if "!GraphMatcher:" in line:
+                    line = line.replace("!GraphMatcher:", "")
+                if "!" in line:
+                    line = line[:line.index("!")]
+                if not len(line):
+                    continue
+                tokens = [i.strip() for i in line.split()]
+                if not len(tokens):
+                    continue
 
-            # Handle previous data
-            if data and (tokens[0] == "RESI" or tokens[0] == "PRES"):
-                if patch:
-                    self.patches[resname] = data
-                else:
-                    self.known_res[resname] = self._rtf_to_graph(data)
-                data = ""
+                # Handle previous data
+                if data and (tokens[0] == "RESI" or tokens[0] == "PRES"):
+                    if patch:
+                        self.patches[resname] = data
+                    else:
+                        self.known_res[resname] = self._rtf_to_graph(data, resname)
+                    data = ""
 
-            # Handle new residue definition
-            if tokens[0] == "RESI":
-                resname = tokens[1]
-                patch = False
-                if self.known_res.get(resname):
-                    logging.info("Skipping duplicate residue %s", resname)
-                    # TODO define as a different residue name???
-                    # Currently reads in first file's definition, ignores others
-                    resname = "_skip"
-            # PRES is a patch
-            elif tokens[0] == "PRES":
-                resname = tokens[1] # prefix with _ so we can tell it's a patch
-                patch = True
-                if self.patches.get(resname):
-                    logging.warning("Skipping duplicate patch %s", resname[1:])
-            # Check for atom definitions
-            elif tokens[0] == "MASS":
-                if self.nodenames.get(tokens[2]):
-                    logger.info("Skipping duplicate type %s", tokens[2])
-                else:
-                    self.nodenames[tokens[2]] = \
-                            MoleculeMatcher.get_element(float(tokens[3]))
-            elif resname and resname != "_skip":
-                data += ' '.join(tokens) + '\n'
+                # Handle new residue definition
+                if tokens[0] == "RESI":
+                    resname = tokens[1]
+                    patch = False
+                    if self.known_res.get(resname):
+                        logging.info("Skipping duplicate residue %s", resname)
+                        # TODO define as a different residue name???
+                        # Currently reads in first file's definition, ignores others
+                        resname = "_skip"
+                # PRES is a patch
+                elif tokens[0] == "PRES":
+                    resname = tokens[1] # prefix with _ so we can tell it's a patch
+                    patch = True
+                    if self.patches.get(resname):
+                        logging.warning("Skipping duplicate patch %s", resname[1:])
+                # Check for atom definitions
+                elif tokens[0] == "MASS":
+                    if self.nodenames.get(tokens[2]):
+                        logger.info("Skipping duplicate type %s", tokens[2])
+                    else:
+                        self.nodenames[tokens[2]] = \
+                                MoleculeMatcher.get_element(float(tokens[3]))
+                elif resname and resname != "_skip":
+                    data += ' '.join(tokens) + '\n'
 
         # Write out final residue
         if data:
             if patch:
                 self.patches[resname] = data
             else:
-                self.known_res[resname] = self._rtf_to_graph(data)
+                self.known_res[resname] = self._rtf_to_graph(data, resname)
 
         return True
 
     #=========================================================================
 
-    def _rtf_to_graph(self, data, patch=None): #pylint: disable=too-many-branches
+    def _rtf_to_graph(self, data, resname, patch=None): #pylint: disable=too-many-branches
         """
         Parses rtf text to a graph representation. If a graph to patch
         is provided, then patches that graph with this rtf data
 
         Args:
             data (str): The rtf data for this residue or patch
+            resname (str): Residue name, from earlier parsing
             patch (networkx graph): The graph to apply patches to,
               or None if just parsing a residue. Will not be modified.
 
@@ -380,6 +427,10 @@ class CharmmMatcher(MoleculeMatcher):
                 except nx.NetworkXError: # Atom or bond did not exist, ie this patch is invalid
                     return None
 
+
+        # Assign resname to all atoms
+        nx.set_node_attributes(graph, "resname", resname)
+
         return graph
 
     #=========================================================================
@@ -437,11 +488,38 @@ class CharmmMatcher(MoleculeMatcher):
           if the patch did not apply correctly
         """
         patched = self._rtf_to_graph(self.patches.get(patch),
+                                     resname=matchname,
                                      patch=self.known_res[matchname])
         if not patched:
             return None
         self._assign_elements(patched)
         return patched
+
+    #=========================================================================
+
+    def _assign_elements(self, graph):
+        """
+        Assigns elements to parsed in residues. Called after all
+        topology files are read in. Element "_join" is assigned
+        to atoms from other residues (+- atoms), since these are only
+        defined by name.
+
+        Args:
+            graph (networkx graph): The graph to assign elements to
+
+        Raises:
+            ValueError if an atom type can't be assigned an element
+        """
+        # Now that all atom and mass lines are read, get the element for each atom
+        for node, data in graph.nodes(data=True):
+            if data.get('residue') != "self":
+                data['element'] = "_join"
+            else:
+                element = self.nodenames.get(data.get('type'))
+                if not element:
+                    raise ValueError("Unknown atom type %s, name %s"
+                                     % (data.get('type'), node))
+                data['element'] = element
 
     #=========================================================================
 
