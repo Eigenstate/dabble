@@ -85,7 +85,7 @@ class DabbleBuilder(object):
         if not self.opts.get('cation'): self.opts['cation'] = 'Na'
         if not self.opts.get('salt_conc'): self.opts['salt_conc'] = 0.150
         if not self.opts.get('wat_buffer'): self.opts['wat_buffer'] = 20.0
-        if not self.opts.get('xy_buf'): self.opts['xy_buf'] = 35.0
+        if not self.opts.get('xy_buf'): self.opts['xy_buf'] = 17.5
         if not self.opts.get('lipid_dist'): self.opts['lipid_dist'] = 1.75
         if not self.opts.get('membrane_system'):
             self.opts['membrane_system'] =  resource_filename(__name__, \
@@ -385,6 +385,7 @@ class DabbleBuilder(object):
             solute_z = atomsel(self.solute_sel, molid=molid).get('z')
             dx_tm = 0.0
             dy_tm = 0.0
+            sol_solute = atomsel(self.solute_sel, molid)
         else:
             # Add dummy to the membrane boundaries in case protein is peripheral
             # If protein is really far from protein then oops
@@ -399,6 +400,9 @@ class DabbleBuilder(object):
             else:
                 dx_tm = dy_tm = 0
 
+            sol_solute = atomsel('(%s) and (z < %f or z > %f)' % (self.solute_sel,
+                                                                  -zh_mem_hyd,
+                                                                  zh_mem_hyd), molid)
 # Old way of doing it- get diameter of protein in membrane
 #            dxy_tm = molutils.solute_xy_diameter('(%s) and z > %f and z < %f' %
 #                                                 (self.solute_sel,
@@ -408,17 +412,15 @@ class DabbleBuilder(object):
 #       dxy_sol = molutils.solute_xy_diameter(self.solute_sel, molid)
 
         # Solvent invariant options
-        sol_solute = atomsel(self.solute_sel, molid)
         dx_sol = max(sol_solute.get('x')) - min(sol_solute.get('x'))
         dy_sol = max(sol_solute.get('y')) - min(sol_solute.get('y'))
 
-        self.size[0] = max(dx_tm + mem_buf, dx_sol + wat_buf)
-        print("mem_buf = %f, wat_buf = %f" % (mem_buf, wat_buf))
-        self.size[1] = max(dy_tm + mem_buf, dy_sol + wat_buf)
+        self.size[0] = max(dx_tm + 2.*mem_buf, dx_sol + 2.*wat_buf)
+        self.size[1] = max(dy_tm + 2.*mem_buf, dy_sol + 2.*wat_buf)
 
         # Z dimension
         dz_full = max(solute_z) - min(solute_z)
-        self.size[2] = dz_full + wat_buf
+        self.size[2] = dz_full + 2.*wat_buf
 
         # Cleanup temporary file, if read in
         if filename is not None:

@@ -136,9 +136,10 @@ z_buffer_opts = group.add_mutually_exclusive_group()
 z_buffer_opts.add_argument('-w', '--water-buffer', dest='wat_buffer', default=20.0,
                            type=float, help='water padding from each side of '
                            'protein [default 20.0 angstroms]')
-group.add_argument('-m', '--membrane-buffer-dist', dest='xy_buf', default=35.0,
-                   type=float, help='buffer distance through the membrane.'
-                   '[default: 35.0 angstroms]')
+group.add_argument('-m', '--membrane-buffer-dist', dest='xy_buf', default=17.5,
+                   type=float, help='membrane buffer distance from the protein to the '
+                                    'box edge in the XY plane.'
+                                    '[default: 17.5 angstroms]')
 group.add_argument('-d', '--lipid-dist', dest='lipid_dist',
                    default=1.75, type=float,
                    help='minimum distance from solute to lipid acyl group'
