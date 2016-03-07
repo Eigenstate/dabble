@@ -13,7 +13,7 @@ def test_multiligand_building(tmpdir):
     print p+"/test.mae"
     filename =  dir + "B2AR_10ALPs.mae"
     b = DabbleBuilder(solute_filename=filename, output_filename=p+"/test.mae",
-                      xy_buf=10., wat_buffer=5., overwrite=True, tmp_dir=p)
+                      xy_buf=5., wat_buffer=5., overwrite=True, tmp_dir=p)
     b.write()
     #resout, reserr = capfd.readouterr()
     subprocess.check_call(["diff","-q", dir + "test_multiligand_correct.mae", p+"/test.mae"])
