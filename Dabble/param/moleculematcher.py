@@ -295,12 +295,13 @@ class MoleculeMatcher(object): # pylint: disable=too-few-public-methods
         others = set(rgraph.nodes()) - set(selection.get('index'))
         is_covalent = bool(len(others))
         for oth in others:
-            rdict[oth] = "_join"
-            resido = atomsel('index %d' % oth, molid=selection.molid).get('resid')[0]
+            sel = atomsel('index %d' % oth, molid=selection.molid)
+            resido = sel.get('resid')[0]
             if resido > resid:
                 edict[oth] = "+"
             else:
                 edict[oth] = "-"
+            rdict[oth] = sel.get('element')[0]
 
         # Set node attributes
         nx.set_node_attributes(rgraph, 'element', rdict)

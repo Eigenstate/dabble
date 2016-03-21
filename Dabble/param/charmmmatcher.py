@@ -79,7 +79,6 @@ class CharmmMatcher(MoleculeMatcher):
                 applied = self._apply_patch(res, patch)
                 if applied:
                     self.known_pres[(res, patch)] = applied
-                    self._assign_elements(self.known_pres[(res, patch)])
 
     #=========================================================================
     #                            Public methods                              #
@@ -354,17 +353,17 @@ class CharmmMatcher(MoleculeMatcher):
         firstcmap = True
 
         for line in data.splitlines():
-            tokens = [i.strip() for i in line.split()]
+            tokens = [i.strip().upper() for i in line.split()]
 
             # Atoms mean add node to current residue
             if tokens[0] == "ATOM":
-                # Patches can change atom type>
+                # Patches can change atom type
                 # Technically re-adding the node will just change the type and
                 # not add a duplicate, but this is more correct and clear.
                 if tokens[1] in graph.nodes():
                     graph.node[tokens[1]]["type"] = tokens[2]
                 else:
-                    graph.add_node(tokens[1], type=tokens[2], residue="self")
+                    graph.add_node(tokens[1], type=tokens[2], residue="self", patched=bool(patch))
 
             # Bond or double means add edge to residue graph
             elif tokens[0] == "BOND" or tokens[0] == "DOUBLE":
@@ -374,8 +373,9 @@ class CharmmMatcher(MoleculeMatcher):
                 for txn in range(1, len(tokens), 2):
                     node1 = tokens[txn]
                     node2 = tokens[txn+1]
-                    if not self._define_bond(graph, node1, node2):
+                    if not self._define_bond(graph, node1, node2, bool(patch)):
                         return None
+
             # CMAP terms add edges. This makes amino acids work since the
             # next and previous amino acids aren't defined as bonds usually
             elif tokens[0] == "CMAP":
@@ -393,7 +393,7 @@ class CharmmMatcher(MoleculeMatcher):
                          for j in range(len(tokens)/4) \
                          for i in range(j, j+3)]  # oo i love one liners
                 for (node1, node2) in nodes:
-                    if not self._define_bond(graph, node1, node2):
+                    if not self._define_bond(graph, node1, node2, bool(patch)):
                         return None
 
             # Check for atom definitions
@@ -424,18 +424,23 @@ class CharmmMatcher(MoleculeMatcher):
 
                         graph.remove_edge(tokens[2], tokens[3])
 
-                except nx.NetworkXError: # Atom or bond did not exist, ie this patch is invalid
+                # Atom or bond did not exist, ie this patch is invalid
+                except nx.NetworkXError:
                     return None
 
 
         # Assign resname to all atoms
         nx.set_node_attributes(graph, "resname", resname)
 
+        # If we didn't patch, set the whole residue to unpatched atom attribute
+        if not patch:
+            nx.set_node_attributes(graph, "patched", False)
+
         return graph
 
     #=========================================================================
 
-    def _define_bond(self, graph, node1, node2):
+    def _define_bond(self, graph, node1, node2, patch):
         """
         Process a bond defined in a psf file and adds it to the graph.
         Checks for + or - in bonded atom name and sets the node "residue"
@@ -445,6 +450,7 @@ class CharmmMatcher(MoleculeMatcher):
           graph (networkx graph): Graph to add bond to
           node1 (str): Atom name from psf file of first atom
           node2 (str): Atom name from psf file of second atom
+          patch (bool): If this bond is defined by a patch
 
         Returns:
           (bool) if bond could be defined
@@ -456,21 +462,21 @@ class CharmmMatcher(MoleculeMatcher):
 
         # Sanity check and process first atom name
         if "+" in node1:
-            graph.add_node(node1, type="", residue="+")
+            graph.add_node(node1, type="", residue="+", patched=patch)
         elif "-" in node1:
-            graph.add_node(node1, type="", residue="-")
+            graph.add_node(node1, type="", residue="-", patched=patch)
         elif node1 not in graph.nodes():
             return False
 
         # Now sanity check and process second atom name
         if "+" in node2:
-            graph.add_node(node2, type="", residue="+")
+            graph.add_node(node2, type="", residue="+", patched=patch)
         elif "-" in node2:
-            graph.add_node(node2, type="", residue="-")
+            graph.add_node(node2, type="", residue="-", patched=patch)
         elif node2 not in graph.nodes():
             return False
 
-        graph.add_edge(node1, node2)
+        graph.add_edge(node1, node2, patched=patch)
         return True
 
     #=========================================================================
@@ -493,6 +499,7 @@ class CharmmMatcher(MoleculeMatcher):
         if not patched:
             return None
         self._assign_elements(patched)
+        self._prune_joins(patched)
         return patched
 
     #=========================================================================
@@ -513,13 +520,37 @@ class CharmmMatcher(MoleculeMatcher):
         # Now that all atom and mass lines are read, get the element for each atom
         for node, data in graph.nodes(data=True):
             if data.get('residue') != "self":
-                data['element'] = "_join"
+                typestr = ''.join([i for i in node if not i.isdigit() and i != "+" and i != "-"])
             else:
-                element = self.nodenames.get(data.get('type'))
-                if not element:
-                    raise ValueError("Unknown atom type %s, name %s"
-                                     % (data.get('type'), node))
-                data['element'] = element
+                typestr = data.get('type')
+
+            element = self.nodenames.get(typestr)
+            if not element:
+                raise ValueError("Unknown atom type %s, name %s"
+                                 % (typestr, node))
+            data['element'] = element
+
+    #=========================================================================
+
+    def _prune_joins(self, graph):
+        """
+        Prunes _join elements that have been fulfilled by the addition of
+        this patch.
+
+        Args:
+           graph (networkx graph): The residue to prun
+        """
+
+        unpatched = [n for n in graph.nodes() if not graph.node[n]["patched"]]
+        for u in unpatched:
+            neighbor_joins = [e[1] for e in nx.edges_iter(graph, nbunch=[u]) if \
+                              graph.node[e[1]]["residue"] != "self" and \
+                                      not graph.node[e[1]]["patched"]]
+            for n in neighbor_joins:
+                if any(graph.node[e[1]]["element"]==graph.node[n]["element"] for \
+                       e in nx.edges_iter(graph, nbunch=[u]) if \
+                       graph.node[e[1]]["patched"]):
+                    graph.remove_node(n)
 
     #=========================================================================
 
