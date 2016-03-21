@@ -2,7 +2,7 @@
 Parameterizes molecules for molecular dynamics simulations
 """
 
-__version__ = '1.3.1'
+__version__ = '1.3.2'
 __author__ = 'Robin Betz'
 
 from Dabble.param.moleculematcher import MoleculeMatcher
