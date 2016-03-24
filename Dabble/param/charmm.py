@@ -242,30 +242,44 @@ class CharmmWriter(object):
         # ones have been written
         allw = atomsel('water and user 1.0')
         print("Found %d water residues" % len(set(atomsel('water and user 1.0').get('residue'))))
+
+        # Find the problem waters with unordered indices
+        problems = []
+        for r in set(allw.get('residue')):
+            widx = atomsel('residue %s' % r).get("index")
+            if max(widx) - min(widx) != 2:
+                problems.append(r)
+                atomsel('residue %s' % r).set("user", 0.0) # get it out of allw
+
+        allw.update()
         num_written = len(allw)/(9999*3)+1
         print("Going to write %d files for %d water atoms"
               % (num_written, len(allw)))
 
-        # Pull out and write 10k waters at a time
-        for i in range(num_written):
-            residues = list(set(allw.get('residue')))[:9999]
-            batchtxt = 'residue ' + \
-                       ' '.join([str(s) for s in set(residues)])
-            batch = atomsel(batchtxt)
-            try:
-                batch.set('resid', [k for k in range(1, len(batch)/3+1)
-                                    for _ in range(3)])
-            except ValueError:
-                print("\nERROR! You have some waters missing hydrogens!\n"
-                      "Found %d water residues, but %d water atoms. Check "
-                      " your crystallographic waters in the input structure."
-                      % (len(residues), len(batch)))
-                quit(1)
-            temp = tempfile.mkstemp(suffix='_%d.pdb' % i, prefix='psf_wat_',
-                                    dir=self.tmp_dir)[1]
-            batch.set('user', 0.0)
-            batch.write('pdb', temp)
-            allw.update()
+        # Pull out and write 10k waters at a time if we have normal waters
+        if allw:
+            idx = 1
+            for i in range(num_written):
+                temp = tempfile.mkstemp(suffix='_%d.pdb' % i, prefix='psf_wat_',
+                                        dir=self.tmp_dir)[1]
+                residues = list(set(allw.get('residue')))[:9999]
+               
+                batch = atomsel('residue %s' % ' '.join([str(x) for x in residues]))
+                try:
+                    batch.set('resid', [k for k in range(1, len(batch)/3+1)
+                                        for _ in range(3)])
+                except ValueError:
+                    print("\nERROR! You have some waters missing hydrogens!\n"
+                          "Found %d water residues, but %d water atoms. Check "
+                          " your crystallographic waters in the input structure."
+                          % (len(residues), len(batch)))
+                    quit(1)
+                batch.set('user', 0.0)
+                batch.write('pdb', temp)
+                allw.update()
+
+        # Now write the problem waters
+        self._write_unorderedindex_waters(problems, self.molid)
 
         string = '''
         set waterfiles [glob -directory %s psf_wat_*.pdb]
@@ -285,6 +299,49 @@ class CharmmWriter(object):
         molecule.set_top(old_top)
 
         return num_written
+
+    #==========================================================================
+
+    def _write_unorderedindex_waters(self, residues, molid):
+        """
+        Renumbers and sorts the specified waters manually. This is much less
+        efficient but is necessary in cases where atoms within a water molecule
+        are not sequential in index, preventing quick renaming with VMD.
+        Identify problem waters, then call this on them. It'll write its own
+        psf_wat_* file with just those waters, minimizing inefficiency.
+
+        Args:
+            residues (list of int): Problem water molecules
+            molid (int): VMD molecule ID to write
+        Returns:
+            (int) Number of waters written
+        """
+        temp = tempfile.mkstemp(suffix='_indexed.pdb', prefix='psf_wat_',
+                                dir=self.tmp_dir)[1]
+        fileh = open(temp , 'w')
+
+        idx = 1
+        for r in range(len(residues)):
+            res = atomsel('residue %d' % residues[r], molid=molid)
+            
+            for i in res.get('index'):
+                a = atomsel('index %d' % i, molid) # pylint: disable=invalid-name
+                entry = ('%-6s%5d %-5s%-4s%c%4d    %8.3f%8.3f%8.3f%6.2f%6.2f'
+                         '     %-4s%2s\n' % ('ATOM', idx, a.get('name')[0],
+                                             a.get('resname')[0],
+                                             a.get('chain')[0],
+                                             r+1,
+                                             a.get('x')[0],
+                                             a.get('y')[0],
+                                             a.get('z')[0],
+                                             0.0, 0.0, a.get('segname')[0],
+                                             a.get('element')[0]))
+                idx += 1
+                fileh.write(entry)
+
+        fileh.write('END\n')
+        fileh.close()
+        return idx
 
     #==========================================================================
 
@@ -706,10 +763,16 @@ class CharmmWriter(object):
         # Then, use residue to pull out each one since it is much much
         # faster then trying to pull out residues
         resids = set(atomsel(sel).get('resid'))
+
+        # Add additional residue constraint to selection since pulling out
+        # by resid can match something in a different chain
+        resstr = ' '.join([str(x) for x in set(atomsel(sel).get('residue'))])
+
         idx = 1
         # For renumbering capping groups
         for resid in sorted(resids):
-            rid = atomsel('resid %d' % resid).get('residue')[0]
+            rid = atomsel('resid %d and residue %s'
+                          % (resid,resstr)).get('residue')[0]
 #            names = set(atomsel('residue %d'% rid).get('resname'))
 #            assert len(names) < 3, ("More than 2 residues with same number... "
 #                                    "currently unhandled. Report a bug")
@@ -753,7 +816,6 @@ class CharmmWriter(object):
 
             for i in atomsel('residue %d' % rid).get('index'):
                 a = atomsel('index %d' % i) # pylint: disable=invalid-name
-#            for i in atoms:
                 entry = ('%-6s%5d %-5s%-4s%c%4d    %8.3f%8.3f%8.3f%6.2f%6.2f'
                          '     %-4s%2s\n' % ('ATOM', idx, a.get('name')[0],
                                              a.get('resname')[0],
