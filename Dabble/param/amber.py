@@ -25,15 +25,16 @@ Boston, MA 02111-1307, USA.
 from __future__ import print_function
 import os
 import sys
+import tempfile
 from pkg_resources import resource_filename
 
 import vmd
 import molecule
 from atomsel import atomsel
 
-from Dabble.param import CharmmWriter
 from parmed.tools import chamber, parmout, HMassRepartition
 from parmed.amber import AmberParm
+from Dabble.param import CharmmWriter, AmberMatcher
 
 #++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
 
@@ -60,8 +61,7 @@ class AmberWriter(object):
         if forcefield not in ['amber', 'charmm']:
             raise ValueError("Unsupported forcefield: %s" % forcefield)
         self.forcefield = forcefield
-        self.topologies = ''
-        if self.forcefield is 'charmm':
+        if self.forcefield == 'charmm':
             self.parameters = [
                 resource_filename(__name__, "charmm_parameters/toppar_water_ions.str"),
                 resource_filename(__name__, "charmm_parameters/par_all36_cgenff.prm"),
@@ -71,8 +71,17 @@ class AmberWriter(object):
                 resource_filename(__name__, "charmm_parameters/par_all36_na.prm"),
                 resource_filename(__name__, "charmm_parameters/toppar_all36_prot_na_combined.str")
                 ]
-        else:
-            self.parameters = [] # TODO amber default parameters
+            self.topologies = ''
+        elif self.forcefield == 'amber':
+            if not os.environ.get("AMBERHOME"):
+                raise ValueError("AMBERHOME must be set to use AMBER forcefield!")
+
+            self.topologies = [
+                os.path.join(os.environ["AMBERHOME"],"dat","leap","cmd","leaprc.ff14SB"),
+                os.path.join(os.environ["AMBERHOME"],"dat","leap","cmd","leaprc.lipid14"),
+            #    os.path.join(os.environ["AMBERHOME"],"dat","leap","cmd","leaprc.gaff")
+               ]
+            self.parameters = self.topologies
 
         if extra_params is not None:
             self.parameters.extend(extra_params)
@@ -87,6 +96,7 @@ class AmberWriter(object):
         """
         self.prmtop_name = prmtop_name
 
+        # Charmm forcefield
         if self.forcefield is 'charmm':
             psfgen = CharmmWriter(molid=self.molid, 
                                   tmp_dir=self.tmp_dir,
@@ -94,14 +104,54 @@ class AmberWriter(object):
                                   extra_topos=self.extra_topos)
             self.topologies = psfgen.write(self.prmtop_name)
             self._psf_to_charmm_amber()
+
+        # Amber forcefield
         elif self.forcefield is 'amber':
-            # TODO TODO TODO
-            print("Currently unsupported")
-            quit(1)
+            ## Save and reload so residue looping is correct
+            self._split_caps()
+            self._rename_atoms_amber()
 
     #========================================================================#
     #                           Private methods                              #
     #========================================================================#
+    
+    def _rename_atoms_amber(self):
+        """
+        Matches up atom names with those in the provided topologies and
+        sets the atom and residue names correctly in the built molecule.
+
+        Raises:
+            ValueError if a residue definition could not be found
+        """
+
+        matcher = AmberMatcher(self.topologies)
+
+        for residue in set(atomsel("all", molid=self.molid).get("residue")):
+            sel = atomsel("residue %s" % residue)
+            resnames, atomnames = matcher.get_names(sel, print_warning=False)
+            
+            # Check if it's disulfide bond
+            if not resnames:
+                resnames, atomnames, conect = matcher.get_disulfide(sel, self.molid)
+                if not resnames:
+                    import networkx as nx
+                    rgraph = matcher.parse_vmd_graph(sel)[0]
+                    nx.write_dot(rgraph, "rgraph.dot")
+                    raise ValueError("ERROR: Could not find a residue definition "
+                                     "for %s:%s" % (sel.get("resname")[0],
+                                                    sel.get("resid")[0]))
+
+            # Do the renaming
+            for idx, name in atomnames.iteritems():
+                atom = atomsel('index %s' % idx)
+                if atom.get('name')[0] != name:
+                    #print("Renaming %s:%s: %s -> %s:%s" % (atom.get('resname')[0], residue,
+                    #                                          atom.get('name')[0],
+                    #                                          resnames[idx], name))
+                    atom.set('name', name)
+                atom.set('resname', resnames[idx])
+
+    #==========================================================================
 
     def _psf_to_charmm_amber(self):
         """
@@ -181,6 +231,69 @@ class AmberWriter(object):
 #    TODO do atom names need to be changed? - no not from charmm names
 #    Looks like I can save pdb/psf and then call charmmlipid2amber.py on  pdb
 # oh also call leap kthx
+
+    #==========================================================================
+
+    def _split_caps(self):
+        """
+        Pulls out ACE and NMA caps, renumbers residues, and loads that 
+        renumbered molecule. Closes the old molecule and sets this as
+        the top one.
+        
+        Returns:
+            (int): Molid of loaded fragment
+        """
+        # Put our molecule on top and grab selection
+        molecule.set_top(self.molid)
+
+        # Do one fragment at a time to handle duplicate resids across chains
+        for frag in set(atomsel('all').get('fragment')):
+            for resid in sorted(set(atomsel('fragment %d' % frag).get('resid'))):
+                # Handle bug where capping groups in same residue as the
+                # neighboring amino acid Maestro writes it this way for some
+                # reason but it causes problems down the line when psfgen doesn't
+                # understand the weird combined residue
+                rid = atomsel('fragment %d and resid %d' % (frag, resid)).get('residue')[0]
+                names = set(atomsel('residue %d'% rid).get('resname'))
+                assert len(names) < 3, ("More than 2 residues with same number... "
+                                        "currently unhandled. Report a bug")
+
+                if len(names) > 1:
+                    if 'ACE' in names and 'NMA' in names:
+                        print("ERROR: Both ACE and NMA were given the same resid"
+                              "Check your input structure")
+                        quit(1)
+
+                    if 'ACE' in names:
+                        # Set ACE residue number as one less
+                        resid = atomsel('residue %d and not resname ACE' % rid).get('resid')[0]
+                        if len(atomsel('fragment %s and resid %d' % (frag, resid-1))):
+                            raise ValueError('ACE resid collision number %d' % resid-1)
+                        atomsel('residue %d and resname ACE'
+                                % rid).set('resid', resid-1)
+                        print("INFO: ACE %d -> %d" % (resid, resid-1))
+
+                    elif 'NMA' in names:
+                        # Set NMA residue number as one more
+                        resid = atomsel('residue %d and not resname NMA' % rid).get('resid')[0]
+                        if len(atomsel('fragment %s and resid %d' % (frag, resid+1))):
+                            raise ValueError('NMA resid collision number %d' % resid+1)
+
+                        atomsel('residue %d and resname NMA'
+                                % rid).set('resid', resid+1)
+                        print("INFO: NMA %d -> %d" % (resid, resid+1))
+
+        # Have to save and reload so residues are parsed correctly by VMD
+        temp = tempfile.mkstemp(suffix='.mae', prefix='mae_renum_',
+                                dir=self.tmp_dir)[1]
+        atomsel('all').write('mae', temp)
+        molecule.delete(self.molid)
+        self.molid = molecule.load('mae', temp)
+        molecule.set_top(self.molid)
+
+        return self.molid
+
+    #==========================================================================
 
 #++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
 
