@@ -476,6 +476,20 @@ class CharmmMatcher(MoleculeMatcher):
         elif node2 not in graph.nodes():
             return False
 
+        # If we are applying a patch and there are _join atoms attached
+        # to the atom we are applying a bond to, delete the _join atom.
+        # It can be added back later if it was actually needed.
+        if graph.node[node1]["patched"] and not graph.node[node2]["patched"]:
+            neighbor_joins = [e[1] for e in nx.edges_iter(graph, nbunch=[node2]) \
+                              if graph.node[e[1]]["residue"] != "self" and \
+                              not graph.node[e[1]]["patched"]]
+            graph.remove_nodes_from(neighbor_joins)
+        elif graph.node[node2]["patched"] and not graph.node[node1]["patched"]:
+            neighbor_joins = [e[1] for e in nx.edges_iter(graph, nbunch=[node1]) \
+                              if graph.node[e[1]]["residue"] != "self" and \
+                              not graph.node[e[1]]["patched"]]
+            graph.remove_nodes_from(neighbor_joins)
+
         graph.add_edge(node1, node2, patched=patch)
         return True
 
@@ -499,7 +513,6 @@ class CharmmMatcher(MoleculeMatcher):
         if not patched:
             return None
         self._assign_elements(patched)
-        self._prune_joins(patched)
         return patched
 
     #=========================================================================
@@ -536,6 +549,10 @@ class CharmmMatcher(MoleculeMatcher):
         """
         Prunes _join elements that have been fulfilled by the addition of
         this patch.
+
+        DEPRECATED! But a useful function for detecting fulfilled +- joins
+                    that match by element so I'm keeping it.
+                    Pruning now done in _define_bond
 
         Args:
            graph (networkx graph): The residue to prun
