@@ -183,6 +183,8 @@ def write_final_system(out_fmt, out_name, molid, **kwargs):
         kwargs['tmp_dir'] = "."
     if not kwargs.get('lipid_sel'):
         kwargs['lipid_sel'] = "lipid or resname POPS POPG"
+    if not kwargs.get('forcefield'):
+        kwargs['forcefield'] = "charmm"
 
     # Write a mae file always, removing the prefix from the output file
     mae_name = '.'.join(out_name.rsplit('.')[:-1]) + '.mae'
@@ -235,6 +237,7 @@ def write_final_system(out_fmt, out_name, molid, **kwargs):
         write_psf_name = mae_name.replace('.mae', '')
         writer = AmberWriter(molid=temp_mol,
                              tmp_dir=kwargs['tmp_dir'],
+                             forcefield=kwargs['forcefield'],
                              lipid_sel=kwargs.get('lipid_sel'),
                              hmr=kwargs.get('hmassrepartition'),
                              extra_topos=tops,
@@ -293,13 +296,14 @@ def check_write_ok(filename, out_fmt, overwrite=False):
 
 #==========================================================================
 
-def check_out_type(value, hmr=False):
+def check_out_type(value, forcefield, hmr=False):
     """
     Checks the file format of the requiested output is supported, and sets
     internal variables as necessary.
 
     Args:
       value (str): Filename requested
+      forcefield (str): Force field requested
       hmr (bool): If hydrogen mass repartitioning is requested
 
     Returns:
@@ -320,15 +324,20 @@ def check_out_type(value, hmr=False):
         out_fmt = 'pdb'
     elif ext == 'dms':
         out_fmt = 'dms'
-    elif ext == 'psf':
+    elif ext == 'psf' and forcefield=="charmm":
         out_fmt = 'charmm'
-    elif ext == 'prmtop':
+    elif ext == 'prmtop' and forcefield in ["amber","charmm"]:
         out_fmt = 'amber'
     else:
-        raise ValueError("%s is an unsupported format" % value)
+        raise ValueError("%s is an unsupported format with %s forcefield"
+                         % (value, forcefield))
 
     if hmr and (out_fmt != 'amber'):
         raise NotImplementedError("HMR only supported with AMBER outputs!")
+
+    # Check if amber forcefield can be used
+    if forcefield == "amber" and not os.environ.get("AMBERHOME"):
+        raise ValueError("AMBERHOME must be set to use AMBER forcefields!")
 
     return out_fmt
 

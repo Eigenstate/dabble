@@ -78,7 +78,7 @@ group.add_argument('-o', '--output', dest='output_filename',
                    required=True,
                    help='Name of output file, format will be inferred by '
                    'extension. Currently supported: pdb, mae, psf (charmm), '
-                   'prmtop (amber with charmm params)')
+                   'prmtop (amber or charmm)')
 group.add_argument('-M', '--membrane-system', dest='membrane_system',
                    type=str, metavar='<solvent>',
                    default="DEFAULT",
@@ -90,20 +90,25 @@ group.add_argument('-q', '--quiet', dest='quiet',
                    action='store_true', default=False)
 
 group = parser.add_argument_group('Parameterization Options')
+group.add_argument('-ff', '--forcefield', dest='forcefield',
+                   type=str, metavar='<forcefield>', default="charmm",
+                   choices=['amber','charmm'], action='store',
+                   help="Force field to use for parameterization. Currently "
+                        "supported: amber/charmm")
 group.add_argument('--hmr', dest='hmassrepartition', default=False,
                    action='store_true', help='Repartition Hydrogen masses'
-                   'to allow up to 4fs time steps. Currently amber only')
+                   'to allow up to 4fs time steps. Currently prmtop output only')
 group.add_argument('-top', '--topology', default=None, action='append',
                     type=str, metavar='<topologies>', dest='extra_topos',
-                    help='Additional topology (rtf) file to '
+                    help='Additional topology (rtf, off, lib) file to '
                     'include in parameterization')
 group.add_argument('-par', '--parameters', default=None, action='append',
                    type=str, metavar='<parameters>', dest='extra_params',
-                   help='Additional parameter (prm) file to '
+                   help='Additional parameter (prm, lib, frcmod) file to '
                    'include in parameterization')
 group.add_argument('-str', '--stream', default=None, action='append',
                    type=str, metavar='<streams>', dest='extra_streams',
-                   help='Additional stream (str) file to include in '
+                   help='Additional stream (str, leaprc) file to include in '
                    'parameterization')
 
 group = parser.add_argument_group('Lipid Membrane Options')

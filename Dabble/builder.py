@@ -81,6 +81,7 @@ class DabbleBuilder(object):
 
         # Check for default lipid membrane
         # Set some default options
+        if not self.opts.get('forcefield'): self.opts['forcefield'] = "charmm"
         if not self.opts.get('lipid_sel'): self.opts['lipid_sel'] = "lipid or resname POPS POPG"
         if not self.opts.get('cation'): self.opts['cation'] = 'Na'
         if not self.opts.get('salt_conc'): self.opts['salt_conc'] = 0.150
@@ -102,6 +103,7 @@ class DabbleBuilder(object):
 
         # Check the file output format is supported
         self.out_fmt = fileutils.check_out_type(self.opts.get('output_filename'),
+                                                self.opts.get('forcefield'),
                                                 self.opts.get('hmassrepartition'))
 
     #==========================================================================
@@ -243,6 +245,7 @@ class DabbleBuilder(object):
         fileutils.write_final_system(out_fmt=self.out_fmt,
                                      out_name=self.opts.get('output_filename'),
                                      molid=final_id, tmp_dir=self.tmp_dir,
+                                     forcefield=self.opts.get('forcefield'),
                                      extra_topos=self.opts.get('extra_topos'),
                                      extra_params=self.opts.get('extra_params'),
                                      extra_streams=self.opts.get('extra_streams'),
