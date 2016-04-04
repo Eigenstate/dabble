@@ -90,6 +90,9 @@ class AmberMatcher(MoleculeMatcher):
                    85: 'At', 86: 'Rn'}
     # pylint: enable=bad-whitespace,bad-continuation
 
+    lipid_heads = ["PC", "PE", "PS", "PH-", "H2-", "PGR", "PGS"]
+    lipid_tails = ["LA", "MY", "PA", "ST", "OL", "LEO", "LEN", "AR", "DHA"]
+
     #=========================================================================
     #                            Public methods                              #
     #=========================================================================
@@ -164,7 +167,6 @@ class AmberMatcher(MoleculeMatcher):
 
     #=========================================================================
 
-# TODO: CYX should be a subgraph of the disulfide residue (_join residue is only extra)
     def get_disulfide(self, selection, molid):
         """
         Checks if the selection corresponds to a cysteine in a disulfide bond.
@@ -180,7 +182,7 @@ class AmberMatcher(MoleculeMatcher):
             atomnames (dict int -> str) Atom name translation dictionary
             conect (int) Residue this one is connected to 
        """
-        nx.write_dot(self.known_res.get("LEU"), "leu.dot")
+        nx.write_dot(self.known_res.get("PE"), "pe.dot")
         (rgraph, dump) = self.parse_vmd_graph(selection)
         nx.write_dot(rgraph, "rgraph.dot")
 
@@ -221,9 +223,134 @@ class AmberMatcher(MoleculeMatcher):
             raise ValueError("3 bonded Cys %d isn't a valid disulfide!"
                              % selection.get('resid')[0])
         osel = atomsel("index %d" % partners[0], molid=molid)
-        conect = osel.get("resid")[0]
+        conect = osel.get("residue")[0]
 
         return (resmatch, nammatch, conect)
+
+    #=========================================================================
+
+    def get_lipid_head(self, selection):
+        """
+        Obtains a name mapping for a lipid head group given a selection
+        describing a possible lipid. 
+
+        Args:
+            selection (VMD atomsel): Selection to set names for
+
+        Returns:
+            (dict int->str) Atom index to resname matched
+            (dict int->str) Atom index to atom name matched up
+            (int) Atom index corresponding to - direction tail
+
+        Raises:
+            KeyError: if no matching possible
+        """
+
+        resname = selection.get('resname')[0]
+        rgraph = self.parse_vmd_graph(selection)[0]
+        matched = False
+
+        # Check if a lipid head group is part of this selection.
+        # Remove _join residues from the head so that subgraph match can
+        # be successfully completed
+        matches = {}
+        for matchname in (_ for _ in self.lipid_heads if self.known_res.get(_)):
+            graph = self.known_res.get(matchname)
+            truncated = nx.Graph(graph)
+            truncated.remove_nodes_from([n for n in graph.nodes() if \
+                                         graph.node[n]["residue"] != "self"])
+            matcher = isomorphism.GraphMatcher(rgraph, truncated,
+                                               node_match=self._check_atom_match)
+            if matcher.subgraph_is_isomorphic():
+               matches[matchname] = matcher.match().next()
+
+        if not matches:
+            return (None, None, None)
+        matchname = max(matches.keys(), key=(lambda x: len(self.known_res[x])))
+        match = matches[matchname]
+        graph = self.known_res.get(matchname)
+
+        # Generate naming dictionaries to return
+        nammatch = dict((i, graph.node[match[i]].get("atomname")) \
+                        for i in match.keys() if \
+                        graph.node[match[i]].get("residue") == "self")
+        resmatch = dict((i, graph.node[match[i]].get("resname")) \
+                        for i in match.keys() if \
+                        graph.node[match[i]].get("residue") == "self")
+
+        # Find atom index on non-truncated graph that corresponds to the
+        # - direction join atom. Necessary to figure out the order in which
+        # to list the tails.
+        minusbnded = [_ for _ in match.keys() if match[_] in \
+                      [e[1] for e in nx.edges_iter(graph, nbunch=["-"])]]
+        if len(minusbnded) != 1:
+            raise ValueError("Could not identify tail attached to lipid %s:%s!"
+                             % (resname, selection.get('resid')[0]))
+        minusidx = [_ for _ in atomsel("index %s" % minusbnded[0]).bonds[0] \
+                    if _ not in match.keys()]
+        if len(minusidx) != 1:
+            raise ValueError("Could not identify tail attached to lipid %s:%s!"
+                             % (resname, selection.get('resid')[0]))
+
+        return (resmatch, nammatch, minusidx[0])
+
+    #=========================================================================
+
+    def get_lipid_tails(self, selection, head):
+        """
+        Obtains a name mapping for both ligand tails in a system given
+        a selection describing the lipid and the indices of the head
+        group atoms.
+
+        Args:
+            selection (VMD atomsel): Selection to pull tails from
+            head (list of int): Atom indices in the head group of this lipid.
+                Obtain with get_lipid_head function.
+
+        Returns:
+            (array of tuples that are dict int->str): Atom index to
+                resname matched, atom index to atom name translation
+                dictionaries for both tails
+
+        Raises:
+            ValueError: If a tail could not be matched or if there is an
+                incorrect number of tails somehow attached.
+        """
+        resname = selection.get('resname')[0]
+        rgraph = self.parse_vmd_graph(selection)[0]
+        rgraph.remove_nodes_from(head)
+        
+        if nx.number_connected_components(rgraph) != 2:
+            raise ValueError("Incorrect number of tails attached to %s:%s!" %
+                             (resname, selection.get('resid')[0]))
+
+        taildicts = []                        
+        for tgraph in nx.connected_component_subgraphs(rgraph, copy=True):
+            matched = False
+            for matchname in (_ for _ in self.lipid_tails if \
+                              self.known_res.get(_)):
+                graph = self.known_res.get(matchname)
+                truncated = nx.Graph(graph)
+                truncated.remove_nodes_from([n for n in graph.nodes() if \
+                                             graph.node[n]["residue"] != "self"])
+                matcher = isomorphism.GraphMatcher(tgraph, truncated,
+                                                   node_match=self._check_atom_match)
+
+                if matcher.is_isomorphic():
+                    matched = True
+                    match = matcher.match().next()
+                    nammatch = dict((i, graph.node[match[i]].get("atomname")) \
+                                    for i in match.keys() if \
+                                    graph.node[match[i]].get("residue") == "self")
+                    resmatch = dict((i, graph.node[match[i]].get("resname")) \
+                                    for i in match.keys() if \
+                                    graph.node[match[i]].get("residue") == "self")
+                    taildicts.append((resmatch, nammatch))
+                    break
+            if not matched:
+                raise ValueError("Couldn't find a match for tail %s:%s" %
+                                 (resname, selection.get('resid')[0]))
+        return taildicts
 
     #=========================================================================
     #                           Private methods                              #
