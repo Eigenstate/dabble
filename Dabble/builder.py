@@ -146,6 +146,8 @@ class DabbleBuilder(object):
             self.size[0] = self.opts['user_x']
         if self.opts.get('user_y'):
             self.size[1] = self.opts['user_y']
+        if self.opts.get('user_z'):
+            self.size[2] = self.opts['user_z']
         print("Final system will be %.2f x %.2f x %.2f"
               % (self.size[0], self.size[1], self.size[2]))
         print("X,Y solvent buffer: (%4.1f, %4.1f)" % (self.size[0] - dx_sol,

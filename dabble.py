@@ -155,6 +155,9 @@ group.add_argument('--absolute-x', type=float, default=None,
 group.add_argument('--absolute-y', type=float, default=None,
                    dest='user_y', help='Specifies the y dimension. Takes '
                    'precedence over buffer-based calculation.')
+group.add_argument('--absolute-z', type=float, default=None,
+                   dest='user_z', help='Specifies the z dimension. Takes '
+                   'precedence over buffer-based calculation.')
 
 group = parser.add_argument_group('Orientation Options',
                                   'These options control how the input solute '
