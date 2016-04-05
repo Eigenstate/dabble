@@ -27,13 +27,13 @@ import os
 import sys
 import tempfile
 from pkg_resources import resource_filename
-from subprocess import check_call
+from subprocess import check_output
 
 import vmd
 import molecule
 from atomsel import atomsel
 
-from parmed.tools import chamber, parmout, HMassRepartition
+from parmed.tools import chamber, parmout, HMassRepartition, checkValidity
 from parmed.amber import AmberParm
 from Dabble.param import CharmmWriter, AmberMatcher
 
@@ -135,8 +135,26 @@ class AmberWriter(object):
 
             # Now invoke leap to create the prmtop and inpcrd
             offs = [] # TODO ligands
-            self._run_leap(prot_pdbs, pdbs, offs, disulfides)
-            quit()
+            outfile = self._run_leap(prot_pdbs, pdbs, offs, disulfides)
+
+            # Check validity of output prmtop using parmed
+            print("\nINFO: Checking for problems with the prmtop...")
+            print("        Verify all warnings!")
+            parm = AmberParm(prm_name=outfile+".prmtop",
+                             xyz=outfile+".inpcrd")
+            action = checkValidity(parm)
+            action.execute()
+
+            # Repartion hydrogen masses if requested
+            if self.hmr:
+                print("\nINFO: Repartitioning hydrogen masses...")
+                print("WARNING: Prmtop will not be vmd compatible! Visualize:\n"
+                      "    %s.prmtop" % outfile)
+                action = HMassRepartition(action.parm, "dowater")
+                action.execute()
+                write = parmout(action.parm, "%s.prmtop %s.inpcrd" % (self.prmtop_name,
+                                                                      self.prmtop_name))
+                write.execute()
 
     #========================================================================#
     #                           Private methods                              #
@@ -248,7 +266,6 @@ class AmberWriter(object):
         write.execute()
         print("\nINFO: Wrote output prmtop and inpcrd")
         return True
-
 
     #==========================================================================
 
@@ -630,6 +647,9 @@ class AmberWriter(object):
             offs (list of str): OFF files to combine
             disulfides (set of tuple (int,int)): Residues to disulfide bond
 
+        Returns:
+            (str) Prefix of file written
+
         Raises:
             ValueError if AMBERHOME is unset
             ValueError if topology type cannot be determined
@@ -637,6 +657,12 @@ class AmberWriter(object):
         # Ensure leap is actually available
         if not os.environ.get("AMBERHOME"):
             raise ValueError("AMBERHOME must be set to use leap!")
+
+        # Set output file name as temporary if we're hmr'ing
+        if self.hmr:
+            outfile = self.prmtop_name + "_vmd"
+        else:
+            outfile = self.prmtop_name
 
         # Create the leap input file
         leapin = tempfile.mkstemp(suffix='.in', prefix='dabble_leap_',
@@ -673,13 +699,21 @@ class AmberWriter(object):
                          % ' '.join(["p%d"%i for i in range(len(pdbs))]))
             fileh.write("p = combine { p %s }\n"
                          % ' '.join(["pp%d" % i[0] for i in prot_pdbs]))
+            fileh.write("setbox p centers 0.0\n")
             fileh.write("saveamberparm p %s.prmtop %s.inpcrd\n"
-                         % (self.prmtop_name, self.prmtop_name))
+                         % (outfile, outfile))
             fileh.write("quit\n")
             fileh.close()
 
-        check_call(["%s/bin/tleap" % os.environ.get("AMBERHOME"),
-                    "-f", leapin])
+        # Now invoke leap. If it fails, print output
+        try:
+            out=check_output(["%s/bin/tleap" % os.environ.get("AMBERHOME"),
+                             "-f", leapin])
+        except:
+            print("Call to tleap failed! Output was:\n%s" % out)
+            quit(1)
+        
+        return outfile
 
 #++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
 
