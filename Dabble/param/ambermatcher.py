@@ -182,9 +182,7 @@ class AmberMatcher(MoleculeMatcher):
             atomnames (dict int -> str) Atom name translation dictionary
             conect (int) Residue this one is connected to 
        """
-        nx.write_dot(self.known_res.get("PE"), "pe.dot")
         (rgraph, dump) = self.parse_vmd_graph(selection)
-        nx.write_dot(rgraph, "rgraph.dot")
 
         # Sanity check
         if not self.known_res.get("CYX"):
@@ -372,7 +370,9 @@ class AmberMatcher(MoleculeMatcher):
             ValueError if topology file is malformed in various ways
             ValueError if AMBERHOME is unset
         """
-        if "leaprc" not in filename:
+        if ".off" in filename or ".lib" in filename:
+            self._load_off(filename)
+        elif "leaprc" not in filename:
             raise ValueError("AmberMatcher only parses leaprc topologies!")
 
         # Set AMBER search path for lib files
