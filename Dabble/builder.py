@@ -136,9 +136,9 @@ class DabbleBuilder(object):
                 self.get_cell_size(mem_buf=self.opts.get('xy_buf'),
                                    wat_buf=self.opts.get('wat_buffer'),
                                    molid=self.molids['solute'])
-        print("Solute x diameter is %.2f (%.2f in TM region)\n"
-              "Solute y diameter is %.2f (%.2f in TM region)\n"
-              "Solute + membrane Z diameter is %.2f"
+        print("\tSolute x diameter is %.2f (%.2f in TM region)\n"
+              "\tSolute y diameter is %.2f (%.2f in TM region)\n"
+              "\tSolute + membrane Z diameter is %.2f"
               % (dx_sol, dx_tm, dy_sol, dy_tm, dz_full))
 
         # Compute dimensions of the final system
@@ -150,11 +150,11 @@ class DabbleBuilder(object):
             self.size[2] = self.opts['user_z']
         print("Final system will be %.2f x %.2f x %.2f"
               % (self.size[0], self.size[1], self.size[2]))
-        print("X,Y solvent buffer: (%4.1f, %4.1f)" % (self.size[0] - dx_sol,
+        print("\tX,Y solvent buffer: (%4.1f, %4.1f)" % (self.size[0] - dx_sol,
                                                       self.size[1] - dy_sol))
-        print("X,Y transmembrane buffer: (%4.1f, %4.1f)" % (self.size[0] - dx_tm,
+        print("\tX,Y transmembrane buffer: (%4.1f, %4.1f)" % (self.size[0] - dx_tm,
                                                             self.size[1] - dy_tm))
-        print("Z solvent buffer: %4.1f" % (self.size[2]-dz_full))
+        print("\tZ solvent buffer: %4.1f" % (self.size[2]-dz_full))
 
         # Orient the solute in the membrane so padding is equal on all sides
         self.molids['solute'] = self._orient_solute(self.molids['solute'])
@@ -166,7 +166,7 @@ class DabbleBuilder(object):
                                     self.size,
                                     tmp_dir=self.tmp_dir,
                                     allow_z_tile=self.water_only)
-        print("Solvent tiled %d x %d x %d times" % (times[0], times[1], times[2]))
+        print("\tSolvent tiled %d x %d x %d times" % (times[0], times[1], times[2]))
         # Only delete if a new molecule was created (if tiling occured)
         if self.molids['tiled_membrane'] != self.molids['membrane']:
             self.remove_molecule('membrane')

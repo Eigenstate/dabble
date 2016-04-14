@@ -72,7 +72,7 @@ class AmberWriter(object):
                 resource_filename(__name__, "charmm_parameters/par_all36_na.prm"),
                 resource_filename(__name__, "charmm_parameters/toppar_all36_prot_na_combined.str")
                 ]
-            self.topologies = ''
+            self.topologies = []
         elif self.forcefield == 'amber':
             if not os.environ.get("AMBERHOME"):
                 raise ValueError("AMBERHOME must be set to use AMBER forcefield!")
@@ -80,13 +80,16 @@ class AmberWriter(object):
             self.topologies = [
                 os.path.join(os.environ["AMBERHOME"],"dat","leap","cmd","leaprc.ff14SB"),
                 os.path.join(os.environ["AMBERHOME"],"dat","leap","cmd","leaprc.lipid14"),
-                #os.path.join(os.environ["AMBERHOME"],"dat","leap","cmd","leaprc.lipid11"),
-            #    os.path.join(os.environ["AMBERHOME"],"dat","leap","cmd","leaprc.gaff")
+                os.path.join(os.environ["AMBERHOME"],"dat","leap","cmd","leaprc.lipid11"),
+                os.path.join(os.environ["AMBERHOME"],"dat","leap","cmd","leaprc.gaff")
                ]
             self.parameters = [
                 os.path.join(os.environ["AMBERHOME"],"dat","leap","parm","frcmod.ionsjc_tip3p")
             ]
             self.matcher = None
+
+        if extra_topos is not None:
+            self.topologies.extend(extra_topos)
 
         if extra_params is not None:
             self.parameters.extend(extra_params)
@@ -124,21 +127,13 @@ class AmberWriter(object):
             pdbs.append(self._write_lipids())
             prot_pdbs = self._write_protein()
             pdbs.extend(self._write_solvent())
-            
-            # For now, throw an error if there's any unwritten stuff
-            if len(atomsel('user 1.0')):
-                atomsel('user 1.0').write('pdb', 'extras.pdb')
-                raise NotImplementedError("No support for ligands using "
-                                          "AMBER parameters! Wrote them to "
-                                          "extras.pdb")
-            # TODO: pdbs.extend(self._write_ligands())
+            pdbs.extend(self._write_ligands())
 
             # Now invoke leap to create the prmtop and inpcrd
-            offs = [] # TODO ligands
-            outfile = self._run_leap(prot_pdbs, pdbs, offs, disulfides)
+            outfile = self._run_leap(prot_pdbs, pdbs, disulfides)
 
             # Check validity of output prmtop using parmed
-            print("\nINFO: Checking for problems with the prmtop...")
+            print("\nChecking for problems with the prmtop...")
             print("        Verify all warnings!")
             parm = AmberParm(prm_name=outfile+".prmtop",
                              xyz=outfile+".inpcrd")
@@ -147,9 +142,9 @@ class AmberWriter(object):
 
             # Repartion hydrogen masses if requested
             if self.hmr:
-                print("\nINFO: Repartitioning hydrogen masses...")
-                print("WARNING: Prmtop will not be vmd compatible! Visualize:\n"
-                      "    %s.prmtop" % outfile)
+                print("\nRepartitioning hydrogen masses...")
+                #print("WARNING: Prmtop will not be vmd compatible! Visualize:\n"
+                #      "    %s.prmtop" % outfile)
                 action = HMassRepartition(action.parm, "dowater")
                 action.execute()
                 write = parmout(action.parm, "%s.prmtop %s.inpcrd" % (self.prmtop_name,
@@ -234,6 +229,7 @@ class AmberWriter(object):
             print("Using the following parameter files:")
             for prm in self.parameters:
                 print("  - %s" % prm.split("/")[-1])
+            print("\n")
 
         # Begin assembling chamber input string
         args = "-crd %s.pdb -psf %s.psf" % (self.prmtop_name, self.prmtop_name)
@@ -246,7 +242,7 @@ class AmberWriter(object):
         box = molecule.get_periodic(molid=self.molid)
         args += " -box %f,%f,%f" % (box['a'], box['b'], box['c'])
 
-        print("\nINFO: Running chamber. This may take a while...")
+        print("Running chamber. This may take a while...")
         sys.stdout.flush()
         parm = AmberParm()
         action = chamber(parm, args)
@@ -254,17 +250,17 @@ class AmberWriter(object):
 
         # Do hydrogen mass repartitioning if requested
         if self.hmr:
-            print("\nINFO: Repartitioning hydrogen masses...")
+            print("Repartitioning hydrogen masses...")
             parm = action.parm
             action = HMassRepartition(parm, "dowater")
             print(action)
             action.execute()
 
-        print("\nINFO: Ran chamber")
+        print("\tRan chamber")
         write = parmout(action.parm, "%s.prmtop %s.inpcrd"
                         %(self.prmtop_name, self.prmtop_name))
         write.execute()
-        print("\nINFO: Wrote output prmtop and inpcrd")
+        print("\nWrote output prmtop and inpcrd")
         return True
 
     #==========================================================================
@@ -425,6 +421,7 @@ class AmberWriter(object):
         molecule.set_top(self.molid)
 
         # Do one fragment at a time to handle duplicate resids across chains
+        print("Checking if capping groups need to be renumbered")
         for frag in set(atomsel('all').get('fragment')):
             for resid in sorted(set(atomsel('fragment %d' % frag).get('resid'))):
                 # Handle bug where capping groups in same residue as the
@@ -449,7 +446,7 @@ class AmberWriter(object):
                             raise ValueError('ACE resid collision number %d' % resid-1)
                         atomsel('residue %d and resname ACE'
                                 % rid).set('resid', resid-1)
-                        print("INFO: ACE %d -> %d" % (resid, resid-1))
+                        print("\tACE %d -> %d" % (resid, resid-1))
 
                     elif 'NMA' in names:
                         # Set NMA residue number as one more
@@ -459,7 +456,7 @@ class AmberWriter(object):
 
                         atomsel('residue %d and resname NMA'
                                 % rid).set('resid', resid+1)
-                        print("INFO: NMA %d -> %d" % (resid, resid+1))
+                        print("\tNMA %d -> %d" % (resid, resid+1))
 
         # Have to save and reload so residues are parsed correctly by VMD
         temp = tempfile.mkstemp(suffix='.mae', prefix='mae_renum_',
@@ -470,6 +467,32 @@ class AmberWriter(object):
         molecule.set_top(self.molid)
 
         return self.molid
+
+    #==========================================================================
+
+    def _write_ligands(self):
+        """
+        Writes any remaining user=1.0 residues each to a mol2 file. This
+        make the connectivity slightly more likely to be correct. Renumbers
+        the residues along the way.
+
+        Returns:
+            (list of str): Mol2 filenames that were written
+        """
+
+        idx = 1
+        mol2s = []
+        for residue in set(atomsel("user 1.0").get("residue")):
+            temp = tempfile.mkstemp(suffix='.mol2', prefix='amber_extra',
+                                    dir=self.tmp_dir)[1]
+            sel = atomsel("residue %d" % residue)
+            sel.set('type', '')
+            sel.set('user', 0.0)
+            sel.set('resid', idx)
+            sel.write('mol2', temp)
+            mol2s.append(temp)
+            idx += 1
+        return mol2s
 
     #==========================================================================
 
@@ -634,7 +657,7 @@ class AmberWriter(object):
 
     #==========================================================================
 
-    def _run_leap(self, prot_pdbs, pdbs, offs, disulfides):
+    def _run_leap(self, prot_pdbs, pdbs, disulfides):
         """
         Runs leap, creating a prmtop and inpcrd from the given pdb and off
         library files.
@@ -643,8 +666,7 @@ class AmberWriter(object):
             prot_pdbs (list of (int, str)): PDB files containing protein fragments
                                             Predictably named for disulfide-ing.
                                             The int is the fragment in each
-            pdbs (list of str): PDB files to combine
-            offs (list of str): OFF files to combine
+            pdbs (list of str): PDB or Mol2 files to combine
             disulfides (set of tuple (int,int)): Residues to disulfide bond
 
         Returns:
@@ -680,7 +702,13 @@ class AmberWriter(object):
             fileh.write('\n')
 
             for i in range(len(pdbs)):
-                fileh.write("p%s = loadpdb %s\n" % (i, pdbs[i]))
+                if "pdb" in pdbs[i]:
+                    fileh.write("p%s = loadpdb %s\n" % (i, pdbs[i]))
+                elif "mol2" in pdbs[i]:
+                    fileh.write("p%s = loadmol2 %s\n" % (i, pdbs[i]))
+                else:
+                    raise ValueError("Unknown coordinate type: %s"
+                                     % pdbs[i])
 
             for p in prot_pdbs:
                 fileh.write("pp%s = loadpdb %s\n" % (p[0], p[1]))

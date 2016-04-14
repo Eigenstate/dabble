@@ -24,9 +24,83 @@ Boston, MA 02111-1307, USA.
 
 from __future__ import print_function
 import argparse
+import os, sys
 import signal
-import sys
-from Dabble import __version__, DabbleBuilder
+import tempfile
+
+__version__ = '1.3.5'
+__author__ = 'Robin Betz'
+    
+#++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+#                                   CLASSES                                   #
+#++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+
+class VmdSilencer:
+    """
+    Toggles whether or not C extensions can write to stdout. Since
+    VMD is the only C extension that does this, silences this extra
+    output during the dabbling process. This is done in dabble.py not
+    in the Dabble API because the user probably wants more info / it 
+    can't hurt them if they're smart enough to use the API.
+
+    Most of this is from:
+    http://code.activestate.com/recipes/577564-context-manager-for-low-level-redirection-of-stdou/
+    which is licensed under the MIT license.
+
+    Attributes:
+        output (file): Where to put the VMD ouptut
+    """
+
+    def __init__(self, output=os.devnull):
+        self.outfile = output
+        self.mode = 'w'
+        
+    #==========================================================================
+
+    def __enter__(self):
+        self.sys = sys
+        # save previous stdout/stderr
+        self.saved_stream = sys.__stdout__
+        self.fd = self.saved_stream.fileno()
+        self.saved_fd = os.dup(sys.stdout.fileno())
+        sys.stdout.flush() # flush any pending output 
+
+        # open surrogate files
+        null_fd = open(self.outfile, self.mode)
+        os.dup2(null_fd.fileno(), self.fd)
+
+        self.null_stream = open(self.outfile, self.mode, 0)
+        self.null_fd = self.null_stream.fileno()
+
+        # overwrite file objects and low-level file descriptors
+        os.dup2(self.null_fd, self.fd)
+
+        sys.stdout = os.fdopen(self.saved_fd, 'w')
+        sys.stdout.flush()
+
+    #==========================================================================
+
+    def __exit__(self, *args):
+        sys = self.sys
+        # flush any pending output
+        sys.__stdout__.flush()
+        # restore original streams and file descriptors
+        os.dup2(self.saved_fd, self.fd)
+        sys.stdout = self.saved_stream
+        # clean up
+        self.null_stream.close()
+        os.close(self.saved_fd)
+        return False
+
+#++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+
+# Handle interrupts
+def signal_handler(*args, **kwargs): # pylint: disable=unused-argument
+    """ Catch signals """
+    sys.stdout.write('\nInterrupted\n')
+    sys.exit(1)
+
+#++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
 
 WELCOME_SCREEN = '''
  ===============================================
@@ -44,25 +118,6 @@ WELCOME_SCREEN = '''
 | %s |
  ===============================================
 ''' % ('{0:^45}'.format("Version " + __version__))
-
-# Handle interrupts
-def signal_handler(*args, **kwargs): # pylint: disable=unused-argument
-    """ Catch signals """
-    sys.stdout.write('\nInterrupted\n')
-    sys.exit(1)
-
-signal.signal(signal.SIGINT, signal_handler)
-
-# Log messages
-def _make_logger(out, quiet=False):
-    """
-    Creates a logger that auto-flushes
-    """
-    def logger(msg): # pylint: disable=missing-docstring
-        if not quiet:
-            out.write(msg)
-            out.flush()
-    return logger
 
 # pylint: disable=invalid-name
 parser = argparse.ArgumentParser(prog='dabble')
@@ -189,9 +244,17 @@ group.add_argument('--tmp-dir', dest='tmp_dir', default=None)
 print(WELCOME_SCREEN)
 print("\nCommand was:\n  %s\n" % " ".join([i for i in sys.argv]))
 opts = parser.parse_args(sys.argv[1:])
-log = _make_logger(sys.stdout, opts.quiet)
-log('\n\n')
 
-builder = DabbleBuilder(**vars(opts)) # pylint: disable=star-args
-builder.write()
+# Make the temporary directory. Needs to be done now so there is somewhere
+# to save the vmd output
+if not opts.tmp_dir:
+    opts.tmp_dir = tempfile.mkdtemp(prefix='dabble', dir=os.getcwd())
+
+with VmdSilencer(output=os.path.join(opts.tmp_dir,"vmd_output.txt")):
+
+    signal.signal(signal.SIGINT, signal_handler)
+    from Dabble import DabbleBuilder
+    builder = DabbleBuilder(**vars(opts)) # pylint: disable=star-args
+    builder.write()
+    print("\nSuccess!")
 
