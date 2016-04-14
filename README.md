@@ -9,6 +9,16 @@ from VMD, which is compiled into a Python module and imported into the program.
 To use, just run dabble from this directory. It will pull in the relevant
 dependencies and launch.
 
+## Installation ###
+Conda package (recommended for dependency resolution):
+
+    conda install -c https://conda.anaconda.org/rbetz dabble
+
+Dabble requires the [VMD python module](https://github.com/Eigenstate/vmd-python).
+Provided this dependency is available, installation of Dabble is straightforward:
+    
+    python setup.py install
+
 ## Basic Usage ##
 
 ### The protein ###
@@ -63,7 +73,7 @@ in a variety of formats.
 However, if you are going to run a simulation, dabble can construct the membrane system
 and then apply atom types and connectivity from your favourite molecular dynamics 
 force field. Currently this only works if your favourite molecular dynamics force field
-is CHARMM and you want to simulate in CHARMM or AMBER.
+is AMBER (alpha!) or CHARMM and you want to simulate in CHARMM or AMBER.
 
 All intermediate files are saved, so if you want an AMBER prmtop, you will also get
 the .mae, .pdb, and .psf files that were created along the way. These can be useful in
@@ -84,35 +94,44 @@ file (pdb) describing the system with CHARMM atom types. Dabble does all of the 
 lifting, most of which is dealing with quirks of psfgen and handling translation from
 pdb atom names/types to CHARMM ones. 
 
-By default, the charmm36 atom names, types, and topologies aare used.
-You will be prompted for additional or alternative rtf files where you can define
-ligands or use a different version of the force field.
+By default, the charmm36 atom names, types, and topologies are used. Provide additional
+str, rtf/top, or par files with the appropriate flag. Flags may be given multiple times.
 
-Dabble will attempt to match up atom names from the structure to the topologies, but
-will occasionally fail. If this happens, you will be presented with a list of unmatched
-atoms for each problem residue and a list of atoms in your file for that residue that could
-not be matched. Usually it is easy to identify the correspondence: 1H -> H1, etc. However
-if it is not obvious, please check the charmm rtf file and your structure to be sure that
-the atoms are being done right.
+    -o <output.psf> -top ligand1.rtf -top ligand2.rtf -par ligands.prm -str caps.str
 
-To get a pdb and psf file,
+You will get two files, output.psf and output.pdb.
 
-    -o <output.psf>
+Dabble will attempt to match up atom names from the structure to known topologies. The
+matching functionality will detect and apply patches! However, it can occasionally fail.
+Check all patches applied are correct and verify your structure before simiulating.
 
-And you will get two files, output.psf and output.pdb.
+#### AMBER-ready with AMBER parameters ###
+
+*Alpha!* Bug reports are very much appreciated!
+
+If you want to simulate in AMBER using AMBER parameters, use the `-ff amber` option
+and request a prmtop formatted output.
+Residue topologies will be matched against the AMBER definitions and atom names
+assigned automatically. Leap will be invoked to do the final system building.
+
+By default, ff14SB and lipid14 will be used to describe the system. Provide additional
+leaprc files with the `-str` option, additional frcmod files with the `-par` option,
+and additional off or lib topology files with the `top` option. For example:
+
+    -o <output.prmtop> -ff amber -par ligand.frcmod -top ligand.off -str leaprc.lipid11
 
 #### AMBER-ready with CHARMM parameters ####
 
-No, you can't use AMBER parameters yet, sorry. But if you want to simulate in AMBER 
-with CHARMM parameters, dabble can help you out. It will obtain a psf file using the same
-method described above, and then will use the chamber function of the ParmEd API (by
+If you want to simulate in AMBER with CHARMM parameters, dabble can help you out.
+It will obtain a psf file using the same method described for CHARMM format files,
+and then will use the chamber function of the ParmEd API (by
 Jason Swails) to produce AMBER input files.
 
 Please be patient. The call to chamber often takes some time.
 
 To get AMBER input files:
 
-    -o <output.prmtop>
+    -o <output.prmtop> -ff charmm
 
 And you will get two files, output.prmtop and output.inpcrd, ready to run in AMBER.
 _Please note that these files will not view correctly in VMD._ There will be a complaint
@@ -125,14 +144,13 @@ file instead of the prmtop to check the final structure.
 
 ### Ligands ###
 
-*"I have a ligand not defined in cgenff"*
+*"I have a ligand not defined in the default topologies"*
 
 Currently our lab uses [paramchem](cgenff.paramchem.org) to obtain ligand parameters, with
-extensive validation. Put the resulting .str filename in at the prompts, or by passing
-a comma separated list at the command line.
+extensive validation. The resulting str file can be passed to Dabble.
 
-    -par <files>
-    -top <files>
+If you are using AMBER parameters, please refer to the [Antechamber tutorial](http://ambermd.org/tutorials/basic/tutorial4b/) for information on how to obtain an off and frcmod file describing your
+ligand that can then be passed to Dabble.
 
 *"It says it couldn't find atoms, but they're in the structure!"*
 
@@ -143,19 +161,10 @@ charmm topology files or your .str file, and make sure that your atom names matc
 will try to help you with this process, but it sometimes fails. Most of the time it is
 because there are multiple atoms with the same name. Ensure you have unique names.
 
-*"I have a cholesterol but it's not recognizing it!"*
-
-Cholesterol or other small molecules defined in cgenff are identified during psf generation
-by residue name and atom names, so it may not match or may match atoms incorrectly. The
-easiest way to fix name issues is to generate a mol2 file of your small molecule and run
-that through [paramchem](cgenff.paramchem.org) which is smart enough to recognize the
-molecule and will provide a topology file that translates the atom names to the correct 
-charmm atom types.
-
 ## *NEW* Hydrogen mass repartitioning ##
-To run your simulations with timesteps up to 4fs, dabble now supports hydrogen
-mass repartitioning. Currently this only works when using AMBER with charmm parameters.
-Just add the following flag.
+To run your simulations with timesteps up to 4fs, Dabble can invoke Parmed to conduct hydrogen
+mass repartitioning. Currently this only works when requesting prmtop format output
+(with either AMBER or CHARMM parameters)
 
     --hmr
 
@@ -253,20 +262,25 @@ You can set the amount of padding on each side of the protein with the following
 
     --z-buffer-dist 10.0
 
+You can also manually set the total Z dimension of the final system:
+
+    --absolute-z 100.0
 
 *"I want a much larger area of membrane around the protein"*
 
 You can specify the buffer distance around the protein that must consist of lipids.
-The default is 20.0 A, which errs on the small side. 
+This buffer determines the distance between the protein and the edge of the box
+on each side.
+The default is 17.5 A.
 
-    --membrane-buffer-dist 30.0
+    --membrane-buffer-dist 20.0
 
 Alternatively, you could specify the desired X and/or Y dimension of the final system:
 
     --absolute-x 20.0
     --absolute-y 25.0
 
-*"I want a square system, but my lipid is a rectangle"*
+*"I want a square system, but my lipid patch is a rectangle"*
 
 Dabble now treats the X and Y dimensions of the protein separately. This results in
 large decreases in the number of atoms in the dabbled system, especially for
