@@ -11,8 +11,10 @@ dependencies and launch.
 
 ## Installation ###
 Conda package (recommended for dependency resolution):
-
-    conda install -c https://conda.anaconda.org/rbetz dabble
+    
+    conda config --add channels omnia
+    conda config --add channels rbetz
+    conda install dabble
 
 Dabble requires the [VMD python module](https://github.com/Eigenstate/vmd-python).
 Provided this dependency is available, installation of Dabble is straightforward:
