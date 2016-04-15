@@ -1,4 +1,4 @@
-#!/bin/bsh
+#!/bin/bash
 
 $PYTHON setup.py install
 
