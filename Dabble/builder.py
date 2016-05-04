@@ -81,14 +81,14 @@ class DabbleBuilder(object):
 
         # Check for default lipid membrane
         # Set some default options
-        if not self.opts.get('forcefield'): self.opts['forcefield'] = "charmm"
-        if not self.opts.get('lipid_sel'): self.opts['lipid_sel'] = "lipid or resname POPS POPG"
-        if not self.opts.get('cation'): self.opts['cation'] = 'Na'
-        if not self.opts.get('salt_conc'): self.opts['salt_conc'] = 0.150
-        if not self.opts.get('wat_buffer'): self.opts['wat_buffer'] = 20.0
-        if not self.opts.get('xy_buf'): self.opts['xy_buf'] = 17.5
-        if not self.opts.get('lipid_dist'): self.opts['lipid_dist'] = 1.75
-        if not self.opts.get('membrane_system'):
+        if not 'forcefield' in self.opts: self.opts['forcefield'] = "charmm"
+        if not 'lipid_sel' in self.opts: self.opts['lipid_sel'] = "lipid or resname POPS POPG"
+        if not 'cation' in self.opts: self.opts['cation'] = 'Na'
+        if not 'salt_conc' in self.opts:  self.opts['salt_conc'] = 0.150
+        if not 'wat_buffer' in self.opts: self.opts['wat_buffer'] = 20.0
+        if not 'xy_buf' in self.opts: self.opts['xy_buf'] = 17.5
+        if not 'lipid_dist' in self.opts:  self.opts['lipid_dist'] = 1.75
+        if not 'membrane_system' in self.opts:
             self.opts['membrane_system'] =  resource_filename(__name__, \
                     "lipid_membranes/popc.mae")
 
@@ -315,7 +315,6 @@ class DabbleBuilder(object):
         Raises:
           ValueError if invalid cation is specified
         """
-
         # Check cation
         if self.opts.get('cation') not in ['Na', 'K']:
             raise ValueError("Invalid cation")
