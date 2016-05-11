@@ -602,12 +602,12 @@ class DabbleBuilder(object):
         # Remove waters in the Z direction
         total = 0
         zcoord = atomsel(self.solute_sel).get('z')
-        total = _remove_residues('(not (%s)) and noh and z > %f' % \
-                                 (self.solute_sel,
+        total = _remove_residues('(not (%s) and not (%s)) and noh and z > %f' % \
+                                 (self.solute_sel, self.opts['lipid_sel'],
                                   max(zcoord) + self.opts['wat_buffer']),
                                  molid=molid)
-        total += _remove_residues('(not (%s)) and noh and z < %f' %
-                                  (self.solute_sel,
+        total += _remove_residues('(not (%s) and not (%s)) and noh and z < %f' %
+                                  (self.solute_sel, self.opts['lipid_sel'],
                                    min(zcoord) - self.opts['wat_buffer']),
                                   molid=molid)
 
