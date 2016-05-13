@@ -391,10 +391,7 @@ class DabbleBuilder(object):
             dy_tm = 0.0
             sol_solute = atomsel(self.solute_sel, molid)
         else:
-            # Add dummy to the membrane boundaries in case protein is peripheral
-            # If protein is really far from protein then oops
-            solute_z = atomsel(self.solute_sel, molid=molid).get('z') + \
-                       [-zh_mem_full, zh_mem_full]
+            solute_z = atomsel(self.solute_sel, molid=molid).get('z')
             tm_solute = atomsel('(%s) and z > %f and z < %f' % (self.solute_sel,
                                                                 -zh_mem_hyd,
                                                                 zh_mem_hyd), molid)
@@ -407,13 +404,6 @@ class DabbleBuilder(object):
             sol_solute = atomsel('(%s) and (z < %f or z > %f)' % (self.solute_sel,
                                                                   -zh_mem_hyd,
                                                                   zh_mem_hyd), molid)
-# Old way of doing it- get diameter of protein in membrane
-#            dxy_tm = molutils.solute_xy_diameter('(%s) and z > %f and z < %f' %
-#                                                 (self.solute_sel,
-#                                                  -zh_mem_hyd,
-#                                                  zh_mem_hyd), molid)
-#
-#       dxy_sol = molutils.solute_xy_diameter(self.solute_sel, molid)
 
         # Solvent invariant options
         dx_sol = max(sol_solute.get('x')) - min(sol_solute.get('x'))
@@ -422,9 +412,15 @@ class DabbleBuilder(object):
         self.size[0] = max(dx_tm + 2.*mem_buf, dx_sol + 2.*wat_buf)
         self.size[1] = max(dy_tm + 2.*mem_buf, dy_sol + 2.*wat_buf)
 
-        # Z dimension
-        dz_full = max(solute_z) - min(solute_z)
-        self.size[2] = dz_full + 2.*wat_buf
+        # Z dimension. If there's a membrane, need to account for asymmetry
+        # in the Z dimension where the protein could be uneven in the membrane
+        # or even peripheral
+        if self.water_only:
+            self.size[2] = max(solute_z)-min(solute_z) + 2.*wat_buf
+        else:
+            zmax = max(max(solute_z)+wat_buf, zh_mem_full)
+            zmin = min(min(solute_z)-wat_buf, -zh_mem_full)
+            self.size[2] = zmax - zmin
 
         # Cleanup temporary file, if read in
         if filename is not None:
@@ -432,7 +428,7 @@ class DabbleBuilder(object):
             if top != -1:
                 molecule.set_top(top)
 
-        return dx_sol, dy_sol, dx_tm, dy_tm, dz_full
+        return dx_sol, dy_sol, dx_tm, dy_tm, max(solute_z)-min(solute_z)
 
     #==========================================================================
     #                            Private methods                              #
