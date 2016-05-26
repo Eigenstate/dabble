@@ -65,6 +65,10 @@ class VmdSilencer:
         self.saved_fd = os.dup(sys.stdout.fileno())
         sys.stdout.flush() # flush any pending output 
 
+        # Check if we're not actually redirecting
+        if self.outfile == sys.stdout:
+            return
+
         # open surrogate files
         null_fd = open(self.outfile, self.mode)
         os.dup2(null_fd.fileno(), self.fd)
@@ -88,7 +92,8 @@ class VmdSilencer:
         os.dup2(self.saved_fd, self.fd)
         sys.stdout = self.saved_stream
         # clean up
-        self.null_stream.close()
+        try: self.null_stream.close()
+        except: pass
         os.close(self.saved_fd)
         return False
 
@@ -240,6 +245,8 @@ group.add_argument('--membrane-rotation', dest='z_rotation',
 
 group = parser.add_argument_group('Debug and Testing Options')
 group.add_argument('--tmp-dir', dest='tmp_dir', default=None)
+group.add_argument('--verbose', dest='debug_verbose', default=False,
+                   action='store_true')
 
 print(WELCOME_SCREEN)
 print("\nCommand was:\n  %s\n" % " ".join([i for i in sys.argv]))
@@ -250,7 +257,10 @@ opts = parser.parse_args(sys.argv[1:])
 if not opts.tmp_dir:
     opts.tmp_dir = tempfile.mkdtemp(prefix='dabble', dir=os.getcwd())
 
-with VmdSilencer(output=os.path.join(opts.tmp_dir,"vmd_output.txt")):
+if opts.debug_verbose: soutput = sys.stdout
+else:                  soutput = os.path.join(opts.tmp_dir, "vmd_output.txt")
+
+with VmdSilencer(output=soutput):
 
     signal.signal(signal.SIGINT, signal_handler)
     from Dabble import DabbleBuilder
