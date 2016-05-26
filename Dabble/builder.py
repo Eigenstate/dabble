@@ -197,7 +197,6 @@ class DabbleBuilder(object):
 
         # Remove lipids outside the box if there are lipids
         if not self.water_only:
-            self._remove_xy_residues(self.molids['combined'])
             print("\nInitial membrane composition:\n%s" %
                   molutils.print_lipid_composition(self.opts.get('lipid_sel'),
                                                    molid=self.molids['combined']))
@@ -666,7 +665,7 @@ class DabbleBuilder(object):
 
     #==========================================================================
 
-    def _remove_xy_residues(self, molid):
+    def _remove_xy_lipids(self, molid):
         """
         Removes residues in the +-XY direction in the system. Used to chop off
         lipids that are protruding outside of the box dimensions.
@@ -834,6 +833,7 @@ class DabbleBuilder(object):
         # TODO
         clash_lips = 0
         protein_lips = 0
+        solute_lips = 0
         if self.opts.get('clash_lipids'):
             x_edge_dim = self.size[0]*0.5*0.9
             y_edge_dim = self.size[1]*0.5*0.9
@@ -849,6 +849,8 @@ class DabbleBuilder(object):
             protein_lips = self._remove_lipids_near_rings(self.opts['clash_lipids'], \
                 ring_sel='noh and protein and not backbone', dist=1.25, \
                 molid=molid)
+
+        solute_lips = self._remove_xy_lipids(molid)
 
         print("Removed %d atoms" % (solute_lips + ring_lips + clash_lips +
                                     protein_lips))

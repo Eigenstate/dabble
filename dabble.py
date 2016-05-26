@@ -177,6 +177,7 @@ group.add_argument('-L', '--lipid-selection', dest='lipid_sel',
                    help='atomsel for the lipids in the membrane [default: '
                    '"lipid or resname POPS"]')
 group.add_argument('-C', '--lipid-clash-check', dest='clash_lipids',
+                   default='resname CLR CLOL',
                    help='Atomsel for lipids with rings (i.e. cholesterol) '
                    'that might clash with other lipids.')
 group.add_argument('-f', '--lipid-friendly-sel', type=str,
