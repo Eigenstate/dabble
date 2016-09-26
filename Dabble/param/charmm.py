@@ -79,7 +79,8 @@ class CharmmWriter(object):
 
     #==========================================================================
 
-    def __init__(self, tmp_dir, molid, lipid_sel="lipid", extra_topos=None):
+    def __init__(self, tmp_dir, molid, lipid_sel="lipid", extra_topos=None,
+                 override_defaults=False):
 
         # Create TCL temp file and directory
         self.tmp_dir = tmp_dir
@@ -90,17 +91,20 @@ class CharmmWriter(object):
         self.molid = molid
         self.psf_name = ""
         # Default parameter sets
-        self.topologies = [
-            resource_filename(__name__, "charmm_parameters/top_all36_caps.rtf"),
-            resource_filename(__name__, "charmm_parameters/top_water_ions.rtf"),
-            resource_filename(__name__, "charmm_parameters/top_all36_cgenff.rtf"),
-            resource_filename(__name__, "charmm_parameters/top_all36_prot.rtf"),
-            resource_filename(__name__, "charmm_parameters/top_all36_lipid.rtf"),
-            resource_filename(__name__, "charmm_parameters/top_all36_carb.rtf"),
-            resource_filename(__name__, "charmm_parameters/top_all36_na.rtf"),
-            resource_filename(__name__, "charmm_parameters/toppar_all36_prot_na_combined.str"),
-            resource_filename(__name__, "charmm_parameters/toppar_all36_prot_fluoro_alkanes.str"),
-            ]
+        if override_defaults:
+            self.topologies = []
+        else:
+            self.topologies = [
+                resource_filename(__name__, "charmm_parameters/top_all36_caps.rtf"),
+                resource_filename(__name__, "charmm_parameters/top_water_ions.rtf"),
+                resource_filename(__name__, "charmm_parameters/top_all36_cgenff.rtf"),
+                resource_filename(__name__, "charmm_parameters/top_all36_prot.rtf"),
+                resource_filename(__name__, "charmm_parameters/top_all36_lipid.rtf"),
+                resource_filename(__name__, "charmm_parameters/top_all36_carb.rtf"),
+                resource_filename(__name__, "charmm_parameters/top_all36_na.rtf"),
+                resource_filename(__name__, "charmm_parameters/toppar_all36_prot_na_combined.str"),
+                resource_filename(__name__, "charmm_parameters/toppar_all36_prot_fluoro_alkanes.str"),
+                ]
 
         if extra_topos:
             self.topologies.extend(extra_topos)

@@ -53,7 +53,8 @@ class AmberWriter(object):
 
     def __init__(self, molid, tmp_dir,
                  forcefield='charmm', lipid_sel="lipid",
-                 hmr=False, extra_topos=None, extra_params=None):
+                 hmr=False, extra_topos=None, extra_params=None,
+                 override_defaults=False):
         self.lipid_sel = lipid_sel
         self.molid = molid
         self.tmp_dir = tmp_dir
@@ -88,6 +89,11 @@ class AmberWriter(object):
             ]
             self.matcher = None
 
+        self.override = override_defaults
+        if override_defaults:
+            self.topologies = []
+            self.parameters = []
+
         if extra_topos is not None:
             self.topologies.extend(extra_topos)
 
@@ -109,7 +115,8 @@ class AmberWriter(object):
             psfgen = CharmmWriter(molid=self.molid, 
                                   tmp_dir=self.tmp_dir,
                                   lipid_sel=self.lipid_sel,
-                                  extra_topos=self.extra_topos)
+                                  extra_topos=self.extra_topos,
+                                  override_defaults=self.override)
             self.topologies = psfgen.write(self.prmtop_name)
             self._psf_to_charmm_amber()
 
@@ -734,9 +741,10 @@ class AmberWriter(object):
             fileh.close()
 
         # Now invoke leap. If it fails, print output
+        out = ""
         try:
-            out=check_output(["%s/bin/tleap" % os.environ.get("AMBERHOME"),
-                             "-f", leapin])
+            out = check_output(["%s/bin/tleap" % os.environ.get("AMBERHOME"),
+                                "-f", leapin])
         except:
             print("Call to tleap failed! Output was:\n%s" % out)
             quit(1)
