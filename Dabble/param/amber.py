@@ -79,14 +79,13 @@ class AmberWriter(object):
                 raise ValueError("AMBERHOME must be set to use AMBER forcefield!")
 
             self.topologies = [
-                os.path.join(os.environ["AMBERHOME"],"dat","leap","cmd","leaprc.ff14SB"),
+                os.path.join(os.environ["AMBERHOME"],"dat","leap","cmd","leaprc.protein.ff14SB"),
                 os.path.join(os.environ["AMBERHOME"],"dat","leap","cmd","leaprc.lipid14"),
-                os.path.join(os.environ["AMBERHOME"],"dat","leap","cmd","leaprc.lipid11"),
-                os.path.join(os.environ["AMBERHOME"],"dat","leap","cmd","leaprc.gaff")
+                os.path.join(os.environ["AMBERHOME"],"dat","leap","cmd","leaprc.lipid16"),
+                os.path.join(os.environ["AMBERHOME"],"dat","leap","cmd","leaprc.water.tip3p"),
+                os.path.join(os.environ["AMBERHOME"],"dat","leap","cmd","leaprc.gaff2"),
                ]
-            self.parameters = [
-                os.path.join(os.environ["AMBERHOME"],"dat","leap","parm","frcmod.ionsjc_tip3p")
-            ]
+            self.parameters = []
             self.matcher = None
 
         self.override = override_defaults
@@ -111,7 +110,7 @@ class AmberWriter(object):
         self.prmtop_name = prmtop_name
 
         # Charmm forcefield
-        if self.forcefield is 'charmm':
+        if self.forcefield == 'charmm':
             psfgen = CharmmWriter(molid=self.molid, 
                                   tmp_dir=self.tmp_dir,
                                   lipid_sel=self.lipid_sel,
@@ -121,9 +120,12 @@ class AmberWriter(object):
             self._psf_to_charmm_amber()
 
         # Amber forcefield
-        elif self.forcefield is 'amber':
+        elif self.forcefield == 'amber':
             # Initialize the matcher
             self.matcher = AmberMatcher(self.topologies)
+            print("Using the following topologies:")
+            for top in self.topologies:
+                print("  - %s" % top.split("/")[-1])
             # Save and reload so residue looping is correct
             print("Assigning AMBER atom types...")
             self._split_caps()
@@ -134,10 +136,11 @@ class AmberWriter(object):
             pdbs.append(self._write_lipids())
             prot_pdbs = self._write_protein()
             pdbs.extend(self._write_solvent())
-            pdbs.extend(self._write_ligands())
+            ligfiles = self._write_ligands()
 
             # Now invoke leap to create the prmtop and inpcrd
-            outfile = self._run_leap(prot_pdbs, pdbs, disulfides)
+            outfile = self._run_leap(ligfiles, prot_pdbs, pdbs,
+                                     disulfides)
 
             # Check validity of output prmtop using parmed
             print("\nChecking for problems with the prmtop...")
@@ -488,7 +491,8 @@ class AmberWriter(object):
         """
 
         idx = 1
-        mol2s = []
+        mol2s = {}
+
         for residue in set(atomsel("user 1.0").get("residue")):
             temp = tempfile.mkstemp(suffix='.mol2', prefix='amber_extra',
                                     dir=self.tmp_dir)[1]
@@ -497,7 +501,8 @@ class AmberWriter(object):
             sel.set('user', 0.0)
             sel.set('resid', idx)
             sel.write('mol2', temp)
-            mol2s.append(temp)
+            unit = self.matcher.get_unit(sel, molecule.get_top()) 
+            mol2s[unit] = temp
             idx += 1
         return mol2s
 
@@ -515,7 +520,8 @@ class AmberWriter(object):
         # First write all the ions using just vmd
         temp = tempfile.mkstemp(suffix='.pdb', prefix='amber_ion',
                                 dir=self.tmp_dir)[1]
-        ions = atomsel("resname NA 'Cl-' and user 1.0")
+        ionnames = [_ for _ in self.matcher.known_res.keys() if '+' in _ or '-' in _]
+        ions = atomsel("resname NA CL %s and user 1.0" % ' '.join("'%s'" % _ for _ in ionnames))
         ions.set('resid', range(1,len(ions)+1))
         ions.write('pdb', temp)
         ions.set('user', 0.0)
@@ -664,15 +670,18 @@ class AmberWriter(object):
 
     #==========================================================================
 
-    def _run_leap(self, prot_pdbs, pdbs, disulfides):
+    def _run_leap(self, ligfiles, prot_pdbs, pdbs, disulfides):
         """
         Runs leap, creating a prmtop and inpcrd from the given pdb and off
         library files.
 
         Args:
+            ligfiles (dict str -> str): UNIT name and filename of mol2 file
+                for each ligand. The unit name is necessary here to add
+                the right variable names in leap because it is the worst.
             prot_pdbs (list of (int, str)): PDB files containing protein fragments
-                                            Predictably named for disulfide-ing.
-                                            The int is the fragment in each
+                Predictably named for disulfide-ing.
+                The int is the fragment in each
             pdbs (list of str): PDB or Mol2 files to combine
             disulfides (set of tuple (int,int)): Residues to disulfide bond
 
@@ -702,8 +711,10 @@ class AmberWriter(object):
                     fileh.write("source %s\n" % i)
                 elif "frcmod" in i:
                     fileh.write("loadamberparams %s\n" % i)
-                elif ".lib" or ".off" in i:
+                elif ".lib" in i:
                     fileh.write("loadoff %s\n" % i)
+                elif ".off" in i:
+                    continue
                 else:
                     raise ValueError("Unknown topology type: %s" % i)
             fileh.write('\n')
@@ -720,6 +731,20 @@ class AmberWriter(object):
             for p in prot_pdbs:
                 fileh.write("pp%s = loadpdb %s\n" % (p[0], p[1]))
 
+            for unit, f in ligfiles.iteritems():
+                if "pdb" in f:
+                    fileh.write("%s = loadpdb %s\n" % (unit, f))
+                elif "mol2" in f:
+                    fileh.write("%s = loadmol2 %s\n" % (unit, f))
+                else:
+                    raise ValueError("Unknown ligand file type: %s" % f)
+            
+            # Add off files here since they need to be stated after
+            # things are read in
+            for i in [_ for _ in self.topologies + self.parameters if ".off" in _]:
+                fileh.write("loadoff %s\n" %i )
+
+
             # Create disulfides
             for d in disulfides:
                 s1 = atomsel("residue %s" % d[0])
@@ -732,6 +757,7 @@ class AmberWriter(object):
 
             fileh.write("\np = combine { %s }\n"
                          % ' '.join(["p%d"%i for i in range(len(pdbs))]))
+            fileh.write("p = combine { p %s }\n" % ' '.join(ligfiles.keys()))
             fileh.write("p = combine { p %s }\n"
                          % ' '.join(["pp%d" % i[0] for i in prot_pdbs]))
             fileh.write("setbox p centers 0.0\n")

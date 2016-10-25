@@ -231,8 +231,13 @@ def write_final_system(out_fmt, out_name, molid, **kwargs):
 
     # For amber format files, invoke the parmed chamber routine
     if out_fmt == 'amber':
-        print("Writing AMBER format files with CHARMM parameters. "
-              "This may take a moment...\n")
+        if kwargs.get('forcefield') == "charmm":
+            print("Writing AMBER format files with CHARMM parameters. "
+                  "This may take a moment...\n")
+        else:
+            print("Writing AMBER format files with Amber parameters. "
+                  "This may take a moment...\n")
+
         temp_mol = molecule.load('mae', mae_name)
         write_psf_name = mae_name.replace('.mae', '')
         writer = AmberWriter(molid=temp_mol,

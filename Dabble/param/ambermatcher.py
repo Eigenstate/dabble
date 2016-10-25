@@ -84,10 +84,12 @@ class AmberMatcher(MoleculeMatcher):
                    37: 'Rb', 38: 'Sr', 39: 'Y', 40: 'Zr', 41: 'Nb', 42: 'Mo',
                    43: 'Tc', 44: 'Ru', 45: 'Rh', 46: 'Pd', 47: 'Ag', 48: 'Cd',
                    49: 'In', 50: 'Sn', 51: 'Sb', 52: 'Te', 53: 'I', 54: 'Xe',
-                   55: 'Cs', 56: 'Ba', 57: 'La', 64: 'Gd', 72: 'Hf',
+                   55: 'Cs', 56: 'Ba', 57: 'La', 59: 'Pr', 60: 'Nd', 62: 'Sm',
+                   63: 'Eu', 64: 'Gd', 65: 'Tb', 66: 'Dy', 68: 'Er', 69: 'Tm',
+                   70: 'Yb', 71: 'Lu', 72: 'Hf',
                    73: 'Ta', 74: 'W', 75: 'Re', 76: 'Os', 77: 'Ir', 78: 'Pt',
                    79: 'Au', 80: 'Hg', 81: 'Tl', 82: 'Pb', 83: 'Bi', 84: 'Po',
-                   85: 'At', 86: 'Rn'}
+                   85: 'At', 86: 'Rn', 88: 'Ra', 90: 'Th', 92: 'U', 94: 'Pu'}
     # pylint: enable=bad-whitespace,bad-continuation
 
     lipid_heads = ["PC", "PE", "PS", "PH-", "H2-", "PGR", "PGS"]
@@ -164,6 +166,35 @@ class AmberMatcher(MoleculeMatcher):
                       "forget to provide a topology file?")
 
         return (None, None)
+
+    #=========================================================================
+
+    def get_unit(self, selection, molid):
+        """
+        Gets the UNIT name corresponding to a selection. Helpful when matching
+        ligands that may have a residue name different from unit name since
+        the average user doesn't know what a unit name is when creating a library.
+        This isn't as efficient as it could be because it is called 
+        infrequently, on ligands only.
+
+        Args:
+            selection (VMD atomsel): Selection to check
+            molid (int): VMD molecule ID to look in
+
+        Returns:
+            (str) The unit name, or None if there was no match 
+        """
+        resname = selection.get('resname')[0]
+        rgraph = self.parse_vmd_graph(selection)[0]
+        matched = False
+
+        for matchname in self.known_res.keys():
+            graph = self.known_res[matchname]
+            matcher = isomorphism.GraphMatcher(rgraph, graph,
+                                               node_match=self._check_atom_match)
+            if matcher.is_isomorphic():
+                return matchname
+        return None
 
     #=========================================================================
 
@@ -372,8 +403,10 @@ class AmberMatcher(MoleculeMatcher):
         """
         if ".off" in filename or ".lib" in filename:
             self._load_off(filename)
+        elif "frcmod" in filename:
+            return self._load_params(filename)
         elif "leaprc" not in filename:
-            raise ValueError("AmberMatcher only parses leaprc topologies!")
+            raise ValueError("AmberMatcher only parses leaprc or frcmod topologies!")
 
         # Set AMBER search path for lib files
         if not os.environ.get("AMBERHOME"):
@@ -407,7 +440,8 @@ class AmberMatcher(MoleculeMatcher):
                         logger.warning("Ignoring pseudoatom %s" % tokens[1])
                         continue
 
-                    if tokens[2] not in self.MASS_LOOKUP.values():
+                    if tokens[2] not in self.MASS_LOOKUP.values() and \
+                       tokens[2] not in self.LEAP_ELEMENTS.values():
                         raise ValueError("Unknown element in %s\n: %s"
                                          % (filename, tokens[2]))
                     self.nodenames[tokens[1]] = tokens[2]
@@ -424,6 +458,18 @@ class AmberMatcher(MoleculeMatcher):
                         self._load_off(os.path.join(leapdir, "lib",
                                                     tokens[1]))
 
+                # loadamberparamsloads a frcmod file, which
+                # may define ions
+                elif not incmd and tokens[0].lower() == "loadamberparams":
+                    if len(tokens) < 2:
+                        raise ValueError("Malformed line in %s: %s"
+                                         % (filename, line))
+                    if os.path.isfile(tokens[1]):
+                        self._load_params(tokens[1])
+                    else:
+                        self._load_params(os.path.join(leapdir, "parm",
+                                                       tokens[1]))
+
                 # can source other leaprc files within this one
                 # search current directory first, then amber one
                 elif not incmd and tokens[0].lower() == "source":
@@ -435,6 +481,50 @@ class AmberMatcher(MoleculeMatcher):
                 elif incmd:
                     raise ValueError("Unclosed command in %s" % filename)
 
+        return True
+
+    #=========================================================================
+
+    def _load_params(self, filename):
+        """
+        Parses a dat/frcmod format amber library file. If single
+        atom ions are found, adds them to the known_res dictionary.
+
+        Args:
+            filename (str): The file to parse
+
+        Returns:
+            True if successful
+
+        Raises:
+            ValueError if frcmod file is malformed in various ways
+        """
+        incmd = ""
+
+        with open(filename, 'r') as fh:
+            for line in fh:
+                if not len(line):
+                    continue
+                tokens = [i.strip(" \t\"\n") for i in line.split()]
+                if not len(tokens) or not len(tokens[0]):
+                    continue
+                
+                # Find the MASS lines
+                if len(tokens) == 1:
+                    incmd = tokens[0].lower()
+                elif incmd == "mass": 
+                    if "+" in tokens[0] or "-" in tokens[0]:
+                        unit = tokens[0]
+                        if not self.known_res.get(unit):
+                            self.known_res[unit] = nx.Graph()
+                        graph = self.known_res[unit]
+                       
+                        element = self.nodenames.get(tokens[0], "Other")
+                        graph.add_node("1", type=tokens[0],
+                                       element=element,
+                                       resname=tokens[0],
+                                       residue="self",
+                                       atomname=tokens[0])
         return True
 
     #=========================================================================
