@@ -1,5 +1,5 @@
 
-from distutils.core import setup, Command
+from setuptools import setup, Command
 import os
 import sys
 
