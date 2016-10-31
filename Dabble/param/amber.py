@@ -251,6 +251,7 @@ class AmberWriter(object):
         # Add box information since it is not in the pdb
         box = molecule.get_periodic(molid=self.molid)
         args += " -box %f,%f,%f" % (box['a'], box['b'], box['c'])
+        args += " nosettle"
 
         print("Running chamber. This may take a while...")
         sys.stdout.flush()
