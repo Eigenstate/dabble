@@ -6,25 +6,27 @@ dir = os.path.dirname(__file__) + "/"
 
 #==============================================================================
 
-def test_multiligand_building(tmpdir):
-    from Dabble import DabbleBuilder
-
-    p = str(tmpdir.mkdir("multiligand_build"))
-    print p+"/test.mae"
-    filename =  dir + "B2AR_10ALPs.mae"
-    b = DabbleBuilder(solute_filename=filename, output_filename=p+"/test.mae",
-                      xy_buf=5., wat_buffer=5., overwrite=True, tmp_dir=p)
-    b.write()
-    #resout, reserr = capfd.readouterr()
-    subprocess.check_call(["diff","-q", dir + "test_multiligand_correct.mae", p+"/test.mae"])
-
-#==============================================================================
-
+#def test_multiligand_building(tmpdir):
+#    from Dabble import DabbleBuilder
+#
+#    p = str(tmpdir.mkdir("multiligand_build"))
+#    print p+"/test.mae"
+#    filename =  dir + "B2AR_10ALPs.mae"
+#    b = DabbleBuilder(solute_filename=filename, output_filename=p+"/test.mae",
+#                      xy_buf=5., wat_buffer=5., overwrite=True, tmp_dir=p)
+#    b.write()
+#    #resout, reserr = capfd.readouterr()
+#    subprocess.check_call(["diff","-q", dir + "test_multiligand_correct.mae", p+"/test.mae"])
+#
+##==============================================================================
+#
 def test_multiligand_parameterizing(tmpdir):
     from Dabble.param import CharmmWriter
     import vmd, molecule
 
-    p = str(tmpdir.mkdir("multiligand_parameterize"))
+    #p = str(tmpdir.mkdir("multiligand_parameterize"))
+    p = tmpdir
+    dir = "./"
     molid = molecule.load("mae", dir + "test_multiligand_correct.mae")
     w = CharmmWriter(tmp_dir=p, molid=molid, lipid_sel="lipid",
                      extra_topos=[dir+"alprenolol.rtf"])
@@ -51,18 +53,46 @@ def test_multiligand_parameterizing(tmpdir):
 
 #==============================================================================
 
-def test_multiligand_renaming(tmpdir):
-    from Dabble.param import CharmmWriter
+#def test_multiligand_renaming(tmpdir):
+#    from Dabble.param import CharmmWriter
+#    import vmd, molecule
+#
+#    p = str(tmpdir.mkdir("multiligand_rename"))
+#    molid = molecule.load("mae", dir + "B2AR_10ALPs_renamed.mae")
+#    w = CharmmWriter(tmp_dir=p, molid=molid, lipid_sel="lipid",
+#                     extra_topos=[dir + "alprenolol.rtf"])
+#    w.write(p+"/test")
+#    subprocess.check_call(["diff", "-q", "--ignore-matching-lines=REMARKS",
+#                           dir + "test_renamed_correct.psf",
+#                           "--ignore-matching-lines=NTITLE",
+#                           p+"/test.psf"])
+#
+#==============================================================================
+
+#def test_amber_writing(tmpdir):
+#    """
+#    Tests saving a system with no ligand to a file
+#    """
+#    from Dabble.param import AmberWriter
+#    import vmd, molecule
+#
+#    p = str(tmpdir.mkdir("multiligand_rename"))
+#    molid = molecule.load("mae", dir + "B2AR_noalps.mae")
+#    w = AmberWriter(molid, tmp_dir=p, forcefield="amber")
+#    w.write(os.path.join(p,"test"))
+
+#==============================================================================
+
+def test_multiligand_chamber(tmpdir):
+    from Dabble.param import AmberWriter
     import vmd, molecule
 
-    p = str(tmpdir.mkdir("multiligand_rename"))
-    molid = molecule.load("mae", dir + "B2AR_10ALPs_renamed.mae")
-    w = CharmmWriter(tmp_dir=p, molid=molid, lipid_sel="lipid",
-                     extra_topos=[dir + "alprenolol.rtf"])
-    w.write(p+"/test")
-    subprocess.check_call(["diff", "-q", "--ignore-matching-lines=REMARKS",
-                           dir + "test_renamed_correct.psf",
-                           "--ignore-matching-lines=NTITLE",
-                           p+"/test.psf"])
+#    p = str(tmpdir.mkdir("multiligand_rename"))
+    p = tmpdir
+    dir = "./"
+    molid = molecule.load("mae", dir + "test_multiligand_noalps.mae")
+    w = AmberWriter(molid, tmp_dir=p, forcefield="charmm", hmr=True)
+    w.write("test_chamber")
 
-
+#==============================================================================
+test_multiligand_parameterizing("tmpdir/")

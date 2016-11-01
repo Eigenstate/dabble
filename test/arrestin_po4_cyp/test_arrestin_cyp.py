@@ -39,3 +39,4 @@ def test_multiligand_renaming(tmpdir):
                            dir + "test_renamed_correct.psf",
                            p+"/test.psf"])
 
+#==============================================================================
