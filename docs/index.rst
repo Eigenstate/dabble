@@ -13,23 +13,32 @@ parameterization.
 Dabble includes both the main program dabble.py as well as a powerful API for 
 building and parameterizing molecular dynamics systems.
 
+To get started via `Anaconda Python <https://www.continuum.io/downloads>`_,
+use::
+    
+    conda install -c rbetz dabble
+
+.. figure:: _static/dabblebox.png
+    :align: right
+    Prepared system with lipid, water, protein, ligand, and ions
+    
 Features
 --------
 
 - Prepare membrane protein systems by inserting them into a membrane
 - Prepare solvated proteins by adding water
 - Add ions to neutralize and/or to desired concentration
-- Parameterize with CHARMM parameter sets
+- Parameterize with CHARMM or AMBER parameter sets
 - Outputs files for simulation with AMBER or CHARMM 
 - Automatic detection of post-translational modifications
 - Modified amino acids made easy
-- Ligands made easy  
+- Ligands made easy! No more messing with atom names. 
 
 Supported Parameter Sets
 ------------------------
 
 - [X] CHARMM
-- [ ] AMBER
+- [X] AMBER
 - [ ] Gromacs
 
 Supported Simulation Programs
@@ -40,57 +49,38 @@ Supported Simulation Programs
 - [X] Anton (via conversion)
 - [ ] Gromacs
 
-Installation
+Contributing
 ------------
 
-A conda installer for Dabble is coming soon.
-Dabble's main dependency is vmd-python.
-
-    pip install -i https://pypi.anaconda/org/rbetz/simple vmd-python
-
-Then, download the source code from our github.
-
-    git clone https://github.com/drorlab/dabble.git
-
-And install
-
-    cd dabble
-    python setup.py install
-
-Usage
------
-
-.. toctree::
-   :maxdepth: 2
-
-
-   Usage.rst
-
-
-Contribute
-----------
-
-Dabble is a project of the Ron Dror Lab at Stanford University.
-Bug finding is always appreciated, as well as corner cases where your protein
+Dabble is a written by Robin Betz, in the Ron Dror lab at Stanford University.
+Bug finding is always apprecciated, as well as corner cases where your protein
 won't dabble.
+
+Dabble is licensed under the GPLv2 license.
 
 - Issue tracker: https://github.com/drorlab/dabble/issues
 - Source code: https://github.com/drorlab/dabble/project
 
-License
+Usage
+-----
 
--------
-This projects is licensed under the GPLv2 license.
-
+- :ref:`command_line`
+- :ref:`builder_api`
+- :ref:`parameter_api`
+- :ref:`utility_programs`
 
 API Documentation
 -----------------
 
 .. toctree::
    :maxdepth: 2
+   :hidden:
 
+   command_line
+   builder_api
+   parameter_api
+   utility_programs
    Dabble.rst
-   DabbleParam.rst
    DabbleUtils.rst
 
 * :ref:`search`
