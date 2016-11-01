@@ -1,0 +1,374 @@
+
+
+<!DOCTYPE html>
+<!--[if IE 8]><html class="no-js lt-ie9" lang="en" > <![endif]-->
+<!--[if gt IE 8]><!--> <html class="no-js" lang="en" > <!--<![endif]-->
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  
+  <title>DabbleParam.amber &mdash; Dabble 1.0a1 documentation</title>
+  
+
+  
+  
+
+  
+  <link href='https://fonts.googleapis.com/css?family=Lato:400,700,400italic,700italic|Roboto+Slab:400,700|Inconsolata:400,700&subset=latin,cyrillic' rel='stylesheet' type='text/css'>
+
+  
+  
+    
+
+  
+
+  
+  
+    <link rel="stylesheet" href="../../_static/css/theme.css" type="text/css" />
+  
+
+  
+
+  
+    <link rel="top" title="Dabble 1.0a1 documentation" href="../../index.html"/>
+        <link rel="up" title="Module code" href="../index.html"/> 
+
+  
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/modernizr/2.6.2/modernizr.min.js"></script>
+
+</head>
+
+<body class="wy-body-for-nav" role="document">
+
+  <div class="wy-grid-for-nav">
+
+    
+    <nav data-toggle="wy-nav-shift" class="wy-nav-side">
+      <div class="wy-side-nav-search">
+        
+          <a href="../../index.html" class="fa fa-home"> Dabble</a>
+        
+        
+<div role="search">
+  <form id="rtd-search-form" class="wy-form" action="../../search.html" method="get">
+    <input type="text" name="q" placeholder="Search docs" />
+    <input type="hidden" name="check_keywords" value="yes" />
+    <input type="hidden" name="area" value="default" />
+  </form>
+</div>
+      </div>
+
+      <div class="wy-menu wy-menu-vertical" data-spy="affix" role="navigation" aria-label="main navigation">
+        
+          
+          
+              <ul>
+<li class="toctree-l1"><a class="reference internal" href="../../command_line.html">Command-line Usage</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="../../command_line.html#the-protein">The protein</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../../command_line.html#the-membrane-or-solvent">The membrane or solvent</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../../command_line.html#ions">Ions</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../../command_line.html#geometry-specification">Geometry specification</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../../command_line.html#desired-output">Desired output</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../../command_line.html#less-common-options">Less common options</a></li>
+</ul>
+</li>
+<li class="toctree-l1"><a class="reference internal" href="../../parameter_api.html">DabbleParam package</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="../../parameter_api.html#submodules">Submodules</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../../parameter_api.html#dabbleparam-amber-module">DabbleParam.amber module</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../../parameter_api.html#dabbleparam-charmm-module">DabbleParam.charmm module</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../../parameter_api.html#module-contents">Module contents</a></li>
+</ul>
+</li>
+<li class="toctree-l1"><a class="reference internal" href="../../Dabble.html">Dabble package</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="../../Dabble.html#submodules">Submodules</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../../Dabble.html#module-Dabble.builder">Dabble.builder module</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../../Dabble.html#module-Dabble.fileutils">Dabble.fileutils module</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../../Dabble.html#module-Dabble.molutils">Dabble.molutils module</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../../Dabble.html#module-Dabble">Module contents</a></li>
+</ul>
+</li>
+</ul>
+
+          
+        
+      </div>
+      &nbsp;
+    </nav>
+
+    <section data-toggle="wy-nav-shift" class="wy-nav-content-wrap">
+
+      
+      <nav class="wy-nav-top" role="navigation" aria-label="top navigation">
+        <i data-toggle="wy-nav-top" class="fa fa-bars"></i>
+        <a href="../../index.html">Dabble</a>
+      </nav>
+
+
+      
+      <div class="wy-nav-content">
+        <div class="rst-content">
+          <div role="navigation" aria-label="breadcrumbs navigation">
+  <ul class="wy-breadcrumbs">
+    <li><a href="../../index.html">Docs</a> &raquo;</li>
+      
+          <li><a href="../index.html">Module code</a> &raquo;</li>
+      
+    <li>DabbleParam.amber</li>
+      <li class="wy-breadcrumbs-aside">
+        
+      </li>
+  </ul>
+  <hr/>
+</div>
+          <div role="main" class="document">
+            
+  <h1>Source code for DabbleParam.amber</h1><div class="highlight"><pre>
+<span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">This module contains the AmberWriter class and associated methods,</span>
+<span class="sd">which outputs a prmtop/inpcrd file with CHARMM names and parameters</span>
+<span class="sd">for use with simulation with the AMBER molecular dynamics package.</span>
+<span class="sd">It does this by using the chamber functionality of ParmEd API.</span>
+
+<span class="sd">Author: Robin Betz</span>
+
+<span class="sd">Copyright (C) 2015 Robin Betz</span>
+
+<span class="sd">This program is free software; you can redistribute it and/or modify it under</span>
+<span class="sd">the terms of the GNU Lesser General Public License as published by the Free</span>
+<span class="sd">Software Foundation; either version 2 of the License, or (at your option) any</span>
+<span class="sd">later version.</span>
+
+<span class="sd">This program is distributed in the hope that it will be useful, but WITHOUT ANY</span>
+<span class="sd">WARRANTY; without even the implied warranty of MERCHANTABILITY or FITNESS FOR A</span>
+<span class="sd">PARTICULAR PURPOSE.  See the GNU Lesser General Public License for more details.</span>
+
+<span class="sd">You should have received a copy of the GNU Lesser General Public License along</span>
+<span class="sd">with this program; if not, write to the Free Software Foundation, Inc.,</span>
+<span class="sd">59 Temple Place - Suite 330</span>
+<span class="sd">Boston, MA 02111-1307, USA.</span>
+<span class="sd">&quot;&quot;&quot;</span>
+<span class="kn">from</span> <span class="nn">__future__</span> <span class="kn">import</span> <span class="n">print_function</span>
+<span class="kn">import</span> <span class="nn">os</span>
+<span class="kn">import</span> <span class="nn">sys</span>
+<span class="kn">from</span> <span class="nn">pkg_resources</span> <span class="kn">import</span> <span class="n">resource_filename</span>
+
+<span class="kn">import</span> <span class="nn">vmd</span>
+<span class="kn">import</span> <span class="nn">molecule</span>
+<span class="kn">from</span> <span class="nn">atomsel</span> <span class="kn">import</span> <span class="n">atomsel</span>
+
+<span class="kn">from</span> <span class="nn">DabbleParam</span> <span class="kn">import</span> <span class="n">CharmmWriter</span>
+
+<span class="c">#++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++</span>
+
+<div class="viewcode-block" id="AmberWriter"><a class="viewcode-back" href="../../DabbleParam.html#DabbleParam.amber.AmberWriter">[docs]</a><span class="k">class</span> <span class="nc">AmberWriter</span><span class="p">(</span><span class="nb">object</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    Creates AMBER-format input files, using either CHARMM or AMBER parameters.</span>
+
+<span class="sd">    When using the CHARMM parameters, creates a psf/pdb file and interfaces</span>
+<span class="sd">    with ParmEd chamber command to create AMBER format files.</span>
+<span class="sd">    When using the AMBER parameters, creates a pdb file and runs the amber</span>
+<span class="sd">    lipid conversion script to create leap input files.</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+
+    <span class="c">#==========================================================================</span>
+
+    <span class="k">def</span> <span class="nf">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">molid</span><span class="p">,</span> <span class="n">tmp_dir</span><span class="p">,</span>
+                 <span class="n">forcefield</span><span class="o">=</span><span class="s">&#39;charmm&#39;</span><span class="p">,</span> <span class="n">lipid_sel</span><span class="o">=</span><span class="s">&quot;lipid&quot;</span><span class="p">,</span>
+                 <span class="n">hmr</span><span class="o">=</span><span class="bp">False</span><span class="p">,</span> <span class="n">extra_params</span><span class="o">=</span><span class="bp">None</span><span class="p">):</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">lipid_sel</span> <span class="o">=</span> <span class="n">lipid_sel</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">molid</span> <span class="o">=</span> <span class="n">molid</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">tmp_dir</span> <span class="o">=</span> <span class="n">tmp_dir</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">hmr</span> <span class="o">=</span> <span class="n">hmr</span>
+        <span class="k">if</span> <span class="n">forcefield</span> <span class="ow">not</span> <span class="ow">in</span> <span class="p">[</span><span class="s">&#39;amber&#39;</span><span class="p">,</span> <span class="s">&#39;charmm&#39;</span><span class="p">]:</span>
+            <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="s">&quot;Unsupported forcefield: </span><span class="si">%s</span><span class="s">&quot;</span> <span class="o">%</span> <span class="n">forcefield</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">forcefield</span> <span class="o">=</span> <span class="n">forcefield</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">topologies</span> <span class="o">=</span> <span class="s">&#39;&#39;</span>
+        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">forcefield</span> <span class="ow">is</span> <span class="s">&#39;charmm&#39;</span><span class="p">:</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">parameters</span> <span class="o">=</span> <span class="p">[</span>
+                <span class="n">resource_filename</span><span class="p">(</span><span class="n">__name__</span><span class="p">,</span> <span class="s">&quot;charmm_parameters/toppar_water_ions.str&quot;</span><span class="p">),</span>
+                <span class="n">resource_filename</span><span class="p">(</span><span class="n">__name__</span><span class="p">,</span> <span class="s">&quot;charmm_parameters/par_all36_cgenff.prm&quot;</span><span class="p">),</span>
+                <span class="n">resource_filename</span><span class="p">(</span><span class="n">__name__</span><span class="p">,</span> <span class="s">&quot;charmm_parameters/par_all36_prot.prm&quot;</span><span class="p">),</span>
+                <span class="n">resource_filename</span><span class="p">(</span><span class="n">__name__</span><span class="p">,</span> <span class="s">&quot;charmm_parameters/par_all36_lipid.prm&quot;</span><span class="p">),</span>
+                <span class="n">resource_filename</span><span class="p">(</span><span class="n">__name__</span><span class="p">,</span> <span class="s">&quot;charmm_parameters/par_all36_carb.prm&quot;</span><span class="p">),</span>
+                <span class="n">resource_filename</span><span class="p">(</span><span class="n">__name__</span><span class="p">,</span> <span class="s">&quot;charmm_parameters/par_all36_na.prm&quot;</span><span class="p">),</span>
+                <span class="n">resource_filename</span><span class="p">(</span><span class="n">__name__</span><span class="p">,</span> <span class="s">&quot;charmm_parameters/toppar_all36_prot_na_combined.str&quot;</span><span class="p">)</span>
+                <span class="p">]</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">parameters</span> <span class="o">=</span> <span class="p">[]</span> <span class="c"># TODO amber default parameters</span>
+
+        <span class="k">if</span> <span class="n">extra_params</span> <span class="ow">is</span> <span class="ow">not</span> <span class="bp">None</span><span class="p">:</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">parameters</span><span class="o">.</span><span class="n">extend</span><span class="p">(</span><span class="n">extra_parms</span><span class="p">)</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">prompt_params</span> <span class="o">=</span> <span class="bp">False</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">prompt_params</span> <span class="o">=</span> <span class="bp">True</span>
+
+    <span class="c">#==========================================================================</span>
+
+<div class="viewcode-block" id="AmberWriter.write"><a class="viewcode-back" href="../../DabbleParam.html#DabbleParam.amber.AmberWriter.write">[docs]</a>    <span class="k">def</span> <span class="nf">write</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">prmtop_name</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Creates a prmtop with either AMBER or CHARMM parameters.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">prmtop_name</span> <span class="o">=</span> <span class="n">prmtop_name</span>
+
+        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">forcefield</span> <span class="ow">is</span> <span class="s">&#39;charmm&#39;</span><span class="p">:</span>
+            <span class="n">psfgen</span> <span class="o">=</span> <span class="n">CharmmWriter</span><span class="p">(</span><span class="n">molid</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">molid</span><span class="p">,</span> 
+                                  <span class="n">tmp_dir</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">tmp_dir</span><span class="p">,</span>
+                                  <span class="n">lipid_sel</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">lipid_sel</span><span class="p">)</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">topologies</span> <span class="o">=</span> <span class="n">psfgen</span><span class="o">.</span><span class="n">write</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">prmtop_name</span><span class="p">)</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">_psf_to_charmm_amber</span><span class="p">()</span>
+        <span class="k">elif</span> <span class="bp">self</span><span class="o">.</span><span class="n">forcefield</span> <span class="ow">is</span> <span class="s">&#39;amber&#39;</span><span class="p">:</span>
+            <span class="c"># TODO TODO TODO</span>
+            <span class="k">print</span><span class="p">(</span><span class="s">&quot;Currently unsupported&quot;</span><span class="p">)</span>
+            <span class="n">quit</span><span class="p">(</span><span class="mi">1</span><span class="p">)</span>
+
+    <span class="c">#========================================================================#</span>
+    <span class="c">#                           Private methods                              #</span>
+    <span class="c">#========================================================================#</span>
+</div>
+    <span class="k">def</span> <span class="nf">_psf_to_charmm_amber</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Runs the chamber command of ParmEd to produce AMBER format input files.</span>
+
+<span class="sd">        Returns:</span>
+<span class="sd">          True if successful</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+
+        <span class="c"># Ask the user for additional parameter files</span>
+        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">prompt_params</span><span class="p">:</span>
+            <span class="n">sys</span><span class="o">.</span><span class="n">stdout</span><span class="o">.</span><span class="n">flush</span><span class="p">()</span>
+            <span class="k">print</span><span class="p">(</span><span class="s">&quot;</span><span class="se">\n</span><span class="s">Currently using the following parameter files:&quot;</span><span class="p">)</span>
+            <span class="k">for</span> <span class="n">prm</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">parameters</span><span class="p">:</span>
+                <span class="k">print</span><span class="p">(</span><span class="s">&quot;  - </span><span class="si">%s</span><span class="s">&quot;</span> <span class="o">%</span> <span class="n">prm</span><span class="o">.</span><span class="n">split</span><span class="p">(</span><span class="s">&quot;/&quot;</span><span class="p">)[</span><span class="o">-</span><span class="mi">1</span><span class="p">])</span>
+            <span class="k">print</span><span class="p">(</span><span class="s">&quot;Enter the path to the filename(s) from the current working &quot;</span>
+                  <span class="s">&quot;directory, separated by a comma, of any additional rtf files &quot;</span>
+                  <span class="s">&quot;you wish to use.</span><span class="se">\n</span><span class="s">&quot;</span><span class="p">)</span>
+            <span class="n">sys</span><span class="o">.</span><span class="n">stdout</span><span class="o">.</span><span class="n">flush</span><span class="p">()</span>
+            <span class="n">inp</span> <span class="o">=</span> <span class="nb">raw_input</span><span class="p">(</span><span class="s">&#39;&gt; &#39;</span><span class="p">)</span>
+            <span class="k">if</span> <span class="n">inp</span><span class="p">:</span>
+                <span class="bp">self</span><span class="o">.</span><span class="n">parameters</span><span class="o">.</span><span class="n">extend</span><span class="p">(</span><span class="n">inp</span><span class="o">.</span><span class="n">split</span><span class="p">(</span><span class="s">&#39;,&#39;</span><span class="p">))</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="k">print</span><span class="p">(</span><span class="s">&quot;Using the following parameter files:&quot;</span><span class="p">)</span>
+            <span class="k">for</span> <span class="n">prm</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">parameters</span><span class="p">:</span>
+                <span class="k">print</span><span class="p">(</span><span class="s">&quot;  - </span><span class="si">%s</span><span class="s">&quot;</span> <span class="o">%</span> <span class="n">prm</span><span class="o">.</span><span class="n">split</span><span class="p">(</span><span class="s">&quot;/&quot;</span><span class="p">)[</span><span class="o">-</span><span class="mi">1</span><span class="p">])</span>
+
+        <span class="c"># Begin assembling chamber input string</span>
+        <span class="n">args</span> <span class="o">=</span> <span class="s">&quot;-crd </span><span class="si">%s</span><span class="s">.pdb -psf </span><span class="si">%s</span><span class="s">.psf&quot;</span> <span class="o">%</span> <span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">prmtop_name</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">prmtop_name</span><span class="p">)</span>
+
+        <span class="c"># Add topology and parameter arguments</span>
+        <span class="k">for</span> <span class="n">top</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">topologies</span><span class="p">:</span>
+            <span class="n">args</span> <span class="o">+=</span> <span class="s">&#39; -top </span><span class="si">%s</span><span class="s">&#39;</span> <span class="o">%</span> <span class="n">top</span>
+        <span class="k">for</span> <span class="n">prm</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">parameters</span><span class="p">:</span>
+            <span class="k">if</span> <span class="s">&#39;toppar&#39;</span> <span class="ow">in</span> <span class="n">prm</span><span class="p">:</span>
+                <span class="n">args</span> <span class="o">+=</span> <span class="s">&#39; -toppar </span><span class="si">%s</span><span class="s">&#39;</span> <span class="o">%</span> <span class="n">prm</span>
+            <span class="k">else</span><span class="p">:</span>
+                <span class="n">args</span> <span class="o">+=</span> <span class="s">&#39; -param </span><span class="si">%s</span><span class="s">&#39;</span> <span class="o">%</span> <span class="n">prm</span>
+
+        <span class="c"># Add box information since it is not in the pdb</span>
+        <span class="n">box</span> <span class="o">=</span> <span class="n">molecule</span><span class="o">.</span><span class="n">get_periodic</span><span class="p">(</span><span class="n">molid</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">molid</span><span class="p">)</span>
+        <span class="n">args</span> <span class="o">+=</span> <span class="s">&quot; -box </span><span class="si">%f</span><span class="s">,</span><span class="si">%f</span><span class="s">,</span><span class="si">%f</span><span class="s">&quot;</span> <span class="o">%</span> <span class="p">(</span><span class="n">box</span><span class="p">[</span><span class="s">&#39;a&#39;</span><span class="p">],</span> <span class="n">box</span><span class="p">[</span><span class="s">&#39;b&#39;</span><span class="p">],</span> <span class="n">box</span><span class="p">[</span><span class="s">&#39;c&#39;</span><span class="p">])</span>
+
+        <span class="kn">from</span> <span class="nn">ParmedTools</span> <span class="kn">import</span> <span class="n">chamber</span><span class="p">,</span> <span class="n">parmout</span><span class="p">,</span> <span class="n">HMassRepartition</span>
+        <span class="kn">from</span> <span class="nn">chemistry.amber</span> <span class="kn">import</span> <span class="n">AmberParm</span>
+
+        <span class="k">print</span><span class="p">(</span><span class="s">&quot;</span><span class="se">\n</span><span class="s">INFO: Running chamber. This may take a while...&quot;</span><span class="p">)</span>
+        <span class="n">sys</span><span class="o">.</span><span class="n">stdout</span><span class="o">.</span><span class="n">flush</span><span class="p">()</span>
+        <span class="n">parm</span> <span class="o">=</span> <span class="n">AmberParm</span><span class="p">()</span>
+        <span class="n">action</span> <span class="o">=</span> <span class="n">chamber</span><span class="p">(</span><span class="n">parm</span><span class="p">,</span> <span class="n">args</span><span class="p">)</span>
+        <span class="k">print</span><span class="p">(</span><span class="n">action</span><span class="p">)</span>
+        <span class="n">action</span><span class="o">.</span><span class="n">execute</span><span class="p">()</span>
+
+        <span class="c"># Do hydrogen mass repartitioning if requested</span>
+        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">hmr</span><span class="p">:</span>
+            <span class="k">print</span><span class="p">(</span><span class="s">&quot;</span><span class="se">\n</span><span class="s">INFO: Repartitioning hydrogen masses...&quot;</span><span class="p">)</span>
+            <span class="n">parm</span> <span class="o">=</span> <span class="n">action</span><span class="o">.</span><span class="n">parm</span>
+            <span class="n">action</span> <span class="o">=</span> <span class="n">HMassRepartition</span><span class="p">(</span><span class="n">parm</span><span class="p">)</span>
+            <span class="n">action</span><span class="o">.</span><span class="n">execute</span><span class="p">()</span>
+
+        <span class="k">print</span><span class="p">(</span><span class="s">&quot;</span><span class="se">\n</span><span class="s">INFO: Ran chamber&quot;</span><span class="p">)</span>
+        <span class="n">write</span> <span class="o">=</span> <span class="n">parmout</span><span class="p">(</span><span class="n">action</span><span class="o">.</span><span class="n">parm</span><span class="p">,</span> <span class="s">&quot;</span><span class="si">%s</span><span class="s">.prmtop </span><span class="si">%s</span><span class="s">.inpcrd&quot;</span>
+                        <span class="o">%</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">prmtop_name</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">prmtop_name</span><span class="p">))</span>
+        <span class="n">write</span><span class="o">.</span><span class="n">execute</span><span class="p">()</span>
+        <span class="k">print</span><span class="p">(</span><span class="s">&quot;</span><span class="se">\n</span><span class="s">INFO: Wrote output prmtop and inpcrd&quot;</span><span class="p">)</span>
+        <span class="k">return</span> <span class="bp">True</span>
+
+
+    <span class="c">#==========================================================================</span>
+
+    <span class="k">def</span> <span class="nf">_write_amber_pdb</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Writes a pdb file of the selected molecule that&#39;s compatible with leap</span>
+
+<span class="sd">        Args:</span>
+<span class="sd">          output_filename (str): Name of file to save, including .pdb extension</span>
+<span class="sd">          molid (int): VMD index of the molecule to save</span>
+
+<span class="sd">        Returns:</span>
+<span class="sd">          True if successful</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+<span class="c">#    import charmmlipid2amber.py</span>
+
+<span class="c">#    oh hi write pdb here pls</span>
+<span class="c">#    TODO do atom names need to be changed? - no not from charmm names</span>
+<span class="c">#    Looks like I can save pdb/psf and then call charmmlipid2amber.py on  pdb</span>
+<span class="c"># oh also call leap kthx</span>
+
+<span class="c">#++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++</span>
+</pre></div></div>
+
+          </div>
+          <footer>
+  
+
+  <hr/>
+
+  <div role="contentinfo">
+    <p>
+        &copy; Copyright 2015, Robin Betz.
+    </p>
+  </div>
+
+  Built with <a href="http://sphinx-doc.org/">Sphinx</a> using a <a href="https://github.com/snide/sphinx_rtd_theme">theme</a> provided by <a href="https://readthedocs.org">Read the Docs</a>.
+  
+</footer>
+        </div>
+      </div>
+
+    </section>
+
+  </div>
+  
+
+
+  
+
+    <script type="text/javascript">
+        var DOCUMENTATION_OPTIONS = {
+            URL_ROOT:'../../',
+            VERSION:'1.0a1',
+            COLLAPSE_INDEX:false,
+            FILE_SUFFIX:'.html',
+            HAS_SOURCE:  true
+        };
+    </script>
+      <script type="text/javascript" src="../../_static/jquery.js"></script>
+      <script type="text/javascript" src="../../_static/underscore.js"></script>
+      <script type="text/javascript" src="../../_static/doctools.js"></script>
+
+  
+
+  
+  
+    <script type="text/javascript" src="../../_static/js/theme.js"></script>
+  
+
+  
+  
+  <script type="text/javascript">
+      jQuery(function () {
+          SphinxRtdTheme.StickyNav.enable();
+      });
+  </script>
+   
+
+</body>
+</html>

@@ -1,0 +1,1339 @@
+
+
+<!DOCTYPE html>
+<!--[if IE 8]><html class="no-js lt-ie9" lang="en" > <![endif]-->
+<!--[if gt IE 8]><!--> <html class="no-js" lang="en" > <!--<![endif]-->
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  
+  <title>DabbleParam.charmm &mdash; Dabble 1.0a1 documentation</title>
+  
+
+  
+  
+
+  
+  <link href='https://fonts.googleapis.com/css?family=Lato:400,700,400italic,700italic|Roboto+Slab:400,700|Inconsolata:400,700&subset=latin,cyrillic' rel='stylesheet' type='text/css'>
+
+  
+  
+    
+
+  
+
+  
+  
+    <link rel="stylesheet" href="../../_static/css/theme.css" type="text/css" />
+  
+
+  
+
+  
+    <link rel="top" title="Dabble 1.0a1 documentation" href="../../index.html"/>
+        <link rel="up" title="Module code" href="../index.html"/> 
+
+  
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/modernizr/2.6.2/modernizr.min.js"></script>
+
+</head>
+
+<body class="wy-body-for-nav" role="document">
+
+  <div class="wy-grid-for-nav">
+
+    
+    <nav data-toggle="wy-nav-shift" class="wy-nav-side">
+      <div class="wy-side-nav-search">
+        
+          <a href="../../index.html" class="fa fa-home"> Dabble</a>
+        
+        
+<div role="search">
+  <form id="rtd-search-form" class="wy-form" action="../../search.html" method="get">
+    <input type="text" name="q" placeholder="Search docs" />
+    <input type="hidden" name="check_keywords" value="yes" />
+    <input type="hidden" name="area" value="default" />
+  </form>
+</div>
+      </div>
+
+      <div class="wy-menu wy-menu-vertical" data-spy="affix" role="navigation" aria-label="main navigation">
+        
+          
+          
+              <ul>
+<li class="toctree-l1"><a class="reference internal" href="../../command_line.html">Command-line Usage</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="../../command_line.html#the-protein">The protein</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../../command_line.html#the-membrane-or-solvent">The membrane or solvent</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../../command_line.html#ions">Ions</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../../command_line.html#geometry-specification">Geometry specification</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../../command_line.html#desired-output">Desired output</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../../command_line.html#less-common-options">Less common options</a></li>
+</ul>
+</li>
+<li class="toctree-l1"><a class="reference internal" href="../../parameter_api.html">DabbleParam package</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="../../parameter_api.html#submodules">Submodules</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../../parameter_api.html#dabbleparam-amber-module">DabbleParam.amber module</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../../parameter_api.html#dabbleparam-charmm-module">DabbleParam.charmm module</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../../parameter_api.html#module-contents">Module contents</a></li>
+</ul>
+</li>
+<li class="toctree-l1"><a class="reference internal" href="../../Dabble.html">Dabble package</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="../../Dabble.html#submodules">Submodules</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../../Dabble.html#module-Dabble.builder">Dabble.builder module</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../../Dabble.html#module-Dabble.fileutils">Dabble.fileutils module</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../../Dabble.html#module-Dabble.molutils">Dabble.molutils module</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../../Dabble.html#module-Dabble">Module contents</a></li>
+</ul>
+</li>
+</ul>
+
+          
+        
+      </div>
+      &nbsp;
+    </nav>
+
+    <section data-toggle="wy-nav-shift" class="wy-nav-content-wrap">
+
+      
+      <nav class="wy-nav-top" role="navigation" aria-label="top navigation">
+        <i data-toggle="wy-nav-top" class="fa fa-bars"></i>
+        <a href="../../index.html">Dabble</a>
+      </nav>
+
+
+      
+      <div class="wy-nav-content">
+        <div class="rst-content">
+          <div role="navigation" aria-label="breadcrumbs navigation">
+  <ul class="wy-breadcrumbs">
+    <li><a href="../../index.html">Docs</a> &raquo;</li>
+      
+          <li><a href="../index.html">Module code</a> &raquo;</li>
+      
+    <li>DabbleParam.charmm</li>
+      <li class="wy-breadcrumbs-aside">
+        
+      </li>
+  </ul>
+  <hr/>
+</div>
+          <div role="main" class="document">
+            
+  <h1>Source code for DabbleParam.charmm</h1><div class="highlight"><pre>
+<span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">This module contains the CharmmWriter class and associated methods,</span>
+<span class="sd">which outputs a psf/pdb file with CHARMM names and parameters.</span>
+<span class="sd">It does this by converting atom names to CHARMM names, writing</span>
+<span class="sd">intermediate files as necessary to invoke the vmd psfgen plugin.</span>
+
+<span class="sd">Author: Robin Betz</span>
+
+<span class="sd">Copyright (C) 2015 Robin Betz</span>
+
+<span class="sd">This program is free software; you can redistribute it and/or modify it under</span>
+<span class="sd">the terms of the GNU Lesser General Public License as published by the Free</span>
+<span class="sd">Software Foundation; either version 2 of the License, or (at your option) any</span>
+<span class="sd">later version.</span>
+
+<span class="sd">This program is distributed in the hope that it will be useful, but WITHOUT ANY</span>
+<span class="sd">WARRANTY; without even the implied warranty of MERCHANTABILITY or FITNESS FOR A</span>
+<span class="sd">PARTICULAR PURPOSE.  See the GNU Lesser General Public License for more details.</span>
+
+<span class="sd">You should have received a copy of the GNU Lesser General Public License along</span>
+<span class="sd">with this program; if not, write to the Free Software Foundation, Inc.,</span>
+<span class="sd">59 Temple Place - Suite 330</span>
+<span class="sd">Boston, MA 02111-1307, USA.</span>
+<span class="sd">&quot;&quot;&quot;</span>
+
+<span class="kn">from</span> <span class="nn">__future__</span> <span class="kn">import</span> <span class="n">print_function</span>
+<span class="kn">import</span> <span class="nn">sys</span>
+<span class="kn">import</span> <span class="nn">os</span>
+<span class="kn">import</span> <span class="nn">tempfile</span>
+<span class="kn">from</span> <span class="nn">pkg_resources</span> <span class="kn">import</span> <span class="n">resource_filename</span>
+
+<span class="kn">import</span> <span class="nn">vmd</span>
+<span class="kn">import</span> <span class="nn">molecule</span>
+<span class="kn">from</span> <span class="nn">atomsel</span> <span class="kn">import</span> <span class="n">atomsel</span>
+
+<span class="c">#++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++</span>
+<span class="c">#                                CONSTANTS                                    #</span>
+<span class="c">#++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++</span>
+
+<span class="n">_acids</span> <span class="o">=</span> <span class="p">(</span><span class="s">&#39;ACE ALA ARG ASN ASP CYS CYX GLN GLU GLY HIE HIS HSP HSE &#39;</span>
+          <span class="s">&#39;HSD ILE LEU LYS MET NMA PHE PRO SER THR TRP TYR VAL&#39;</span><span class="p">)</span>
+
+<span class="c">#++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++</span>
+<span class="c">#                                   CLASSES                                   #</span>
+<span class="c">#++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++</span>
+
+<div class="viewcode-block" id="CharmmWriter"><a class="viewcode-back" href="../../DabbleParam.html#DabbleParam.charmm.CharmmWriter">[docs]</a><span class="k">class</span> <span class="nc">CharmmWriter</span><span class="p">(</span><span class="nb">object</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    An object that handles all the conversions to a psf file</span>
+<span class="sd">    by interfacing with psfgen.</span>
+
+<span class="sd">    Writes a pdb/psf file pair from the current molecule using the</span>
+<span class="sd">    CHARMM36 topology and atom names/types. Interfaces with psfgen by</span>
+<span class="sd">    dynamically generating the .tcl file that psfgen takes as input.</span>
+<span class="sd">    Prompts the user for additional topology files and helps with</span>
+<span class="sd">    matching atom names that cannot be automatically translated to the</span>
+<span class="sd">    charmm naming conventions.</span>
+
+<span class="sd">    Attributes:</span>
+<span class="sd">      file (file handle): Temporary file to write TCL script that invokes</span>
+<span class="sd">          psfgen</span>
+<span class="sd">      tmp_dir (string): Directory where temporary files are stored</span>
+<span class="sd">      psf_name (str): Prefix for the pdb/psf output files, extension will</span>
+<span class="sd">          be appended</span>
+<span class="sd">      molid (str,optional): the VMD molecule id to write. Defaults to 0.</span>
+<span class="sd">      lipid_sel (str,optional): atomselect string describing what should count</span>
+<span class="sd">          as &quot;lipid&quot;.  Defaults to &quot;lipid&quot;</span>
+<span class="sd">      topologies (list of str): Topology files that were used in creating the</span>
+<span class="sd">          psf</span>
+<span class="sd">      prompt_topos (bool): Whether to ask for more topology files</span>
+
+<span class="sd">    &quot;&quot;&quot;</span>
+
+    <span class="c">#==========================================================================</span>
+
+    <span class="k">def</span> <span class="nf">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">tmp_dir</span><span class="p">,</span> <span class="n">molid</span><span class="p">,</span> <span class="n">lipid_sel</span><span class="o">=</span><span class="s">&quot;lipid&quot;</span><span class="p">,</span> <span class="n">extra_topos</span><span class="o">=</span><span class="bp">None</span><span class="p">):</span>
+        <span class="c"># Create TCL temp file and directory</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">tmp_dir</span> <span class="o">=</span> <span class="n">tmp_dir</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">filename</span> <span class="o">=</span> <span class="n">tempfile</span><span class="o">.</span><span class="n">mkstemp</span><span class="p">(</span><span class="n">suffix</span><span class="o">=</span><span class="s">&#39;.tcl&#39;</span><span class="p">,</span> <span class="n">prefix</span><span class="o">=</span><span class="s">&#39;dabble_psfgen&#39;</span><span class="p">,</span>
+                                         <span class="nb">dir</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">tmp_dir</span><span class="p">)[</span><span class="mi">1</span><span class="p">]</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">lipid_sel</span> <span class="o">=</span> <span class="n">lipid_sel</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">file</span> <span class="o">=</span> <span class="nb">open</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">filename</span><span class="p">,</span> <span class="s">&#39;w&#39;</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">molid</span> <span class="o">=</span> <span class="n">molid</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">psf_name</span> <span class="o">=</span> <span class="s">&quot;&quot;</span>
+        <span class="c"># Default parameter sets</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">topologies</span> <span class="o">=</span> <span class="p">[</span>
+            <span class="n">resource_filename</span><span class="p">(</span><span class="n">__name__</span><span class="p">,</span> <span class="s">&quot;charmm_parameters/top_all36_caps.rtf&quot;</span><span class="p">),</span>
+            <span class="n">resource_filename</span><span class="p">(</span><span class="n">__name__</span><span class="p">,</span> <span class="s">&quot;charmm_parameters/top_water_ions.rtf&quot;</span><span class="p">),</span>
+            <span class="n">resource_filename</span><span class="p">(</span><span class="n">__name__</span><span class="p">,</span> <span class="s">&quot;charmm_parameters/top_all36_cgenff.rtf&quot;</span><span class="p">),</span>
+            <span class="n">resource_filename</span><span class="p">(</span><span class="n">__name__</span><span class="p">,</span> <span class="s">&quot;charmm_parameters/top_all36_prot.rtf&quot;</span><span class="p">),</span>
+            <span class="n">resource_filename</span><span class="p">(</span><span class="n">__name__</span><span class="p">,</span> <span class="s">&quot;charmm_parameters/top_all36_lipid.rtf&quot;</span><span class="p">),</span>
+            <span class="n">resource_filename</span><span class="p">(</span><span class="n">__name__</span><span class="p">,</span> <span class="s">&quot;charmm_parameters/top_all36_carb.rtf&quot;</span><span class="p">),</span>
+            <span class="n">resource_filename</span><span class="p">(</span><span class="n">__name__</span><span class="p">,</span> <span class="s">&quot;charmm_parameters/top_all36_na.rtf&quot;</span><span class="p">),</span>
+            <span class="n">resource_filename</span><span class="p">(</span><span class="n">__name__</span><span class="p">,</span> <span class="s">&quot;charmm_parameters/toppar_all36_prot_na_combined.str&quot;</span><span class="p">)</span>
+            <span class="p">]</span>
+        <span class="k">if</span> <span class="n">extra_topos</span> <span class="ow">is</span> <span class="ow">not</span> <span class="bp">None</span><span class="p">:</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">topologies</span><span class="o">.</span><span class="n">extend</span><span class="p">(</span><span class="n">extra_topos</span><span class="p">)</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">prompt_topos</span> <span class="o">=</span> <span class="bp">False</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">prompt_topos</span> <span class="o">=</span> <span class="bp">True</span>
+
+    <span class="c">#=========================================================================</span>
+
+<div class="viewcode-block" id="CharmmWriter.write"><a class="viewcode-back" href="../../DabbleParam.html#DabbleParam.charmm.CharmmWriter.write">[docs]</a>    <span class="k">def</span> <span class="nf">write</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">psf_name</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Writes the pdb/psf file.</span>
+
+<span class="sd">        Args:</span>
+<span class="sd">          psf_name (str): Prefix for the pdb/psf output files, extension</span>
+<span class="sd">            will be appended</span>
+
+<span class="sd">        Returns:</span>
+<span class="sd">          topologies (list of str): Topology files that were used in creating</span>
+<span class="sd">              the psf</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="c"># Clean up all temp files from previous runs if present</span>
+        <span class="c"># An earlier check will exit if it&#39;s not okay to overwrite here</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">psf_name</span> <span class="o">=</span> <span class="n">psf_name</span>
+        <span class="k">try</span><span class="p">:</span>
+            <span class="n">os</span><span class="o">.</span><span class="n">remove</span><span class="p">(</span><span class="s">&#39;</span><span class="si">%s</span><span class="s">.pdb&#39;</span><span class="o">%</span> <span class="bp">self</span><span class="o">.</span><span class="n">psf_name</span><span class="p">)</span>
+            <span class="n">os</span><span class="o">.</span><span class="n">remove</span><span class="p">(</span><span class="s">&#39;</span><span class="si">%s</span><span class="s">.psf&#39;</span><span class="o">%</span> <span class="bp">self</span><span class="o">.</span><span class="n">psf_name</span><span class="p">)</span>
+        <span class="k">except</span> <span class="ne">OSError</span><span class="p">:</span>
+            <span class="k">pass</span>
+
+        <span class="c">#  Finds the psfgen package and sets the output file name</span>
+        <span class="n">string</span> <span class="o">=</span> <span class="s">&#39;&#39;&#39;</span>
+<span class="s">        set dir [file join $env(VMDDIR) plugins [vmdinfo arch] tcl psfgen1.6]</span>
+<span class="s">        package ifneeded psfgen 1.6.2 [list load [file join $dir libpsfgen.so]]</span>
+<span class="s">        package require psfgen</span>
+<span class="s">        set output &quot;</span><span class="si">%s</span><span class="s">&quot;</span>
+<span class="s">        resetpsf</span>
+<span class="s">        &#39;&#39;&#39;</span> <span class="o">%</span> <span class="bp">self</span><span class="o">.</span><span class="n">psf_name</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">file</span><span class="o">.</span><span class="n">write</span><span class="p">(</span><span class="n">string</span><span class="p">)</span>
+
+        <span class="c"># Put our molecule on top</span>
+        <span class="n">old_top</span> <span class="o">=</span> <span class="n">molecule</span><span class="o">.</span><span class="n">get_top</span><span class="p">()</span>
+        <span class="n">molecule</span><span class="o">.</span><span class="n">set_top</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">molid</span><span class="p">)</span>
+
+        <span class="c"># Ask the user for additional topology files</span>
+        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">prompt_topos</span><span class="p">:</span>
+            <span class="n">sys</span><span class="o">.</span><span class="n">stdout</span><span class="o">.</span><span class="n">flush</span><span class="p">()</span>
+            <span class="k">print</span><span class="p">(</span><span class="s">&quot;</span><span class="se">\n</span><span class="s">Currently using the following topology files:&quot;</span><span class="p">)</span>
+            <span class="k">for</span> <span class="n">top</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">topologies</span><span class="p">:</span>
+                <span class="k">print</span><span class="p">(</span><span class="s">&quot;  - </span><span class="si">%s</span><span class="s">&quot;</span> <span class="o">%</span> <span class="n">top</span><span class="o">.</span><span class="n">split</span><span class="p">(</span><span class="s">&quot;/&quot;</span><span class="p">)[</span><span class="o">-</span><span class="mi">1</span><span class="p">])</span>
+
+            <span class="k">print</span><span class="p">(</span><span class="s">&quot;Enter the path to the filename(s) from the current working &quot;</span>
+                  <span class="s">&quot;directory, separated by a comma, of any additional rtf files &quot;</span>
+                  <span class="s">&quot;you wish to use.</span><span class="se">\n</span><span class="s">&quot;</span><span class="p">)</span>
+            <span class="n">sys</span><span class="o">.</span><span class="n">stdout</span><span class="o">.</span><span class="n">flush</span><span class="p">()</span>
+            <span class="n">inp</span> <span class="o">=</span> <span class="nb">raw_input</span><span class="p">(</span><span class="s">&#39;&gt; &#39;</span><span class="p">)</span>
+            <span class="k">if</span> <span class="n">inp</span><span class="p">:</span>
+                <span class="bp">self</span><span class="o">.</span><span class="n">topologies</span><span class="o">.</span><span class="n">extend</span><span class="p">(</span><span class="n">inp</span><span class="o">.</span><span class="n">split</span><span class="p">(</span><span class="s">&#39;,&#39;</span><span class="p">))</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="k">print</span><span class="p">(</span><span class="s">&quot;Using the following topologies:&quot;</span><span class="p">)</span>
+            <span class="k">for</span> <span class="n">top</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">topologies</span><span class="p">:</span>
+                <span class="k">print</span><span class="p">(</span><span class="s">&quot;  - </span><span class="si">%s</span><span class="s">&quot;</span> <span class="o">%</span> <span class="n">top</span><span class="o">.</span><span class="n">split</span><span class="p">(</span><span class="s">&quot;/&quot;</span><span class="p">)[</span><span class="o">-</span><span class="mi">1</span><span class="p">])</span>
+
+        <span class="bp">self</span><span class="o">.</span><span class="n">file</span><span class="o">.</span><span class="n">write</span><span class="p">(</span><span class="s">&#39;</span><span class="se">\n</span><span class="s">&#39;</span><span class="p">)</span>
+        <span class="k">for</span> <span class="n">top</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">topologies</span><span class="p">:</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">file</span><span class="o">.</span><span class="n">write</span><span class="p">(</span><span class="s">&#39;   topology </span><span class="si">%s</span><span class="se">\n</span><span class="s">&#39;</span> <span class="o">%</span> <span class="n">top</span><span class="p">)</span>
+
+        <span class="c"># Mark all atoms as unsaved with the user field</span>
+        <span class="n">atomsel</span><span class="p">(</span><span class="s">&#39;all&#39;</span><span class="p">,</span> <span class="n">molid</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">molid</span><span class="p">)</span><span class="o">.</span><span class="n">set</span><span class="p">(</span><span class="s">&#39;user&#39;</span><span class="p">,</span> <span class="mf">1.0</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_check_atom_names</span><span class="p">(</span><span class="n">molid</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">molid</span><span class="p">)</span>
+
+        <span class="c"># Now ions if present, changing the atom names</span>
+        <span class="k">if</span> <span class="nb">len</span><span class="p">(</span><span class="n">atomsel</span><span class="p">(</span><span class="s">&#39;element Na Cl K&#39;</span><span class="p">,</span> <span class="n">molid</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">molid</span><span class="p">))</span> <span class="o">&gt;</span> <span class="mi">0</span><span class="p">:</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">_write_ion_blocks</span><span class="p">()</span>
+
+        <span class="c"># Save water 10k molecules at a time</span>
+        <span class="k">if</span> <span class="nb">len</span><span class="p">(</span><span class="n">atomsel</span><span class="p">(</span><span class="s">&#39;water&#39;</span><span class="p">,</span> <span class="n">molid</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">molid</span><span class="p">)):</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">_write_water_blocks</span><span class="p">()</span>
+
+        <span class="c"># Now lipid</span>
+        <span class="k">if</span> <span class="nb">len</span><span class="p">(</span><span class="n">atomsel</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">lipid_sel</span><span class="p">)):</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">_write_lipid_blocks</span><span class="p">()</span>
+
+        <span class="k">if</span> <span class="ow">not</span> <span class="nb">len</span><span class="p">(</span><span class="n">atomsel</span><span class="p">(</span><span class="s">&#39;resname </span><span class="si">%s</span><span class="s">&#39;</span> <span class="o">%</span> <span class="n">_acids</span><span class="p">,</span> <span class="n">molid</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">molid</span><span class="p">)):</span>
+            <span class="k">print</span><span class="p">(</span><span class="s">&quot;</span><span class="se">\n</span><span class="s">INFO: Didn&#39;t find any protein.</span><span class="se">\n</span><span class="s">&quot;</span><span class="p">)</span>
+
+        <span class="c"># Pull out the protein, one fragment at a time</span>
+        <span class="k">for</span> <span class="n">frag</span> <span class="ow">in</span> <span class="nb">set</span><span class="p">(</span><span class="n">atomsel</span><span class="p">(</span><span class="s">&#39;resname </span><span class="si">%s</span><span class="s">&#39;</span> <span class="o">%</span> <span class="n">_acids</span><span class="p">)</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s">&#39;fragment&#39;</span><span class="p">)):</span>
+            <span class="n">temp</span> <span class="o">=</span> <span class="n">tempfile</span><span class="o">.</span><span class="n">mkstemp</span><span class="p">(</span><span class="n">suffix</span><span class="o">=</span><span class="s">&#39;_P</span><span class="si">%s</span><span class="s">.mae&#39;</span> <span class="o">%</span> <span class="n">frag</span><span class="p">,</span>
+                                    <span class="n">prefix</span><span class="o">=</span><span class="s">&#39;psf_prot_&#39;</span><span class="p">,</span> <span class="nb">dir</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">tmp_dir</span><span class="p">)[</span><span class="mi">1</span><span class="p">]</span>
+            <span class="n">fragment</span> <span class="o">=</span> <span class="n">atomsel</span><span class="p">(</span><span class="s">&#39;fragment </span><span class="si">%s</span><span class="s">&#39;</span> <span class="o">%</span> <span class="n">frag</span><span class="p">,</span> <span class="n">molid</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">molid</span><span class="p">)</span>
+            <span class="n">fragment</span><span class="o">.</span><span class="n">write</span><span class="p">(</span><span class="s">&#39;mae&#39;</span><span class="p">,</span> <span class="n">temp</span><span class="p">)</span>
+            <span class="n">prot_molid</span> <span class="o">=</span> <span class="n">molecule</span><span class="o">.</span><span class="n">load</span><span class="p">(</span><span class="s">&#39;mae&#39;</span><span class="p">,</span> <span class="n">temp</span><span class="p">)</span>
+
+            <span class="bp">self</span><span class="o">.</span><span class="n">_write_protein_blocks</span><span class="p">(</span><span class="n">seg</span><span class="o">=</span><span class="s">&#39;P</span><span class="si">%s</span><span class="s">&#39;</span><span class="o">%</span><span class="n">frag</span><span class="p">,</span>
+                                       <span class="n">prot_molid</span><span class="o">=</span><span class="n">prot_molid</span><span class="p">)</span>
+            <span class="n">molecule</span><span class="o">.</span><span class="n">delete</span><span class="p">(</span><span class="n">prot_molid</span><span class="p">)</span>
+            <span class="n">fragment</span><span class="o">.</span><span class="n">set</span><span class="p">(</span><span class="s">&#39;user&#39;</span><span class="p">,</span> <span class="mf">0.0</span><span class="p">)</span>
+
+        <span class="c"># Detect disulfide bridges and add appropriate patch lines</span>
+        <span class="k">print</span><span class="p">(</span><span class="s">&quot;Checking cysteines...&quot;</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_set_disulfide_bridges</span><span class="p">()</span>
+        <span class="c"># End protein</span>
+
+        <span class="c"># Check if there is anything else and let the user know about it</span>
+        <span class="n">leftovers</span> <span class="o">=</span> <span class="n">atomsel</span><span class="p">(</span><span class="s">&#39;user 1.0&#39;</span><span class="p">,</span> <span class="n">molid</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">molid</span><span class="p">)</span>
+        <span class="k">if</span> <span class="nb">len</span><span class="p">(</span><span class="n">leftovers</span><span class="p">)</span> <span class="o">&gt;</span> <span class="mi">0</span><span class="p">:</span>
+            <span class="k">print</span><span class="p">(</span><span class="s">&quot;Found extra ligands: </span><span class="si">%s</span><span class="s">&quot;</span> <span class="o">%</span> <span class="nb">set</span><span class="p">(</span><span class="n">leftovers</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s">&#39;resname&#39;</span><span class="p">)))</span>
+        <span class="k">for</span> <span class="n">lig</span> <span class="ow">in</span> <span class="nb">set</span><span class="p">(</span><span class="n">leftovers</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s">&#39;resname&#39;</span><span class="p">)):</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">_write_ligand_blocks</span><span class="p">(</span><span class="n">lig</span><span class="p">)</span>
+
+        <span class="c"># Write the output files and run</span>
+        <span class="n">string</span> <span class="o">=</span> <span class="s">&#39;&#39;&#39;</span>
+<span class="s">        writepsf x-plor cmap ${output}.psf</span>
+<span class="s">        writepdb ${output}.pdb&#39;&#39;&#39;</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">file</span><span class="o">.</span><span class="n">write</span><span class="p">(</span><span class="n">string</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">file</span><span class="o">.</span><span class="n">close</span><span class="p">()</span>
+
+        <span class="kn">from</span> <span class="nn">VMD</span> <span class="kn">import</span> <span class="n">evaltcl</span>
+        <span class="n">evaltcl</span><span class="p">(</span><span class="s">&#39;play </span><span class="si">%s</span><span class="s">&#39;</span> <span class="o">%</span> <span class="bp">self</span><span class="o">.</span><span class="n">filename</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_check_psf_output</span><span class="p">()</span>
+
+        <span class="c"># Reset top molecule</span>
+        <span class="n">molecule</span><span class="o">.</span><span class="n">set_top</span><span class="p">(</span><span class="n">old_top</span><span class="p">)</span>
+
+        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">topologies</span>
+
+    <span class="c">#=========================================================================</span>
+    <span class="c">#                           Private methods                              #</span>
+    <span class="c">#=========================================================================</span>
+</div>
+    <span class="k">def</span> <span class="nf">_write_protein_blocks</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">seg</span><span class="p">,</span> <span class="n">prot_molid</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Writes a temporary protein PDB file with correct atom names for psfgen,</span>
+<span class="sd">        in atom order.</span>
+
+<span class="sd">        Args:</span>
+<span class="sd">          seg (str): VMD segment to write</span>
+<span class="sd">          protmolid (int): VMD molecule ID to write, usually a temp protein</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+
+        <span class="c"># Put molid on top to simplify atom selections</span>
+        <span class="n">old_top</span> <span class="o">=</span> <span class="n">molecule</span><span class="o">.</span><span class="n">get_top</span><span class="p">()</span>
+        <span class="n">molecule</span><span class="o">.</span><span class="n">set_top</span><span class="p">(</span><span class="n">prot_molid</span><span class="p">)</span>
+        <span class="k">print</span><span class="p">(</span><span class="s">&quot;Writing protein file</span><span class="se">\n</span><span class="s">&quot;</span><span class="p">)</span>
+
+        <span class="c"># Renumber residues starting from 1</span>
+        <span class="n">atomsel</span><span class="p">(</span><span class="s">&#39;all&#39;</span><span class="p">)</span><span class="o">.</span><span class="n">set</span><span class="p">(</span><span class="s">&#39;user&#39;</span><span class="p">,</span> <span class="mf">1.0</span><span class="p">)</span>
+<span class="c">#       residues = set(atomsel(&#39;all&#39;).get(&#39;residue&#39;))</span>
+<span class="c">#       resnum = 1</span>
+<span class="c">#       while len(residues):</span>
+<span class="c">#           atomsel(&#39;residue %s&#39;% residues.pop()).set(&#39;resid&#39;, resnum)</span>
+<span class="c">#           resnum += 1</span>
+
+        <span class="c"># Check the protein has hydrogens</span>
+        <span class="k">if</span> <span class="nb">len</span><span class="p">(</span><span class="n">atomsel</span><span class="p">(</span><span class="s">&#39;element H&#39;</span><span class="p">))</span> <span class="o">==</span> <span class="mi">0</span><span class="p">:</span>
+            <span class="k">print</span><span class="p">(</span><span class="s">&quot;</span><span class="se">\n\n</span><span class="s">ERROR: There are no hydrogens on your protein&quot;</span><span class="p">)</span>
+            <span class="k">print</span><span class="p">(</span><span class="s">&quot;       You need to add them before parameterizing &quot;</span>
+                  <span class="s">&quot;because psfgen cannot be trusted to do it correctly</span><span class="se">\n</span><span class="s">&quot;</span><span class="p">)</span>
+            <span class="n">quit</span><span class="p">(</span><span class="mi">1</span><span class="p">)</span>
+
+        <span class="c"># Terminal residue ACE</span>
+        <span class="n">ace_names</span> <span class="o">=</span> <span class="p">{</span><span class="s">&#39;CH3&#39;</span> <span class="p">:</span><span class="s">&#39;CAY&#39;</span><span class="p">,</span> <span class="s">&#39;O&#39;</span>   <span class="p">:</span><span class="s">&#39;OY&#39;</span><span class="p">,</span>
+                     <span class="s">&#39;HH31&#39;</span><span class="p">:</span><span class="s">&#39;HY1&#39;</span><span class="p">,</span> <span class="s">&#39;HH32&#39;</span><span class="p">:</span><span class="s">&#39;HY2&#39;</span><span class="p">,</span> <span class="s">&#39;HH33&#39;</span><span class="p">:</span><span class="s">&#39;HY3&#39;</span><span class="p">,</span>
+                     <span class="s">&#39;H1&#39;</span>  <span class="p">:</span><span class="s">&#39;HY1&#39;</span><span class="p">,</span> <span class="s">&#39;H2&#39;</span>  <span class="p">:</span><span class="s">&#39;HY2&#39;</span><span class="p">,</span> <span class="s">&#39;H3&#39;</span>  <span class="p">:</span><span class="s">&#39;HY3&#39;</span><span class="p">,</span>
+                     <span class="s">&#39;1H&#39;</span>  <span class="p">:</span><span class="s">&#39;HY1&#39;</span><span class="p">,</span> <span class="s">&#39;2H&#39;</span>  <span class="p">:</span><span class="s">&#39;HY2&#39;</span><span class="p">,</span> <span class="s">&#39;3H&#39;</span>  <span class="p">:</span><span class="s">&#39;HY3&#39;</span><span class="p">}</span>
+        <span class="k">for</span> <span class="n">name</span> <span class="ow">in</span> <span class="n">ace_names</span><span class="p">:</span>
+            <span class="n">atomsel</span><span class="p">(</span><span class="s">&#39;resname ACE and name </span><span class="si">%s</span><span class="s">&#39;</span><span class="o">%</span><span class="n">name</span><span class="p">)</span><span class="o">.</span><span class="n">set</span><span class="p">(</span><span class="s">&#39;name&#39;</span><span class="p">,</span> <span class="n">ace_names</span><span class="p">[</span><span class="n">name</span><span class="p">])</span>
+
+        <span class="c"># Terminal residue NMA</span>
+        <span class="n">nma_names</span> <span class="o">=</span> <span class="p">{</span><span class="s">&#39;HN&#39;</span>  <span class="p">:</span><span class="s">&#39;HNT&#39;</span><span class="p">,</span> <span class="s">&#39;H&#39;</span>   <span class="p">:</span><span class="s">&#39;HNT&#39;</span><span class="p">,</span>
+                     <span class="s">&#39;CT3&#39;</span> <span class="p">:</span><span class="s">&#39;CAT&#39;</span><span class="p">,</span> <span class="s">&#39;CA&#39;</span>  <span class="p">:</span><span class="s">&#39;CAT&#39;</span><span class="p">,</span> <span class="s">&#39;CH3&#39;</span> <span class="p">:</span><span class="s">&#39;CAT&#39;</span><span class="p">,</span>
+                     <span class="s">&#39;HA1&#39;</span> <span class="p">:</span><span class="s">&#39;HT1&#39;</span><span class="p">,</span> <span class="s">&#39;HA2&#39;</span> <span class="p">:</span><span class="s">&#39;HT2&#39;</span><span class="p">,</span> <span class="s">&#39;HA3&#39;</span> <span class="p">:</span><span class="s">&#39;HT3&#39;</span><span class="p">,</span>
+                     <span class="s">&#39;1HA&#39;</span> <span class="p">:</span><span class="s">&#39;HT1&#39;</span><span class="p">,</span> <span class="s">&#39;2HA&#39;</span> <span class="p">:</span><span class="s">&#39;HT2&#39;</span><span class="p">,</span> <span class="s">&#39;3HA&#39;</span> <span class="p">:</span><span class="s">&#39;HT3&#39;</span><span class="p">,</span>
+                     <span class="s">&#39;HH31&#39;</span><span class="p">:</span><span class="s">&#39;HT1&#39;</span><span class="p">,</span> <span class="s">&#39;HH32&#39;</span><span class="p">:</span><span class="s">&#39;HT2&#39;</span><span class="p">,</span> <span class="s">&#39;HH33&#39;</span><span class="p">:</span><span class="s">&#39;HT3&#39;</span><span class="p">}</span>
+        <span class="k">for</span> <span class="n">name</span> <span class="ow">in</span> <span class="n">nma_names</span><span class="p">:</span>
+            <span class="n">atomsel</span><span class="p">(</span><span class="s">&#39;resname NMA and name </span><span class="si">%s</span><span class="s">&#39;</span><span class="o">%</span><span class="n">name</span><span class="p">)</span><span class="o">.</span><span class="n">set</span><span class="p">(</span><span class="s">&#39;name&#39;</span><span class="p">,</span> <span class="n">nma_names</span><span class="p">[</span><span class="n">name</span><span class="p">])</span>
+
+        <span class="c"># Determine protonation states of those called HIS based on atom names</span>
+        <span class="n">atomsel</span><span class="p">(</span><span class="s">&#39;resname HIS and same residue as name HE2&#39;</span><span class="p">)</span><span class="o">.</span><span class="n">set</span><span class="p">(</span><span class="s">&#39;resname&#39;</span><span class="p">,</span>
+                                                                <span class="s">&#39;HSE&#39;</span><span class="p">)</span>
+        <span class="n">atomsel</span><span class="p">(</span><span class="s">&#39;resname HIS and same residue as name HD1&#39;</span><span class="p">)</span><span class="o">.</span><span class="n">set</span><span class="p">(</span><span class="s">&#39;resname&#39;</span><span class="p">,</span>
+                                                                <span class="s">&#39;HSD&#39;</span><span class="p">)</span>
+        <span class="c"># NOTE: This atomsel MUST come after the previous two!</span>
+        <span class="n">atomsel</span><span class="p">(</span><span class="s">&#39;resname HIS and same residue as name HE2 &#39;</span>
+                <span class="s">&#39;and same residue as name HD1&#39;</span><span class="p">)</span><span class="o">.</span><span class="n">set</span><span class="p">(</span><span class="s">&#39;resname&#39;</span><span class="p">,</span> <span class="s">&#39;HSP&#39;</span><span class="p">)</span>
+
+        <span class="c"># Isoleucine</span>
+        <span class="n">iso_names</span> <span class="o">=</span> <span class="p">{</span><span class="s">&#39;CD1&#39;</span> <span class="p">:</span>  <span class="s">&#39;CD&#39;</span><span class="p">,</span>
+                     <span class="s">&#39;HD11&#39;</span><span class="p">:</span> <span class="s">&#39;HD1&#39;</span><span class="p">,</span> <span class="s">&#39;HD12&#39;</span><span class="p">:</span><span class="s">&#39;HD2&#39;</span><span class="p">,</span> <span class="s">&#39;HD13&#39;</span><span class="p">:</span><span class="s">&#39;HD3&#39;</span><span class="p">,</span>
+                     <span class="s">&#39;HG12&#39;</span><span class="p">:</span><span class="s">&#39;HG11&#39;</span><span class="p">,</span> <span class="s">&#39;HG13&#39;</span><span class="p">:</span><span class="s">&#39;HG12&#39;</span><span class="p">}</span>
+        <span class="k">for</span> <span class="n">name</span> <span class="ow">in</span> <span class="n">iso_names</span><span class="p">:</span>
+            <span class="n">atomsel</span><span class="p">(</span><span class="s">&#39;resname ILE and name </span><span class="si">%s</span><span class="s">&#39;</span><span class="o">%</span><span class="n">name</span><span class="p">)</span><span class="o">.</span><span class="n">set</span><span class="p">(</span><span class="s">&#39;name&#39;</span><span class="p">,</span> <span class="n">iso_names</span><span class="p">[</span><span class="n">name</span><span class="p">])</span>
+
+        <span class="c"># Lysine last atom</span>
+        <span class="n">atomsel</span><span class="p">(</span><span class="s">&#39;resname LYS and name HZ&#39;</span><span class="p">)</span><span class="o">.</span><span class="n">set</span><span class="p">(</span><span class="s">&#39;name&#39;</span><span class="p">,</span> <span class="s">&#39;HZ3&#39;</span><span class="p">)</span>
+
+        <span class="n">patches</span> <span class="o">=</span> <span class="s">&#39;&#39;</span>
+
+        <span class="c"># Histidine naming convention</span>
+        <span class="n">atomsel</span><span class="p">(</span><span class="s">&#39;resname HID&#39;</span><span class="p">)</span><span class="o">.</span><span class="n">set</span><span class="p">(</span><span class="s">&#39;resname&#39;</span><span class="p">,</span> <span class="s">&#39;HSD&#39;</span><span class="p">)</span>
+        <span class="n">atomsel</span><span class="p">(</span><span class="s">&#39;resname HIE&#39;</span><span class="p">)</span><span class="o">.</span><span class="n">set</span><span class="p">(</span><span class="s">&#39;resname&#39;</span><span class="p">,</span> <span class="s">&#39;HSE&#39;</span><span class="p">)</span>
+        <span class="n">atomsel</span><span class="p">(</span><span class="s">&#39;resname HIP&#39;</span><span class="p">)</span><span class="o">.</span><span class="n">set</span><span class="p">(</span><span class="s">&#39;resname&#39;</span><span class="p">,</span> <span class="s">&#39;HSP&#39;</span><span class="p">)</span>
+
+        <span class="c"># Glutamine check all residues for protonation</span>
+        <span class="c"># Can&#39;t use dictionary for names since two of them must be swapped</span>
+        <span class="c"># Must loop by resid, not residue, to get correct PATCH statement index</span>
+        <span class="n">glups</span> <span class="o">=</span> <span class="nb">set</span><span class="p">(</span><span class="n">atomsel</span><span class="p">(</span><span class="s">&#39;resname GLU GLH GLUP&#39;</span><span class="p">)</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s">&#39;resid&#39;</span><span class="p">))</span>
+        <span class="k">for</span> <span class="n">resid</span> <span class="ow">in</span> <span class="n">glups</span><span class="p">:</span>
+            <span class="c"># Need to specify resname here in case this residue</span>
+            <span class="c"># is attached to a NMA which will have the same resid</span>
+            <span class="c"># because of the way Maestro does things. Otherwise we will</span>
+            <span class="c"># rename the NMA to GLU or whatever when we standardize</span>
+            <span class="c"># residue name</span>
+            <span class="n">ressel</span> <span class="o">=</span> <span class="s">&quot;(resid </span><span class="si">%s</span><span class="s"> and resname GLU GLH GLUP)&quot;</span> <span class="o">%</span> <span class="n">resid</span>
+            <span class="n">atomsel</span><span class="p">(</span><span class="n">ressel</span><span class="p">)</span><span class="o">.</span><span class="n">set</span><span class="p">(</span><span class="s">&#39;resname&#39;</span><span class="p">,</span> <span class="s">&#39;GLU&#39;</span><span class="p">)</span>
+            <span class="k">if</span> <span class="s">&quot;HE1&quot;</span> <span class="ow">in</span> <span class="n">atomsel</span><span class="p">(</span><span class="n">ressel</span><span class="p">)</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s">&#39;name&#39;</span><span class="p">):</span>
+                <span class="n">atomsel</span><span class="p">(</span><span class="s">&#39;</span><span class="si">%s</span><span class="s"> and name HE1&#39;</span><span class="o">%</span> <span class="n">ressel</span><span class="p">)</span><span class="o">.</span><span class="n">set</span><span class="p">(</span><span class="s">&#39;name&#39;</span><span class="p">,</span> <span class="s">&#39;HE2&#39;</span><span class="p">)</span>
+                <span class="n">atomsel</span><span class="p">(</span><span class="s">&#39;</span><span class="si">%s</span><span class="s"> and name OE1&#39;</span><span class="o">%</span> <span class="n">ressel</span><span class="p">)</span><span class="o">.</span><span class="n">set</span><span class="p">(</span><span class="s">&#39;name&#39;</span><span class="p">,</span> <span class="s">&#39;temp&#39;</span><span class="p">)</span>
+                <span class="n">atomsel</span><span class="p">(</span><span class="s">&#39;</span><span class="si">%s</span><span class="s"> and name OE2&#39;</span><span class="o">%</span> <span class="n">ressel</span><span class="p">)</span><span class="o">.</span><span class="n">set</span><span class="p">(</span><span class="s">&#39;name&#39;</span><span class="p">,</span> <span class="s">&#39;OE1&#39;</span><span class="p">)</span>
+                <span class="n">atomsel</span><span class="p">(</span><span class="s">&#39;</span><span class="si">%s</span><span class="s"> and name temp&#39;</span><span class="o">%</span> <span class="n">ressel</span><span class="p">)</span><span class="o">.</span><span class="n">set</span><span class="p">(</span><span class="s">&#39;name&#39;</span><span class="p">,</span> <span class="s">&#39;OE2&#39;</span><span class="p">)</span>
+                <span class="n">patches</span> <span class="o">+=</span> <span class="s">&#39;patch GLUP </span><span class="si">%s</span><span class="s">:</span><span class="si">%d</span><span class="se">\n</span><span class="s">&#39;</span> <span class="o">%</span> <span class="p">(</span><span class="n">seg</span><span class="p">,</span> <span class="n">resid</span><span class="p">)</span>
+            <span class="k">elif</span> <span class="s">&quot;HE2&quot;</span> <span class="ow">in</span> <span class="n">atomsel</span><span class="p">(</span><span class="n">ressel</span><span class="p">)</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s">&#39;name&#39;</span><span class="p">):</span>
+                <span class="n">patches</span> <span class="o">+=</span> <span class="s">&#39;patch GLUP </span><span class="si">%s</span><span class="s">:</span><span class="si">%d</span><span class="se">\n</span><span class="s">&#39;</span> <span class="o">%</span> <span class="p">(</span><span class="n">seg</span><span class="p">,</span> <span class="n">resid</span><span class="p">)</span>
+            <span class="k">elif</span> <span class="s">&quot;HXT&quot;</span> <span class="ow">in</span> <span class="n">atomsel</span><span class="p">(</span><span class="n">ressel</span><span class="p">)</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s">&#39;name&#39;</span><span class="p">):</span>
+                <span class="n">atomsel</span><span class="p">(</span><span class="s">&#39;</span><span class="si">%s</span><span class="s"> and name HXT&#39;</span> <span class="o">%</span> <span class="n">ressel</span><span class="p">)</span><span class="o">.</span><span class="n">set</span><span class="p">(</span><span class="s">&#39;name&#39;</span><span class="p">,</span> <span class="s">&#39;HE2&#39;</span><span class="p">)</span>
+                <span class="n">patches</span> <span class="o">+=</span> <span class="s">&#39;patch GLUP </span><span class="si">%s</span><span class="s">:</span><span class="si">%d</span><span class="se">\n</span><span class="s">&#39;</span> <span class="o">%</span> <span class="p">(</span><span class="n">seg</span><span class="p">,</span> <span class="n">resid</span><span class="p">)</span>
+
+        <span class="c"># Aspartate check each residue to see if it&#39;s protonated</span>
+        <span class="c"># Can&#39;t use dictionary for names since two of them must be swapped</span>
+        <span class="c"># Must loop by resid, not residue, to get correct PATCH statement index</span>
+        <span class="n">asps</span> <span class="o">=</span> <span class="nb">set</span><span class="p">(</span><span class="n">atomsel</span><span class="p">(</span><span class="s">&#39;resname ASP ASH ASPP&#39;</span><span class="p">)</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s">&#39;resid&#39;</span><span class="p">))</span>
+        <span class="k">for</span> <span class="n">resid</span> <span class="ow">in</span> <span class="n">asps</span><span class="p">:</span>
+            <span class="c"># Again use ressel to shorten long selection</span>
+            <span class="n">ressel</span> <span class="o">=</span> <span class="s">&quot;(resid </span><span class="si">%s</span><span class="s"> and resname ASP ASH ASPP)&quot;</span> <span class="o">%</span> <span class="n">resid</span>
+            <span class="n">atomsel</span><span class="p">(</span><span class="n">ressel</span><span class="p">)</span><span class="o">.</span><span class="n">set</span><span class="p">(</span><span class="s">&#39;resname&#39;</span><span class="p">,</span> <span class="s">&#39;ASP&#39;</span><span class="p">)</span>
+            <span class="k">if</span> <span class="s">&quot;HD1&quot;</span> <span class="ow">in</span> <span class="n">atomsel</span><span class="p">(</span><span class="n">ressel</span><span class="p">)</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s">&#39;name&#39;</span><span class="p">):</span>
+                <span class="n">atomsel</span><span class="p">(</span><span class="s">&#39;</span><span class="si">%s</span><span class="s"> and name HD1&#39;</span> <span class="o">%</span> <span class="n">ressel</span><span class="p">)</span><span class="o">.</span><span class="n">set</span><span class="p">(</span><span class="s">&#39;name&#39;</span><span class="p">,</span> <span class="s">&#39;HD2&#39;</span><span class="p">)</span>
+                <span class="n">atomsel</span><span class="p">(</span><span class="s">&#39;</span><span class="si">%s</span><span class="s"> and name OD1&#39;</span> <span class="o">%</span> <span class="n">ressel</span><span class="p">)</span><span class="o">.</span><span class="n">set</span><span class="p">(</span><span class="s">&#39;name&#39;</span><span class="p">,</span> <span class="s">&#39;temp&#39;</span><span class="p">)</span>
+                <span class="n">atomsel</span><span class="p">(</span><span class="s">&#39;</span><span class="si">%s</span><span class="s"> and name OD2&#39;</span> <span class="o">%</span> <span class="n">ressel</span><span class="p">)</span><span class="o">.</span><span class="n">set</span><span class="p">(</span><span class="s">&#39;name&#39;</span><span class="p">,</span> <span class="s">&#39;OD1&#39;</span><span class="p">)</span>
+                <span class="n">atomsel</span><span class="p">(</span><span class="s">&#39;</span><span class="si">%s</span><span class="s"> and name temp&#39;</span> <span class="o">%</span> <span class="n">ressel</span><span class="p">)</span><span class="o">.</span><span class="n">set</span><span class="p">(</span><span class="s">&#39;name&#39;</span><span class="p">,</span> <span class="s">&#39;OD2&#39;</span><span class="p">)</span>
+                <span class="n">patches</span> <span class="o">+=</span> <span class="s">&#39;patch ASPP </span><span class="si">%s</span><span class="s">:</span><span class="si">%d</span><span class="se">\n</span><span class="s">&#39;</span> <span class="o">%</span> <span class="p">(</span><span class="n">seg</span><span class="p">,</span> <span class="n">resid</span><span class="p">)</span>
+            <span class="k">if</span> <span class="s">&quot;HD2&quot;</span> <span class="ow">in</span> <span class="n">atomsel</span><span class="p">(</span><span class="n">ressel</span><span class="p">)</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s">&#39;name&#39;</span><span class="p">):</span>
+                <span class="n">patches</span> <span class="o">+=</span> <span class="s">&#39;patch ASPP </span><span class="si">%s</span><span class="s">:</span><span class="si">%d</span><span class="se">\n</span><span class="s">&#39;</span> <span class="o">%</span> <span class="p">(</span><span class="n">seg</span><span class="p">,</span> <span class="n">resid</span><span class="p">)</span>
+
+        <span class="c"># Methionine hydrogen names</span>
+        <span class="n">atomsel</span><span class="p">(</span><span class="s">&#39;name H2 H1 and resname MET&#39;</span><span class="p">)</span><span class="o">.</span><span class="n">set</span><span class="p">(</span><span class="s">&#39;name&#39;</span><span class="p">,</span> <span class="s">&#39;HN&#39;</span><span class="p">)</span>
+
+        <span class="c"># Serine and cysteine hydrogen names</span>
+        <span class="n">atomsel</span><span class="p">(</span><span class="s">&#39;name HG and resname SER CYS&#39;</span><span class="p">)</span><span class="o">.</span><span class="n">set</span><span class="p">(</span><span class="s">&#39;name&#39;</span><span class="p">,</span> <span class="s">&#39;HG1&#39;</span><span class="p">)</span>
+
+        <span class="c"># Check for deprotonated or phosphorylated serine</span>
+        <span class="c"># Check by element count for stuff, so names don&#39;t matter</span>
+        <span class="n">sers</span> <span class="o">=</span> <span class="nb">set</span><span class="p">(</span><span class="n">atomsel</span><span class="p">(</span><span class="s">&#39;resname SER SP1 SP2&#39;</span><span class="p">)</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s">&#39;resid&#39;</span><span class="p">))</span>
+        <span class="k">for</span> <span class="n">resid</span> <span class="ow">in</span> <span class="n">sers</span><span class="p">:</span>
+            <span class="c"># Specify resname here in case attached to NMA</span>
+            <span class="n">ressel</span> <span class="o">=</span> <span class="s">&quot;(resid </span><span class="si">%s</span><span class="s"> and resname SER SERD SP1 SP2)&quot;</span> <span class="o">%</span> <span class="n">resid</span>
+            <span class="n">atomsel</span><span class="p">(</span><span class="n">ressel</span><span class="p">)</span><span class="o">.</span><span class="n">set</span><span class="p">(</span><span class="s">&#39;resname&#39;</span><span class="p">,</span> <span class="s">&#39;SER&#39;</span><span class="p">)</span>
+            <span class="k">if</span> <span class="s">&quot;P&quot;</span> <span class="ow">in</span> <span class="n">atomsel</span><span class="p">(</span><span class="n">ressel</span><span class="p">)</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s">&#39;element&#39;</span><span class="p">):</span> <span class="c"># Phosphorylated</span>
+                <span class="n">charge</span> <span class="o">=</span> <span class="nb">int</span><span class="p">(</span><span class="nb">sum</span><span class="p">(</span><span class="n">atomsel</span><span class="p">(</span><span class="n">ressel</span><span class="p">)</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s">&#39;charge&#39;</span><span class="p">)))</span>
+                <span class="k">if</span> <span class="n">charge</span><span class="o">==</span> <span class="o">-</span><span class="mi">1</span><span class="p">:</span>
+                    <span class="k">print</span><span class="p">(</span><span class="s">&quot;INFO: Found monoanionic phosphoserine resid </span><span class="si">%d</span><span class="s">&quot;</span> <span class="o">%</span> <span class="n">resid</span><span class="p">)</span>
+                    <span class="n">patches</span> <span class="o">+=</span> <span class="s">&#39;patch SP1 </span><span class="si">%s</span><span class="s">:</span><span class="si">%d</span><span class="se">\n</span><span class="s">&#39;</span> <span class="o">%</span> <span class="p">(</span><span class="n">seg</span><span class="p">,</span> <span class="n">resid</span><span class="p">)</span>
+                <span class="k">elif</span> <span class="n">charge</span> <span class="o">==</span> <span class="o">-</span><span class="mi">2</span><span class="p">:</span>
+                    <span class="k">print</span><span class="p">(</span><span class="s">&quot;INFO: Found dianionic phosphoserine resid </span><span class="si">%d</span><span class="s">&quot;</span> <span class="o">%</span> <span class="n">resid</span><span class="p">)</span>
+                    <span class="n">patches</span> <span class="o">+=</span> <span class="s">&#39;patch SP2 </span><span class="si">%s</span><span class="s">:</span><span class="si">%d</span><span class="se">\n</span><span class="s">&#39;</span> <span class="o">%</span> <span class="p">(</span><span class="n">seg</span><span class="p">,</span> <span class="n">resid</span><span class="p">)</span>
+                <span class="k">else</span><span class="p">:</span> <span class="c"># Print just a warning in case user handles it later</span>
+                    <span class="k">print</span><span class="p">(</span><span class="s">&quot;WARNING: Unknown modification to Ser </span><span class="si">%d</span><span class="s">&quot;</span> <span class="o">%</span> <span class="n">resid</span><span class="p">)</span>
+            <span class="k">elif</span> <span class="s">&quot;HG1&quot;</span> <span class="ow">not</span> <span class="ow">in</span> <span class="n">atomsel</span><span class="p">(</span><span class="n">ressel</span><span class="p">)</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s">&#39;name&#39;</span><span class="p">):</span> <span class="c"># Deprotonated</span>
+                <span class="k">print</span><span class="p">(</span><span class="s">&quot;INFO: Found deprotonated serine resid </span><span class="si">%d</span><span class="s">&quot;</span> <span class="o">%</span> <span class="n">resid</span><span class="p">)</span>
+                <span class="n">patches</span> <span class="o">+=</span> <span class="s">&#39;patch SERD </span><span class="si">%s%d</span><span class="se">\n</span><span class="s">&#39;</span> <span class="o">%</span> <span class="p">(</span><span class="n">seg</span><span class="p">,</span> <span class="n">resid</span><span class="p">)</span>
+
+        <span class="c"># Check for phosphorylated threonine</span>
+        <span class="n">thrs</span> <span class="o">=</span> <span class="nb">set</span><span class="p">(</span><span class="n">atomsel</span><span class="p">(</span><span class="s">&#39;resname THR THP1 THP2&#39;</span><span class="p">)</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s">&#39;resid&#39;</span><span class="p">))</span>
+        <span class="k">for</span> <span class="n">resid</span> <span class="ow">in</span> <span class="n">thrs</span><span class="p">:</span>
+            <span class="n">ressel</span> <span class="o">=</span> <span class="s">&quot;(resid </span><span class="si">%s</span><span class="s"> and resname THR THP1 THP2)&quot;</span> <span class="o">%</span> <span class="n">resid</span>
+            <span class="n">atomsel</span><span class="p">(</span><span class="n">ressel</span><span class="p">)</span><span class="o">.</span><span class="n">set</span><span class="p">(</span><span class="s">&#39;resname&#39;</span><span class="p">,</span> <span class="s">&#39;THR&#39;</span><span class="p">)</span>
+            <span class="k">if</span> <span class="s">&quot;P&quot;</span> <span class="ow">in</span> <span class="n">atomsel</span><span class="p">(</span><span class="n">ressel</span><span class="p">)</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s">&#39;element&#39;</span><span class="p">):</span> <span class="c"># Phosphorylated</span>
+                <span class="n">charge</span> <span class="o">=</span> <span class="nb">int</span><span class="p">(</span><span class="nb">sum</span><span class="p">(</span><span class="n">atomsel</span><span class="p">(</span><span class="n">ressel</span><span class="p">)</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s">&#39;charge&#39;</span><span class="p">)))</span>
+                <span class="k">if</span> <span class="n">charge</span> <span class="o">==</span> <span class="o">-</span><span class="mi">1</span><span class="p">:</span>
+                    <span class="k">print</span><span class="p">(</span><span class="s">&quot;INFO: Found monoanionic phosphothreonine resid </span><span class="si">%d</span><span class="s">&quot;</span> <span class="o">%</span> <span class="n">resid</span><span class="p">)</span>
+                    <span class="n">patches</span> <span class="o">+=</span> <span class="s">&#39;patch THP1 </span><span class="si">%s</span><span class="s">:</span><span class="si">%d</span><span class="se">\n</span><span class="s">&#39;</span> <span class="o">%</span> <span class="p">(</span><span class="n">seg</span><span class="p">,</span> <span class="n">resid</span><span class="p">)</span>
+                <span class="k">elif</span> <span class="n">charge</span> <span class="o">==</span> <span class="o">-</span><span class="mi">2</span><span class="p">:</span>
+                    <span class="k">print</span><span class="p">(</span><span class="s">&quot;INFO: Found dianionic phosphothreonine resid </span><span class="si">%d</span><span class="s">&quot;</span> <span class="o">%</span> <span class="n">resid</span><span class="p">)</span>
+                    <span class="n">patches</span> <span class="o">+=</span> <span class="s">&#39;patch THP2 </span><span class="si">%s</span><span class="s">:</span><span class="si">%d</span><span class="se">\n</span><span class="s">&#39;</span> <span class="o">%</span> <span class="p">(</span><span class="n">seg</span><span class="p">,</span> <span class="n">resid</span><span class="p">)</span>
+                <span class="k">else</span><span class="p">:</span>
+                    <span class="k">print</span><span class="p">(</span><span class="s">&quot;WARNING: Unknown modification to Thr </span><span class="si">%d</span><span class="s">&quot;</span> <span class="o">%</span> <span class="n">resid</span><span class="p">)</span>
+
+        <span class="c"># Check for phosophorylated tyrosine</span>
+        <span class="n">tyrs</span> <span class="o">=</span> <span class="nb">set</span><span class="p">(</span><span class="n">atomsel</span><span class="p">(</span><span class="s">&#39;resname TYR TP1 TP2&#39;</span><span class="p">)</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s">&#39;resid&#39;</span><span class="p">))</span>
+        <span class="k">for</span> <span class="n">resid</span> <span class="ow">in</span> <span class="n">tyrs</span><span class="p">:</span>
+            <span class="n">ressel</span> <span class="o">=</span> <span class="s">&quot;(resid </span><span class="si">%s</span><span class="s"> and resname TYR TP1 TP2)&quot;</span> <span class="o">%</span> <span class="n">resid</span>
+            <span class="n">atomsel</span><span class="p">(</span><span class="n">ressel</span><span class="p">)</span><span class="o">.</span><span class="n">set</span><span class="p">(</span><span class="s">&#39;resname&#39;</span><span class="p">,</span> <span class="s">&#39;TYR&#39;</span><span class="p">)</span>
+            <span class="k">if</span> <span class="s">&quot;P&quot;</span> <span class="ow">in</span> <span class="n">atomsel</span><span class="p">(</span><span class="n">ressel</span><span class="p">)</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s">&#39;element&#39;</span><span class="p">):</span> <span class="c"># Phosphorylated</span>
+                <span class="n">charge</span> <span class="o">=</span> <span class="nb">int</span><span class="p">(</span><span class="nb">sum</span><span class="p">(</span><span class="n">atomsel</span><span class="p">(</span><span class="n">ressel</span><span class="p">)</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s">&#39;charge&#39;</span><span class="p">)))</span>
+                <span class="k">if</span> <span class="n">charge</span> <span class="o">==</span> <span class="o">-</span><span class="mi">1</span><span class="p">:</span>
+                    <span class="k">print</span><span class="p">(</span><span class="s">&quot;INFO: Found monoanionic phosphotyrosine resid </span><span class="si">%d</span><span class="s">&quot;</span> <span class="o">%</span> <span class="n">resid</span><span class="p">)</span>
+                    <span class="n">patches</span> <span class="o">+=</span> <span class="s">&#39;patch TP1 </span><span class="si">%s</span><span class="s">:</span><span class="si">%d</span><span class="se">\n</span><span class="s">&#39;</span> <span class="o">%</span> <span class="p">(</span><span class="n">seg</span><span class="p">,</span> <span class="n">resid</span><span class="p">)</span>
+                <span class="k">elif</span> <span class="n">charge</span> <span class="o">==</span> <span class="o">-</span><span class="mi">2</span><span class="p">:</span>
+                    <span class="k">print</span><span class="p">(</span><span class="s">&quot;INFO: Found dianionic phosphotyrosine resid </span><span class="si">%d</span><span class="s">&quot;</span> <span class="o">%</span> <span class="n">resid</span><span class="p">)</span>
+                    <span class="n">patches</span> <span class="o">+=</span> <span class="s">&#39;patch TP2 </span><span class="si">%s</span><span class="s">:</span><span class="si">%d</span><span class="se">\n</span><span class="s">&#39;</span> <span class="o">%</span> <span class="p">(</span><span class="n">seg</span><span class="p">,</span> <span class="n">resid</span><span class="p">)</span>
+                <span class="k">else</span><span class="p">:</span>
+                    <span class="k">print</span><span class="p">(</span><span class="s">&quot;WARNING: Unknown modification to Tyr </span><span class="si">%d</span><span class="s">&quot;</span> <span class="o">%</span> <span class="n">resid</span><span class="p">)</span>
+
+        <span class="c"># Deprotonated cysteines handled in disulfide bonds section</span>
+
+        <span class="c"># Hydrogens can be somewhat residue-dependent, but only check Hs</span>
+        <span class="c"># on known amino acid residues so that the names on nonstandard amino</span>
+        <span class="c"># acids are never changed</span>
+        <span class="n">h_names</span> <span class="o">=</span> <span class="p">{</span><span class="s">&#39;H&#39;</span>  <span class="p">:</span> <span class="s">&#39;HN&#39;</span><span class="p">,</span> <span class="s">&#39;H2&#39;</span> <span class="p">:</span><span class="s">&#39;HN&#39;</span><span class="p">,</span> <span class="s">&#39;H1&#39;</span> <span class="p">:</span> <span class="s">&#39;HN&#39;</span><span class="p">,</span>
+                   <span class="s">&#39;HA2&#39;</span><span class="p">:</span><span class="s">&#39;HA1&#39;</span><span class="p">,</span>
+                   <span class="s">&#39;HA3&#39;</span><span class="p">:</span><span class="s">&#39;HA2&#39;</span><span class="p">,</span> <span class="s">&#39;HG2&#39;</span><span class="p">:</span><span class="s">&#39;HG1&#39;</span><span class="p">,</span>
+                   <span class="s">&#39;HG3&#39;</span><span class="p">:</span><span class="s">&#39;HG2&#39;</span><span class="p">}</span>
+        <span class="k">for</span> <span class="n">hyd</span> <span class="ow">in</span> <span class="n">h_names</span><span class="p">:</span>
+            <span class="n">atomsel</span><span class="p">(</span><span class="s">&#39;resname </span><span class="si">%s</span><span class="s"> and name </span><span class="si">%s</span><span class="s">&#39;</span>
+                    <span class="o">%</span> <span class="p">(</span><span class="n">_acids</span><span class="p">,</span> <span class="n">hyd</span><span class="p">))</span><span class="o">.</span><span class="n">set</span><span class="p">(</span><span class="s">&#39;name&#39;</span><span class="p">,</span> <span class="n">h_names</span><span class="p">[</span><span class="n">hyd</span><span class="p">])</span>
+
+        <span class="c"># These two statements must execute in this specific order</span>
+        <span class="n">atomsel</span><span class="p">(</span><span class="s">&#39;resname </span><span class="si">%s</span><span class="s"> and name HB2 and &#39;</span>
+                <span class="s">&#39;not resname ALA&#39;</span><span class="o">%</span> <span class="n">_acids</span><span class="p">)</span><span class="o">.</span><span class="n">set</span><span class="p">(</span><span class="s">&#39;name&#39;</span><span class="p">,</span> <span class="s">&#39;HB1&#39;</span><span class="p">)</span>
+        <span class="n">atomsel</span><span class="p">(</span><span class="s">&#39;resname </span><span class="si">%s</span><span class="s"> and name HB3 and &#39;</span>
+                <span class="s">&#39;not resname ALA&#39;</span><span class="o">%</span> <span class="n">_acids</span><span class="p">)</span><span class="o">.</span><span class="n">set</span><span class="p">(</span><span class="s">&#39;name&#39;</span><span class="p">,</span> <span class="s">&#39;HB2&#39;</span><span class="p">)</span>
+
+        <span class="c"># Some residue-specific stuff</span>
+        <span class="n">atomsel</span><span class="p">(</span><span class="s">&#39;resname </span><span class="si">%s</span><span class="s"> and name HD2 and not (resname &#39;</span>
+                <span class="s">&#39;TYR ILE HSP HSE HSD ASP PHE)&#39;</span> <span class="o">%</span> <span class="n">_acids</span><span class="p">)</span><span class="o">.</span><span class="n">set</span><span class="p">(</span><span class="s">&#39;name&#39;</span><span class="p">,</span> <span class="s">&#39;HD1&#39;</span><span class="p">)</span>
+        <span class="n">atomsel</span><span class="p">(</span><span class="s">&#39;resname </span><span class="si">%s</span><span class="s"> and name HD3 and not (resname &#39;</span>
+                <span class="s">&#39;TYR ILE HIS HSE HSD ASP PHE)&#39;</span><span class="o">%</span> <span class="n">_acids</span><span class="p">)</span><span class="o">.</span><span class="n">set</span><span class="p">(</span><span class="s">&#39;name&#39;</span><span class="p">,</span> <span class="s">&#39;HD2&#39;</span><span class="p">)</span>
+        <span class="n">atomsel</span><span class="p">(</span><span class="s">&#39;resname </span><span class="si">%s</span><span class="s"> and name HE2 and not (resname &#39;</span>
+                <span class="s">&#39;TYR MET TRP HSP HSE HSD GLU PHE)&#39;</span><span class="o">%</span> <span class="n">_acids</span><span class="p">)</span><span class="o">.</span><span class="n">set</span><span class="p">(</span><span class="s">&#39;name&#39;</span><span class="p">,</span> <span class="s">&#39;HE1&#39;</span><span class="p">)</span>
+        <span class="n">atomsel</span><span class="p">(</span><span class="s">&#39;resname </span><span class="si">%s</span><span class="s"> and name HE3 and not (resname &#39;</span>
+                <span class="s">&#39;TYR MET TRP HSP HSE HSD PHE)&#39;</span><span class="o">%</span> <span class="n">_acids</span><span class="p">)</span><span class="o">.</span><span class="n">set</span><span class="p">(</span><span class="s">&#39;name&#39;</span><span class="p">,</span> <span class="s">&#39;HE2&#39;</span><span class="p">)</span>
+
+        <span class="c"># Final chance to fix unrecognized atom names for non-protein residues</span>
+        <span class="n">others</span> <span class="o">=</span> <span class="nb">set</span><span class="p">(</span><span class="n">atomsel</span><span class="p">(</span><span class="s">&#39;not resname </span><span class="si">%s</span><span class="s">&#39;</span> <span class="o">%</span> <span class="n">_acids</span><span class="p">)</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s">&#39;resname&#39;</span><span class="p">))</span>
+        <span class="k">if</span> <span class="nb">len</span><span class="p">(</span><span class="n">others</span><span class="p">):</span>
+            <span class="k">print</span><span class="p">(</span><span class="s">&quot;WARNING: Found non-protein residues in protein...&quot;</span><span class="p">)</span>
+
+        <span class="k">for</span> <span class="n">resname</span> <span class="ow">in</span> <span class="n">others</span><span class="p">:</span>
+            <span class="n">newname</span> <span class="o">=</span> <span class="n">resname</span>
+            <span class="k">while</span> <span class="ow">not</span> <span class="bp">self</span><span class="o">.</span><span class="n">_find_residue_in_rtf</span><span class="p">(</span><span class="n">resname</span><span class="o">=</span><span class="n">newname</span><span class="p">,</span> <span class="n">molid</span><span class="o">=</span><span class="n">prot_molid</span><span class="p">):</span>
+                <span class="k">print</span><span class="p">(</span><span class="s">&quot;</span><span class="se">\n</span><span class="s">ERROR: Residue name </span><span class="si">%s</span><span class="s"> wasn&#39;t found in any input &quot;</span>
+                      <span class="s">&quot;topology. Would you like to rename it?</span><span class="se">\n</span><span class="s">&quot;</span> <span class="o">%</span> <span class="n">resname</span><span class="p">)</span>
+                <span class="n">sys</span><span class="o">.</span><span class="n">stdout</span><span class="o">.</span><span class="n">flush</span><span class="p">()</span>
+                <span class="n">newname</span> <span class="o">=</span> <span class="nb">raw_input</span><span class="p">(</span><span class="s">&quot;New residue name or CTRL+D to quit &gt; &quot;</span><span class="p">)</span>
+                <span class="n">sys</span><span class="o">.</span><span class="n">stdout</span><span class="o">.</span><span class="n">flush</span><span class="p">()</span>
+                <span class="n">atomsel</span><span class="p">(</span><span class="s">&#39;resname </span><span class="si">%s</span><span class="s">&#39;</span> <span class="o">%</span> <span class="n">resname</span><span class="p">)</span><span class="o">.</span><span class="n">set</span><span class="p">(</span><span class="s">&#39;resname&#39;</span><span class="p">,</span> <span class="n">newname</span><span class="p">)</span>
+
+        <span class="c"># If ACE and NMA aren&#39;t present, prompt for the residue name of the patch to</span>
+        <span class="c"># apply, since auto-detecting it can be dangerous and the user may want</span>
+        <span class="c"># to define their own</span>
+        <span class="k">if</span> <span class="s">&quot;ACE&quot;</span> <span class="ow">not</span> <span class="ow">in</span> <span class="n">atomsel</span><span class="p">()</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s">&#39;resname&#39;</span><span class="p">):</span>
+            <span class="n">minid</span> <span class="o">=</span> <span class="nb">min</span><span class="p">(</span><span class="n">atomsel</span><span class="p">()</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s">&#39;resid&#39;</span><span class="p">))</span>
+            <span class="n">minresname</span> <span class="o">=</span> <span class="nb">set</span><span class="p">(</span><span class="n">atomsel</span><span class="p">(</span><span class="s">&#39;resid </span><span class="si">%d</span><span class="s">&#39;</span> <span class="o">%</span> <span class="n">minid</span><span class="p">)</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s">&#39;resname&#39;</span><span class="p">))</span>
+            <span class="c"># Sanity check</span>
+            <span class="k">if</span> <span class="nb">len</span><span class="p">(</span><span class="n">minresname</span><span class="p">)</span> <span class="o">!=</span> <span class="mi">1</span><span class="p">:</span>
+                <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="s">&quot;Duplicate residue numbering for C-terminal&quot;</span>
+                                 <span class="s">&quot; resid </span><span class="si">%d</span><span class="s"> names </span><span class="si">%s</span><span class="s">&quot;</span>
+                                 <span class="o">%</span> <span class="p">(</span><span class="n">minid</span><span class="p">,</span> <span class="s">&quot; &quot;</span><span class="o">.</span><span class="n">join</span><span class="p">([</span><span class="n">x</span> <span class="k">for</span> <span class="n">x</span> <span class="ow">in</span> <span class="n">minresname</span><span class="p">])))</span>
+            <span class="k">else</span><span class="p">:</span> <span class="n">minresname</span> <span class="o">=</span> <span class="n">minresname</span><span class="o">.</span><span class="n">pop</span><span class="p">()</span>
+
+            <span class="k">print</span><span class="p">(</span><span class="s">&quot;</span><span class="se">\n\n</span><span class="s">INFO: Didn&#39;t find a C-terminal ACE for segment beginning&quot;</span>
+                  <span class="s">&quot; with </span><span class="si">%s%d</span><span class="s">&quot;</span> <span class="o">%</span> <span class="p">(</span><span class="n">minresname</span><span class="p">,</span> <span class="n">minid</span><span class="p">))</span>
+            <span class="n">patches</span> <span class="o">+=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_get_patch</span><span class="p">(</span><span class="n">seg</span><span class="p">,</span> <span class="n">minid</span><span class="p">)</span>
+
+        <span class="k">if</span> <span class="s">&quot;NMA&quot;</span> <span class="ow">not</span> <span class="ow">in</span> <span class="n">atomsel</span><span class="p">()</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s">&#39;resname&#39;</span><span class="p">):</span>
+            <span class="n">maxid</span> <span class="o">=</span> <span class="nb">max</span><span class="p">(</span><span class="n">atomsel</span><span class="p">()</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s">&#39;resid&#39;</span><span class="p">))</span>
+            <span class="n">maxresname</span> <span class="o">=</span> <span class="nb">set</span><span class="p">(</span><span class="n">atomsel</span><span class="p">(</span><span class="s">&#39;resid </span><span class="si">%d</span><span class="s">&#39;</span> <span class="o">%</span> <span class="n">maxid</span><span class="p">)</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s">&#39;resname&#39;</span><span class="p">))</span>
+
+            <span class="c"># Sanity check</span>
+            <span class="k">if</span> <span class="nb">len</span><span class="p">(</span><span class="n">maxresname</span><span class="p">)</span> <span class="o">!=</span> <span class="mi">1</span><span class="p">:</span>
+                <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="s">&quot;Duplicate residue numbering for C-terminal&quot;</span>
+                                 <span class="s">&quot; resid </span><span class="si">%d</span><span class="s"> names </span><span class="si">%s</span><span class="s">&quot;</span>
+                                 <span class="o">%</span> <span class="p">(</span><span class="n">minid</span><span class="p">,</span> <span class="s">&quot; &quot;</span><span class="o">.</span><span class="n">join</span><span class="p">([</span><span class="n">x</span> <span class="k">for</span> <span class="n">x</span> <span class="ow">in</span> <span class="n">minresname</span><span class="p">])))</span>
+            <span class="k">else</span><span class="p">:</span> <span class="n">maxresname</span> <span class="o">=</span> <span class="n">maxresname</span><span class="o">.</span><span class="n">pop</span><span class="p">()</span>
+
+            <span class="k">print</span><span class="p">(</span><span class="s">&quot;</span><span class="se">\n\n</span><span class="s">INFO: Didn&#39;t find a N-terminal NMA for segment ending&quot;</span>
+                  <span class="s">&quot; with </span><span class="si">%s%d</span><span class="s">&quot;</span> <span class="o">%</span> <span class="p">(</span><span class="n">maxresname</span><span class="p">,</span> <span class="n">maxid</span><span class="p">))</span>
+            <span class="n">patches</span> <span class="o">+=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_get_patch</span><span class="p">(</span><span class="n">seg</span><span class="p">,</span> <span class="n">maxid</span><span class="p">)</span>
+
+        <span class="c"># Now protein</span>
+        <span class="n">filename</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">tmp_dir</span> <span class="o">+</span> <span class="s">&#39;/psf_protein_</span><span class="si">%s</span><span class="s">.pdb&#39;</span><span class="o">%</span> <span class="n">seg</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_write_ordered_pdb</span><span class="p">(</span><span class="n">filename</span><span class="p">,</span> <span class="s">&#39;all&#39;</span><span class="p">,</span> <span class="n">prot_molid</span><span class="p">)</span>
+        <span class="k">print</span><span class="p">(</span><span class="s">&quot;Wrote </span><span class="si">%d</span><span class="s"> atoms to the protein segment </span><span class="si">%s</span><span class="s">&quot;</span>
+              <span class="o">%</span> <span class="p">(</span><span class="nb">len</span><span class="p">(</span><span class="n">atomsel</span><span class="p">(</span><span class="s">&#39;all&#39;</span><span class="p">)),</span> <span class="n">seg</span><span class="p">))</span>
+
+        <span class="n">molecule</span><span class="o">.</span><span class="n">set_top</span><span class="p">(</span><span class="n">old_top</span><span class="p">)</span>
+
+        <span class="c"># Now write to psfgen input file</span>
+        <span class="n">string</span> <span class="o">=</span> <span class="s">&#39;&#39;&#39;</span>
+<span class="s">        pdbalias residue CYX CYS</span>
+<span class="s">        set protnam </span><span class="si">%s</span><span class="s"></span>
+<span class="s">        segment </span><span class="si">%s</span><span class="s"> {</span>
+<span class="s">          first none</span>
+<span class="s">          last none</span>
+<span class="s">          pdb $protnam</span>
+<span class="s">        } </span>
+<span class="s">        &#39;&#39;&#39;</span> <span class="o">%</span> <span class="p">(</span><span class="n">filename</span><span class="p">,</span> <span class="n">seg</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">file</span><span class="o">.</span><span class="n">write</span><span class="p">(</span><span class="n">string</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">file</span><span class="o">.</span><span class="n">write</span><span class="p">(</span><span class="n">patches</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">file</span><span class="o">.</span><span class="n">write</span><span class="p">(</span><span class="s">&#39;   coordpdb $protnam </span><span class="si">%s</span><span class="se">\n</span><span class="s">&#39;</span> <span class="o">%</span> <span class="n">seg</span><span class="p">)</span>
+
+        <span class="k">return</span> <span class="n">filename</span>
+
+    <span class="c">#==========================================================================</span>
+
+    <span class="k">def</span> <span class="nf">_write_water_blocks</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Writes a lot of temporary files with 10000 waters each, to bypass</span>
+<span class="sd">        psfgen being stupid with files containing more than 10000 of a residue.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="c"># Put current molecule on top to simplify atom selection language</span>
+        <span class="n">old_top</span> <span class="o">=</span> <span class="n">molecule</span><span class="o">.</span><span class="n">get_top</span><span class="p">()</span>
+        <span class="n">molecule</span><span class="o">.</span><span class="n">set_top</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">molid</span><span class="p">)</span>
+
+        <span class="c"># Set consistent residue and atom names, crystal waters</span>
+        <span class="c"># can be named HOH, etc</span>
+        <span class="n">atomsel</span><span class="p">(</span><span class="s">&#39;water&#39;</span><span class="p">)</span><span class="o">.</span><span class="n">set</span><span class="p">(</span><span class="s">&#39;resname&#39;</span><span class="p">,</span> <span class="s">&#39;TIP3&#39;</span><span class="p">)</span>
+        <span class="n">atomsel</span><span class="p">(</span><span class="s">&#39;resname TIP3&#39;</span><span class="p">)</span><span class="o">.</span><span class="n">set</span><span class="p">(</span><span class="s">&#39;chain&#39;</span><span class="p">,</span> <span class="s">&#39;W&#39;</span><span class="p">)</span>
+        <span class="n">atomsel</span><span class="p">(</span><span class="s">&#39;resname TIP3 and element O&#39;</span><span class="p">)</span><span class="o">.</span><span class="n">set</span><span class="p">(</span><span class="s">&#39;name&#39;</span><span class="p">,</span> <span class="s">&#39;OH2&#39;</span><span class="p">)</span>
+
+        <span class="c"># Dowser can name water hydrogens strangely</span>
+        <span class="n">atomsel</span><span class="p">(</span><span class="s">&#39;resname TIP3 and name HW1&#39;</span><span class="p">)</span><span class="o">.</span><span class="n">set</span><span class="p">(</span><span class="s">&#39;name&#39;</span><span class="p">,</span> <span class="s">&#39;H1&#39;</span><span class="p">)</span>
+        <span class="n">atomsel</span><span class="p">(</span><span class="s">&#39;resname TIP3 and name HW2&#39;</span><span class="p">)</span><span class="o">.</span><span class="n">set</span><span class="p">(</span><span class="s">&#39;name&#39;</span><span class="p">,</span> <span class="s">&#39;H2&#39;</span><span class="p">)</span>
+
+        <span class="c"># Select all the waters. We&#39;ll use the user field to track which</span>
+        <span class="c"># ones have been written</span>
+        <span class="n">allw</span> <span class="o">=</span> <span class="n">atomsel</span><span class="p">(</span><span class="s">&#39;water and user 1.0&#39;</span><span class="p">)</span>
+        <span class="k">print</span><span class="p">(</span><span class="s">&quot;Found </span><span class="si">%d</span><span class="s"> water residues&quot;</span> <span class="o">%</span> <span class="nb">len</span><span class="p">(</span><span class="nb">set</span><span class="p">(</span><span class="n">atomsel</span><span class="p">(</span><span class="s">&#39;water and user 1.0&#39;</span><span class="p">)</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s">&#39;residue&#39;</span><span class="p">))))</span>
+        <span class="n">num_written</span> <span class="o">=</span> <span class="nb">len</span><span class="p">(</span><span class="n">allw</span><span class="p">)</span><span class="o">/</span><span class="p">(</span><span class="mi">9999</span><span class="o">*</span><span class="mi">3</span><span class="p">)</span><span class="o">+</span><span class="mi">1</span>
+        <span class="k">print</span><span class="p">(</span><span class="s">&quot;Going to write </span><span class="si">%d</span><span class="s"> files for </span><span class="si">%d</span><span class="s"> water atoms&quot;</span>
+              <span class="o">%</span> <span class="p">(</span><span class="n">num_written</span><span class="p">,</span> <span class="nb">len</span><span class="p">(</span><span class="n">allw</span><span class="p">)))</span>
+
+        <span class="c"># Pull out and write 10k waters at a time</span>
+        <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="n">num_written</span><span class="p">):</span>
+            <span class="n">residues</span> <span class="o">=</span> <span class="nb">list</span><span class="p">(</span><span class="nb">set</span><span class="p">(</span><span class="n">allw</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s">&#39;residue&#39;</span><span class="p">)))[:</span><span class="mi">9999</span><span class="p">]</span>
+            <span class="n">batchtxt</span> <span class="o">=</span> <span class="s">&#39;residue &#39;</span> <span class="o">+</span> \
+                       <span class="s">&#39; &#39;</span><span class="o">.</span><span class="n">join</span><span class="p">([</span><span class="nb">str</span><span class="p">(</span><span class="n">s</span><span class="p">)</span> <span class="k">for</span> <span class="n">s</span> <span class="ow">in</span> <span class="nb">set</span><span class="p">(</span><span class="n">residues</span><span class="p">)])</span>
+            <span class="n">batch</span> <span class="o">=</span> <span class="n">atomsel</span><span class="p">(</span><span class="n">batchtxt</span><span class="p">)</span>
+            <span class="k">try</span><span class="p">:</span>
+                <span class="n">batch</span><span class="o">.</span><span class="n">set</span><span class="p">(</span><span class="s">&#39;resid&#39;</span><span class="p">,</span> <span class="p">[</span><span class="n">k</span> <span class="k">for</span> <span class="n">k</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="mi">1</span><span class="p">,</span> <span class="nb">len</span><span class="p">(</span><span class="n">batch</span><span class="p">)</span><span class="o">/</span><span class="mi">3</span><span class="o">+</span><span class="mi">1</span><span class="p">)</span>
+                                    <span class="k">for</span> <span class="n">_</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="mi">3</span><span class="p">)])</span>
+            <span class="k">except</span> <span class="ne">ValueError</span><span class="p">:</span>
+                <span class="k">print</span><span class="p">(</span><span class="s">&quot;</span><span class="se">\n</span><span class="s">ERROR! You have some waters missing hydrogens!</span><span class="se">\n</span><span class="s">&quot;</span>
+                      <span class="s">&quot;Found </span><span class="si">%d</span><span class="s"> water residues, but </span><span class="si">%d</span><span class="s"> water atoms. Check &quot;</span>
+                      <span class="s">&quot; your crystallographic waters in the input structure.&quot;</span>
+                      <span class="o">%</span> <span class="p">(</span><span class="nb">len</span><span class="p">(</span><span class="n">residues</span><span class="p">),</span> <span class="nb">len</span><span class="p">(</span><span class="n">batch</span><span class="p">)))</span>
+                <span class="n">quit</span><span class="p">(</span><span class="mi">1</span><span class="p">)</span>
+            <span class="n">temp</span> <span class="o">=</span> <span class="n">tempfile</span><span class="o">.</span><span class="n">mkstemp</span><span class="p">(</span><span class="n">suffix</span><span class="o">=</span><span class="s">&#39;_</span><span class="si">%d</span><span class="s">.pdb&#39;</span> <span class="o">%</span> <span class="n">i</span><span class="p">,</span> <span class="n">prefix</span><span class="o">=</span><span class="s">&#39;psf_wat_&#39;</span><span class="p">,</span>
+                                    <span class="nb">dir</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">tmp_dir</span><span class="p">)[</span><span class="mi">1</span><span class="p">]</span>
+            <span class="n">batch</span><span class="o">.</span><span class="n">set</span><span class="p">(</span><span class="s">&#39;user&#39;</span><span class="p">,</span> <span class="mf">0.0</span><span class="p">)</span>
+            <span class="n">batch</span><span class="o">.</span><span class="n">write</span><span class="p">(</span><span class="s">&#39;pdb&#39;</span><span class="p">,</span> <span class="n">temp</span><span class="p">)</span>
+            <span class="n">allw</span><span class="o">.</span><span class="n">update</span><span class="p">()</span>
+
+        <span class="n">string</span> <span class="o">=</span> <span class="s">&#39;&#39;&#39;</span>
+<span class="s">        set waterfiles [glob -directory </span><span class="si">%s</span><span class="s"> psf_wat_*.pdb]</span>
+<span class="s">        set i 0</span>
+<span class="s">        foreach watnam $waterfiles {</span>
+<span class="s">           segment W${i} {</span>
+<span class="s">              auto none</span>
+<span class="s">              first none</span>
+<span class="s">              last none</span>
+<span class="s">              pdb $watnam</span>
+<span class="s">           }</span>
+<span class="s">           coordpdb $watnam W${i}</span>
+<span class="s">           incr i</span>
+<span class="s">        }</span>
+<span class="s">          &#39;&#39;&#39;</span> <span class="o">%</span> <span class="bp">self</span><span class="o">.</span><span class="n">tmp_dir</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">file</span><span class="o">.</span><span class="n">write</span><span class="p">(</span><span class="n">string</span><span class="p">)</span>
+        <span class="n">molecule</span><span class="o">.</span><span class="n">set_top</span><span class="p">(</span><span class="n">old_top</span><span class="p">)</span>
+
+        <span class="k">return</span> <span class="n">num_written</span>
+
+    <span class="c">#==========================================================================</span>
+
+    <span class="k">def</span> <span class="nf">_write_lipid_blocks</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Writes a temporary PDB file containing the lipids for later use by</span>
+<span class="sd">        psfgen. Renumbers the lipid residues because some can have **** instead</span>
+<span class="sd">        of an integer for resid in large systems, which will crash psfgen. Also</span>
+<span class="sd">        sets atom names for some common lipids (currently POPC)</span>
+
+<span class="sd">        Raises:</span>
+<span class="sd">            NotImplementedError if more than 10,000 lipids are present since it</span>
+<span class="sd">              doesn&#39;t support feeding multiple lipid blocks to psfgen currently</span>
+<span class="sd">            NotImplementedError if lipid other than POPC,POPE,POPG is found</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="c"># Put current molecule on top to simplify atom selection</span>
+        <span class="n">old_top</span> <span class="o">=</span> <span class="n">molecule</span><span class="o">.</span><span class="n">get_top</span><span class="p">()</span>
+        <span class="n">molecule</span><span class="o">.</span><span class="n">set_top</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">molid</span><span class="p">)</span>
+
+        <span class="c"># Collect lipid residues up</span>
+        <span class="n">alll</span> <span class="o">=</span> <span class="n">atomsel</span><span class="p">(</span><span class="s">&#39;(</span><span class="si">%s</span><span class="s">) and user 1.0&#39;</span> <span class="o">%</span> <span class="bp">self</span><span class="o">.</span><span class="n">lipid_sel</span><span class="p">)</span>
+        <span class="n">residues</span> <span class="o">=</span> <span class="nb">list</span><span class="p">(</span><span class="nb">set</span><span class="p">(</span><span class="n">alll</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s">&#39;residue&#39;</span><span class="p">)))</span>
+        <span class="n">residues</span><span class="o">.</span><span class="n">sort</span><span class="p">()</span>
+
+        <span class="c"># Sanity check for &lt; 10k lipids</span>
+        <span class="k">if</span> <span class="nb">len</span><span class="p">(</span><span class="n">residues</span><span class="p">)</span> <span class="o">&gt;=</span> <span class="mi">10000</span><span class="p">:</span>
+            <span class="k">raise</span> <span class="ne">NotImplementedError</span><span class="p">(</span><span class="s">&quot;More than 10k lipids found&quot;</span><span class="p">)</span>
+
+        <span class="c"># Loop through all residues and renumber and correctly name them</span>
+        <span class="n">counter</span> <span class="o">=</span> <span class="mi">1</span>
+        <span class="k">for</span> <span class="n">res</span> <span class="ow">in</span> <span class="n">residues</span><span class="p">:</span>
+            <span class="c"># Renumber residue</span>
+            <span class="n">atomsel</span><span class="p">(</span><span class="s">&#39;residue </span><span class="si">%d</span><span class="s">&#39;</span> <span class="o">%</span> <span class="n">res</span><span class="p">)</span><span class="o">.</span><span class="n">set</span><span class="p">(</span><span class="s">&#39;resid&#39;</span><span class="p">,</span> <span class="n">counter</span><span class="p">)</span>
+            <span class="n">counter</span> <span class="o">=</span> <span class="n">counter</span> <span class="o">+</span> <span class="mi">1</span>
+
+            <span class="c"># Pick which naming dictionary to use</span>
+            <span class="n">resname</span> <span class="o">=</span> <span class="nb">set</span><span class="p">(</span><span class="n">atomsel</span><span class="p">(</span><span class="s">&#39;residue </span><span class="si">%d</span><span class="s">&#39;</span> <span class="o">%</span> <span class="n">res</span><span class="p">)</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s">&#39;resname&#39;</span><span class="p">))</span>
+            <span class="k">if</span> <span class="nb">len</span><span class="p">(</span><span class="n">resname</span><span class="p">)</span> <span class="o">!=</span> <span class="mi">1</span><span class="p">:</span>
+                <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="s">&quot;More than one name for residue </span><span class="si">%d</span><span class="s">&quot;</span> <span class="o">%</span> <span class="n">res</span><span class="p">)</span>
+            <span class="n">resname</span> <span class="o">=</span> <span class="n">resname</span><span class="o">.</span><span class="n">pop</span><span class="p">()</span>
+            <span class="n">names</span> <span class="o">=</span> <span class="p">{}</span>
+            <span class="k">if</span> <span class="n">resname</span> <span class="o">==</span> <span class="s">&quot;POPC&quot;</span><span class="p">:</span>
+                <span class="c"># Carbons and hydrogen above nitrogen in head group</span>
+                <span class="c"># These selections must be done in order because there is a swap</span>
+                <span class="n">atomsel</span><span class="p">(</span><span class="s">&#39;(</span><span class="si">%s</span><span class="s">) and name C11&#39;</span> <span class="o">%</span> <span class="bp">self</span><span class="o">.</span><span class="n">lipid_sel</span><span class="p">)</span><span class="o">.</span><span class="n">set</span><span class="p">(</span><span class="s">&#39;name&#39;</span><span class="p">,</span> <span class="s">&#39;t12&#39;</span><span class="p">)</span>
+                <span class="n">atomsel</span><span class="p">(</span><span class="s">&#39;(</span><span class="si">%s</span><span class="s">) and name C15&#39;</span> <span class="o">%</span> <span class="bp">self</span><span class="o">.</span><span class="n">lipid_sel</span><span class="p">)</span><span class="o">.</span><span class="n">set</span><span class="p">(</span><span class="s">&#39;name&#39;</span><span class="p">,</span> <span class="s">&#39;C11&#39;</span><span class="p">)</span>
+                <span class="n">atomsel</span><span class="p">(</span><span class="s">&#39;(</span><span class="si">%s</span><span class="s">) and name C14&#39;</span> <span class="o">%</span> <span class="bp">self</span><span class="o">.</span><span class="n">lipid_sel</span><span class="p">)</span><span class="o">.</span><span class="n">set</span><span class="p">(</span><span class="s">&#39;name&#39;</span><span class="p">,</span> <span class="s">&#39;C15&#39;</span><span class="p">)</span>
+                <span class="n">atomsel</span><span class="p">(</span><span class="s">&#39;(</span><span class="si">%s</span><span class="s">) and name C12&#39;</span> <span class="o">%</span> <span class="bp">self</span><span class="o">.</span><span class="n">lipid_sel</span><span class="p">)</span><span class="o">.</span><span class="n">set</span><span class="p">(</span><span class="s">&#39;name&#39;</span><span class="p">,</span> <span class="s">&#39;C14&#39;</span><span class="p">)</span>
+                <span class="n">atomsel</span><span class="p">(</span><span class="s">&#39;(</span><span class="si">%s</span><span class="s">) and name t12&#39;</span> <span class="o">%</span> <span class="bp">self</span><span class="o">.</span><span class="n">lipid_sel</span><span class="p">)</span><span class="o">.</span><span class="n">set</span><span class="p">(</span><span class="s">&#39;name&#39;</span><span class="p">,</span> <span class="s">&#39;C12&#39;</span><span class="p">)</span>
+
+                <span class="n">popc_names</span> <span class="o">=</span> <span class="p">{</span><span class="s">&#39;H31&#39;</span><span class="p">:</span><span class="s">&#39;H13A&#39;</span><span class="p">,</span> <span class="s">&#39;H32&#39;</span><span class="p">:</span><span class="s">&#39;H13B&#39;</span><span class="p">,</span> <span class="s">&#39;H33&#39;</span><span class="p">:</span><span class="s">&#39;H13C&#39;</span><span class="p">,</span>
+                              <span class="s">&#39;H41&#39;</span><span class="p">:</span><span class="s">&#39;H15A&#39;</span><span class="p">,</span> <span class="s">&#39;H42&#39;</span><span class="p">:</span><span class="s">&#39;H15B&#39;</span><span class="p">,</span> <span class="s">&#39;H43&#39;</span><span class="p">:</span><span class="s">&#39;H15C&#39;</span><span class="p">,</span>
+                              <span class="s">&#39;H21&#39;</span><span class="p">:</span><span class="s">&#39;H14A&#39;</span><span class="p">,</span> <span class="s">&#39;H22&#39;</span><span class="p">:</span><span class="s">&#39;H14B&#39;</span><span class="p">,</span> <span class="s">&#39;H23&#39;</span><span class="p">:</span><span class="s">&#39;H14C&#39;</span><span class="p">,</span>
+                              <span class="s">&#39;H51&#39;</span><span class="p">:</span><span class="s">&#39;H11A&#39;</span><span class="p">,</span> <span class="s">&#39;H52&#39;</span><span class="p">:</span><span class="s">&#39;H11B&#39;</span><span class="p">,</span>
+                              <span class="s">&#39;H11&#39;</span><span class="p">:</span><span class="s">&#39;H12A&#39;</span><span class="p">,</span> <span class="s">&#39;H12&#39;</span><span class="p">:</span><span class="s">&#39;H12B&#39;</span><span class="p">,</span>
+                              <span class="c"># Phosphate and its oxygens</span>
+                              <span class="s">&#39;P1&#39;</span> <span class="p">:</span>  <span class="s">&#39;P&#39;</span><span class="p">,</span> <span class="s">&#39;O1&#39;</span> <span class="p">:</span><span class="s">&#39;O12&#39;</span><span class="p">,</span> <span class="s">&#39;O2&#39;</span> <span class="p">:</span><span class="s">&#39;O11&#39;</span><span class="p">,</span>
+                              <span class="s">&#39;O3&#39;</span> <span class="p">:</span><span class="s">&#39;O13&#39;</span><span class="p">,</span> <span class="s">&#39;O4&#39;</span> <span class="p">:</span><span class="s">&#39;O14&#39;</span><span class="p">}</span>
+                <span class="n">names</span> <span class="o">=</span> <span class="n">popc_names</span>
+            <span class="k">elif</span> <span class="n">resname</span> <span class="o">==</span> <span class="s">&quot;POPE&quot;</span><span class="p">:</span>
+                <span class="k">pass</span>
+            <span class="k">elif</span> <span class="n">resname</span> <span class="o">==</span> <span class="s">&quot;POPG&quot;</span><span class="p">:</span>
+                <span class="k">pass</span>
+            <span class="k">else</span><span class="p">:</span>
+                <span class="k">raise</span> <span class="ne">NotImplementedError</span><span class="p">(</span><span class="s">&quot;Lipid </span><span class="si">%s</span><span class="s"> unsupported&quot;</span> <span class="o">%</span> <span class="n">resname</span><span class="p">)</span>
+
+            <span class="k">for</span> <span class="n">name</span> <span class="ow">in</span> <span class="n">names</span><span class="p">:</span>
+                <span class="n">atomsel</span><span class="p">(</span><span class="s">&#39;residue </span><span class="si">%d</span><span class="s"> and name </span><span class="si">%s</span><span class="s">&#39;</span>
+                        <span class="o">%</span> <span class="p">(</span><span class="n">res</span><span class="p">,</span> <span class="n">name</span><span class="p">))</span><span class="o">.</span><span class="n">set</span><span class="p">(</span><span class="s">&#39;name&#39;</span><span class="p">,</span> <span class="n">names</span><span class="p">[</span><span class="n">name</span><span class="p">])</span>
+
+        <span class="c"># Write temporary lipid pdb</span>
+        <span class="n">temp</span> <span class="o">=</span> <span class="n">tempfile</span><span class="o">.</span><span class="n">mkstemp</span><span class="p">(</span><span class="n">suffix</span><span class="o">=</span><span class="s">&#39;.pdb&#39;</span><span class="p">,</span> <span class="n">prefix</span><span class="o">=</span><span class="s">&#39;psf_lipid_&#39;</span><span class="p">,</span>
+                                <span class="nb">dir</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">tmp_dir</span><span class="p">)[</span><span class="mi">1</span><span class="p">]</span>
+        <span class="n">alll</span><span class="o">.</span><span class="n">set</span><span class="p">(</span><span class="s">&#39;user&#39;</span><span class="p">,</span> <span class="mf">0.0</span><span class="p">)</span>
+        <span class="n">alll</span><span class="o">.</span><span class="n">write</span><span class="p">(</span><span class="s">&#39;pdb&#39;</span><span class="p">,</span> <span class="n">temp</span><span class="p">)</span>
+
+        <span class="c"># Write to file</span>
+        <span class="n">string</span> <span class="o">=</span> <span class="s">&#39;&#39;&#39;</span>
+<span class="s">       set lipidfile </span><span class="si">%s</span><span class="s"></span>
+<span class="s">       set mid [mol new $lipidfile]</span>
+<span class="s">       segment L {</span>
+<span class="s">          first none</span>
+<span class="s">          last none</span>
+<span class="s">          pdb $lipidfile</span>
+<span class="s">       }</span>
+<span class="s">       coordpdb $lipidfile L</span>
+<span class="s">       mol delete $mid</span>
+<span class="s">        &#39;&#39;&#39;</span> <span class="o">%</span> <span class="n">temp</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">file</span><span class="o">.</span><span class="n">write</span><span class="p">(</span><span class="n">string</span><span class="p">)</span>
+
+        <span class="c"># Put old top back</span>
+        <span class="n">molecule</span><span class="o">.</span><span class="n">set_top</span><span class="p">(</span><span class="n">old_top</span><span class="p">)</span>
+
+    <span class="c">#==========================================================================</span>
+
+    <span class="k">def</span> <span class="nf">_write_ion_blocks</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Writes a PDB file containing correctly named ions for use by</span>
+<span class="sd">        psfgen, and instructs psfgen to use it in TCL code.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+
+        <span class="c"># Put our molecule on top to simplify atom selection language</span>
+        <span class="n">old_top</span> <span class="o">=</span> <span class="n">molecule</span><span class="o">.</span><span class="n">get_top</span><span class="p">()</span>
+        <span class="n">molecule</span><span class="o">.</span><span class="n">set_top</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">molid</span><span class="p">)</span>
+
+        <span class="c"># Get ion resids that aren&#39;t associated w other molecules</span>
+        <span class="c"># because some ligands have Na, Cl, K</span>
+        <span class="n">total</span> <span class="o">=</span> <span class="n">atomsel</span><span class="p">(</span><span class="s">&#39;element Na Cl K&#39;</span><span class="p">)</span>
+        <span class="n">not_ions</span> <span class="o">=</span> <span class="n">atomsel</span><span class="p">(</span><span class="s">&quot;(same fragment as element Na Cl K)  and (not index </span><span class="si">%s</span><span class="s">)&quot;</span>
+                           <span class="o">%</span> <span class="s">&quot; &quot;</span><span class="o">.</span><span class="n">join</span><span class="p">([</span><span class="nb">str</span><span class="p">(</span><span class="n">s</span><span class="p">)</span> <span class="k">for</span> <span class="n">s</span> <span class="ow">in</span> <span class="nb">set</span><span class="p">(</span><span class="n">total</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s">&#39;index&#39;</span><span class="p">))]))</span>
+        <span class="n">ions</span> <span class="o">=</span> <span class="nb">set</span><span class="p">(</span><span class="n">total</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s">&#39;residue&#39;</span><span class="p">))</span> <span class="o">-</span> <span class="nb">set</span><span class="p">(</span><span class="n">not_ions</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s">&#39;residue&#39;</span><span class="p">))</span>
+
+        <span class="k">if</span> <span class="ow">not</span> <span class="nb">len</span><span class="p">(</span><span class="n">ions</span><span class="p">):</span> <span class="k">return</span>
+        <span class="n">ionstr</span> <span class="o">=</span> <span class="s">&quot;residue &quot;</span> <span class="o">+</span> <span class="s">&quot; &quot;</span><span class="o">.</span><span class="n">join</span><span class="p">([</span><span class="nb">str</span><span class="p">(</span><span class="n">s</span><span class="p">)</span> <span class="k">for</span> <span class="n">s</span> <span class="ow">in</span> <span class="n">ions</span><span class="p">])</span>
+
+        <span class="c"># Fix the names</span>
+        <span class="n">atomsel</span><span class="p">(</span><span class="s">&#39;</span><span class="si">%s</span><span class="s"> and name NA&#39;</span> <span class="o">%</span> <span class="n">ionstr</span><span class="p">)</span><span class="o">.</span><span class="n">set</span><span class="p">(</span><span class="s">&#39;name&#39;</span><span class="p">,</span> <span class="s">&#39;SOD&#39;</span><span class="p">)</span>
+        <span class="n">atomsel</span><span class="p">(</span><span class="s">&#39;</span><span class="si">%s</span><span class="s"> and name CL&#39;</span> <span class="o">%</span> <span class="n">ionstr</span><span class="p">)</span><span class="o">.</span><span class="n">set</span><span class="p">(</span><span class="s">&#39;name&#39;</span><span class="p">,</span> <span class="s">&#39;CLA&#39;</span><span class="p">)</span>
+        <span class="n">atomsel</span><span class="p">(</span><span class="s">&#39;</span><span class="si">%s</span><span class="s"> and name K&#39;</span> <span class="o">%</span> <span class="n">ionstr</span><span class="p">)</span><span class="o">.</span><span class="n">set</span><span class="p">(</span><span class="s">&#39;name&#39;</span><span class="p">,</span> <span class="s">&#39;POT&#39;</span><span class="p">)</span>
+        <span class="n">atomsel</span><span class="p">(</span><span class="s">&#39;</span><span class="si">%s</span><span class="s"> and name NA&#39;</span> <span class="o">%</span> <span class="n">ionstr</span><span class="p">)</span><span class="o">.</span><span class="n">set</span><span class="p">(</span><span class="s">&#39;resname&#39;</span><span class="p">,</span> <span class="s">&#39;SOD&#39;</span><span class="p">)</span>
+        <span class="n">atomsel</span><span class="p">(</span><span class="s">&#39;</span><span class="si">%s</span><span class="s"> and name CL&#39;</span> <span class="o">%</span> <span class="n">ionstr</span><span class="p">)</span><span class="o">.</span><span class="n">set</span><span class="p">(</span><span class="s">&#39;resname&#39;</span><span class="p">,</span> <span class="s">&#39;CLA&#39;</span><span class="p">)</span>
+        <span class="n">atomsel</span><span class="p">(</span><span class="s">&#39;</span><span class="si">%s</span><span class="s"> and name K&#39;</span> <span class="o">%</span> <span class="n">ionstr</span><span class="p">)</span><span class="o">.</span><span class="n">set</span><span class="p">(</span><span class="s">&#39;resname&#39;</span><span class="p">,</span> <span class="s">&#39;POT&#39;</span><span class="p">)</span>
+
+        <span class="c"># Renumber the residues since some may be above 10k</span>
+        <span class="n">residues</span> <span class="o">=</span> <span class="n">atomsel</span><span class="p">(</span><span class="s">&#39;name SOD CLA POT&#39;</span><span class="p">)</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s">&#39;residue&#39;</span><span class="p">)</span>
+        <span class="n">batch</span> <span class="o">=</span> <span class="n">atomsel</span><span class="p">(</span><span class="s">&#39;residue </span><span class="si">%s</span><span class="s">&#39;</span> <span class="o">%</span> <span class="s">&#39; &#39;</span><span class="o">.</span><span class="n">join</span><span class="p">([</span><span class="nb">str</span><span class="p">(</span><span class="n">s</span><span class="p">)</span> <span class="k">for</span> <span class="n">s</span> <span class="ow">in</span> <span class="nb">set</span><span class="p">(</span><span class="n">residues</span><span class="p">)]))</span>
+        <span class="n">batch</span><span class="o">.</span><span class="n">set</span><span class="p">(</span><span class="s">&#39;resid&#39;</span><span class="p">,</span> <span class="p">[</span><span class="n">k</span> <span class="k">for</span> <span class="n">k</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="mi">1</span><span class="p">,</span> <span class="nb">len</span><span class="p">(</span><span class="n">batch</span><span class="p">)</span><span class="o">+</span><span class="mi">1</span><span class="p">)])</span>
+
+        <span class="c"># Save the temporary ions file</span>
+        <span class="n">temp</span> <span class="o">=</span> <span class="n">tempfile</span><span class="o">.</span><span class="n">mkstemp</span><span class="p">(</span><span class="n">suffix</span><span class="o">=</span><span class="s">&#39;.pdb&#39;</span><span class="p">,</span> <span class="n">prefix</span><span class="o">=</span><span class="s">&#39;psf_ions_&#39;</span><span class="p">,</span>
+                                <span class="nb">dir</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">tmp_dir</span><span class="p">)[</span><span class="mi">1</span><span class="p">]</span>
+        <span class="n">atomsel</span><span class="p">(</span><span class="s">&#39;name SOD CLA POT&#39;</span><span class="p">)</span><span class="o">.</span><span class="n">set</span><span class="p">(</span><span class="s">&#39;user&#39;</span><span class="p">,</span> <span class="mf">0.0</span><span class="p">)</span> <span class="c"># mark as saved</span>
+        <span class="n">atomsel</span><span class="p">(</span><span class="s">&#39;name SOD CLA POT&#39;</span><span class="p">)</span><span class="o">.</span><span class="n">write</span><span class="p">(</span><span class="s">&#39;pdb&#39;</span><span class="p">,</span> <span class="n">temp</span><span class="p">)</span>
+
+        <span class="n">string</span> <span class="o">=</span> <span class="s">&#39;&#39;&#39;</span>
+<span class="s">       set ionfile </span><span class="si">%s</span><span class="s"></span>
+<span class="s">       segment I {</span>
+<span class="s">          pdb $ionfile </span>
+<span class="s">          first none</span>
+<span class="s">          last none</span>
+<span class="s">       }</span>
+<span class="s">       coordpdb $ionfile I</span>
+<span class="s">        &#39;&#39;&#39;</span> <span class="o">%</span> <span class="n">temp</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">file</span><span class="o">.</span><span class="n">write</span><span class="p">(</span><span class="n">string</span><span class="p">)</span>
+        <span class="n">molecule</span><span class="o">.</span><span class="n">set_top</span><span class="p">(</span><span class="n">old_top</span><span class="p">)</span>
+
+    <span class="c">#==========================================================================</span>
+
+    <span class="k">def</span> <span class="nf">_write_ligand_blocks</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">resname</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Matches ligands to available topology file, renames atoms, and then</span>
+<span class="sd">        writes temporary files for the ligands</span>
+
+<span class="sd">        Args:</span>
+<span class="sd">          resname (str): Residue name of the ligand that will be written.</span>
+<span class="sd">            All ligands with that name will be written as one segment.</span>
+
+<span class="sd">        Returns:</span>
+<span class="sd">          True if successful</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="c"># Put our molecule on top to simplify atom selection language</span>
+        <span class="n">old_top</span> <span class="o">=</span> <span class="n">molecule</span><span class="o">.</span><span class="n">get_top</span><span class="p">()</span>
+        <span class="n">molecule</span><span class="o">.</span><span class="n">set_top</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">molid</span><span class="p">)</span>
+
+        <span class="n">alig</span> <span class="o">=</span> <span class="n">atomsel</span><span class="p">(</span><span class="s">&#39;user 1.0 and resname </span><span class="si">%s</span><span class="s">&#39;</span> <span class="o">%</span> <span class="n">resname</span><span class="p">)</span>
+        <span class="c"># Get a residue name charmm knows about, either through</span>
+        <span class="c"># manual translation or prompting the user</span>
+        <span class="k">while</span> <span class="ow">not</span> <span class="bp">self</span><span class="o">.</span><span class="n">_find_residue_in_rtf</span><span class="p">(</span><span class="n">resname</span><span class="o">=</span><span class="n">resname</span><span class="p">,</span> <span class="n">molid</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">molid</span><span class="p">):</span>
+            <span class="k">print</span><span class="p">(</span><span class="s">&quot;</span><span class="se">\n</span><span class="s">ERROR: Residue name </span><span class="si">%s</span><span class="s"> wasn&#39;t found in any input &quot;</span>
+                  <span class="s">&quot;topology.</span><span class="se">\n</span><span class="s">Would you like to rename it?</span><span class="se">\n</span><span class="s">&quot;</span> <span class="o">%</span> <span class="n">resname</span><span class="p">)</span>
+            <span class="n">sys</span><span class="o">.</span><span class="n">stdout</span><span class="o">.</span><span class="n">flush</span><span class="p">()</span>
+            <span class="n">newname</span> <span class="o">=</span> <span class="nb">raw_input</span><span class="p">(</span><span class="s">&quot;New residue name or CTRL+D to quit &gt; &quot;</span><span class="p">)</span>
+            <span class="n">sys</span><span class="o">.</span><span class="n">stdout</span><span class="o">.</span><span class="n">flush</span><span class="p">()</span>
+            <span class="n">alig</span><span class="o">.</span><span class="n">set</span><span class="p">(</span><span class="s">&#39;resname&#39;</span><span class="p">,</span> <span class="n">newname</span><span class="p">)</span>
+            <span class="n">resname</span> <span class="o">=</span> <span class="n">newname</span>
+
+        <span class="c"># Write temporary file containg the ligand and update tcl commands</span>
+        <span class="n">temp</span> <span class="o">=</span> <span class="n">tempfile</span><span class="o">.</span><span class="n">mkstemp</span><span class="p">(</span><span class="n">suffix</span><span class="o">=</span><span class="s">&#39;.pdb&#39;</span><span class="p">,</span> <span class="n">prefix</span><span class="o">=</span><span class="s">&#39;psf_ligand_&#39;</span><span class="p">,</span>
+                                <span class="nb">dir</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">tmp_dir</span><span class="p">)[</span><span class="mi">1</span><span class="p">]</span>
+        <span class="n">string</span> <span class="o">=</span> <span class="s">&#39;&#39;&#39;</span>
+<span class="s">       set ligfile </span><span class="si">%s</span><span class="s"></span>
+<span class="s">       segment </span><span class="si">%s</span><span class="s"> {</span>
+<span class="s">         pdb $ligfile </span>
+<span class="s">         first none</span>
+<span class="s">         last none</span>
+<span class="s">       }</span>
+<span class="s">       coordpdb $ligfile </span><span class="si">%s</span><span class="s"></span>
+<span class="s">        &#39;&#39;&#39;</span> <span class="o">%</span> <span class="p">(</span><span class="n">temp</span><span class="p">,</span> <span class="n">resname</span><span class="p">,</span> <span class="n">resname</span><span class="p">)</span>
+        <span class="n">alig</span><span class="o">.</span><span class="n">write</span><span class="p">(</span><span class="s">&#39;pdb&#39;</span><span class="p">,</span> <span class="n">temp</span><span class="p">)</span>
+        <span class="n">alig</span><span class="o">.</span><span class="n">set</span><span class="p">(</span><span class="s">&#39;user&#39;</span><span class="p">,</span> <span class="mf">0.0</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">file</span><span class="o">.</span><span class="n">write</span><span class="p">(</span><span class="n">string</span><span class="p">)</span>
+        <span class="n">molecule</span><span class="o">.</span><span class="n">set_top</span><span class="p">(</span><span class="n">old_top</span><span class="p">)</span>
+
+    <span class="c">#==========================================================================</span>
+
+    <span class="k">def</span> <span class="nf">_write_ordered_pdb</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">filename</span><span class="p">,</span> <span class="n">sel</span><span class="p">,</span> <span class="n">molid</span><span class="o">=</span><span class="mi">0</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Writes a pdb file in order of residues, renumbering the atoms</span>
+<span class="sd">        accordingly, since psfgen wants each residue sequentially while</span>
+<span class="sd">        VMD will write them in the same order as input, which from Maestro</span>
+<span class="sd">        created files has some guessed atoms at the end.</span>
+
+<span class="sd">        Args:</span>
+<span class="sd">          filename (str): Name of the pdb file to write</span>
+<span class="sd">          sel (str): VMD atomsel string for atoms that will be written</span>
+<span class="sd">          molid (int): VMD molecule ID to write from</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="n">old_top</span> <span class="o">=</span> <span class="n">molecule</span><span class="o">.</span><span class="n">get_top</span><span class="p">()</span>
+        <span class="n">molecule</span><span class="o">.</span><span class="n">set_top</span><span class="p">(</span><span class="n">molid</span><span class="p">)</span>
+
+        <span class="n">fileh</span> <span class="o">=</span> <span class="nb">open</span><span class="p">(</span><span class="n">filename</span><span class="p">,</span> <span class="s">&#39;w&#39;</span><span class="p">)</span>
+        <span class="c"># Much much faster then get resids</span>
+        <span class="n">resids</span> <span class="o">=</span> <span class="nb">set</span><span class="p">(</span><span class="n">atomsel</span><span class="p">(</span><span class="n">sel</span><span class="p">)</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s">&#39;residue&#39;</span><span class="p">))</span>
+        <span class="n">idx</span> <span class="o">=</span> <span class="mi">1</span>
+        <span class="c"># For renumbering capping groups</span>
+        <span class="k">for</span> <span class="n">rid</span> <span class="ow">in</span> <span class="n">resids</span><span class="p">:</span>
+            <span class="c"># Handle bug where capping groups in same residue as the</span>
+            <span class="c"># neighboring amino acid Maestro writes it this way for some</span>
+            <span class="c"># reason but it causes problems down the line when psfgen doesn&#39;t</span>
+            <span class="c"># understand the weird combined residue</span>
+            <span class="n">names</span> <span class="o">=</span> <span class="nb">set</span><span class="p">(</span><span class="n">atomsel</span><span class="p">(</span><span class="s">&#39;residue </span><span class="si">%d</span><span class="s">&#39;</span><span class="o">%</span> <span class="n">rid</span><span class="p">)</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s">&#39;resname&#39;</span><span class="p">))</span>
+            <span class="k">assert</span> <span class="nb">len</span><span class="p">(</span><span class="n">names</span><span class="p">)</span> <span class="o">&lt;</span> <span class="mi">3</span><span class="p">,</span> <span class="p">(</span><span class="s">&quot;More than 2 residues with same number... &quot;</span>
+                                    <span class="s">&quot;currently unhandled. Report a bug&quot;</span><span class="p">)</span>
+
+            <span class="k">if</span> <span class="nb">len</span><span class="p">(</span><span class="n">names</span><span class="p">)</span> <span class="o">&gt;</span> <span class="mi">1</span><span class="p">:</span>
+                <span class="k">if</span> <span class="s">&#39;ACE&#39;</span> <span class="ow">in</span> <span class="n">names</span> <span class="ow">and</span> <span class="s">&#39;NMA&#39;</span> <span class="ow">in</span> <span class="n">names</span><span class="p">:</span>
+                    <span class="k">print</span><span class="p">(</span><span class="s">&quot;ERROR: Both ACE and NMA were given the same resid&quot;</span>
+                          <span class="s">&quot;Check your input structure&quot;</span><span class="p">)</span>
+                    <span class="n">quit</span><span class="p">(</span><span class="mi">1</span><span class="p">)</span>
+
+                <span class="k">if</span> <span class="s">&#39;ACE&#39;</span> <span class="ow">in</span> <span class="n">names</span><span class="p">:</span>
+                    <span class="c"># Set ACE residue number as one less</span>
+                    <span class="n">resid</span> <span class="o">=</span> <span class="n">atomsel</span><span class="p">(</span><span class="s">&#39;residue </span><span class="si">%d</span><span class="s"> and not resname ACE&#39;</span> <span class="o">%</span> <span class="n">rid</span><span class="p">)</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s">&#39;resid&#39;</span><span class="p">)[</span><span class="mi">0</span><span class="p">]</span>
+                    <span class="k">if</span> <span class="nb">len</span><span class="p">(</span><span class="n">atomsel</span><span class="p">(</span><span class="s">&#39;(</span><span class="si">%s</span><span class="s">) and resid </span><span class="si">%d</span><span class="s">&#39;</span> <span class="o">%</span> <span class="p">(</span><span class="n">sel</span><span class="p">,</span> <span class="n">resid</span><span class="o">-</span><span class="mi">1</span><span class="p">))):</span>
+                        <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="s">&#39;ACE resid collision number </span><span class="si">%d</span><span class="s">&#39;</span> <span class="o">%</span> <span class="n">resid</span><span class="o">-</span><span class="mi">1</span><span class="p">)</span>
+                    <span class="n">atomsel</span><span class="p">(</span><span class="s">&#39;residue </span><span class="si">%d</span><span class="s"> and resname ACE&#39;</span>
+                            <span class="o">%</span> <span class="n">rid</span><span class="p">)</span><span class="o">.</span><span class="n">set</span><span class="p">(</span><span class="s">&#39;resid&#39;</span><span class="p">,</span> <span class="n">resid</span><span class="o">-</span><span class="mi">1</span><span class="p">)</span>
+
+                    <span class="c"># Handle all of the ACE atoms before the others</span>
+                    <span class="n">atoms</span> <span class="o">=</span> <span class="n">atomsel</span><span class="p">(</span><span class="s">&#39;residue </span><span class="si">%d</span><span class="s"> and resname ACE&#39;</span>
+                                    <span class="o">%</span> <span class="n">rid</span><span class="p">)</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s">&#39;index&#39;</span><span class="p">)</span>
+                    <span class="n">atoms</span><span class="o">.</span><span class="n">extend</span><span class="p">(</span><span class="n">atomsel</span><span class="p">(</span><span class="s">&#39;residue </span><span class="si">%d</span><span class="s"> and not resname ACE&#39;</span>
+                                         <span class="o">%</span> <span class="n">rid</span><span class="p">)</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s">&#39;index&#39;</span><span class="p">))</span>
+
+                <span class="k">elif</span> <span class="s">&#39;NMA&#39;</span> <span class="ow">in</span> <span class="n">names</span><span class="p">:</span>
+                    <span class="c"># Set NMA residue number as one more</span>
+                    <span class="n">resid</span> <span class="o">=</span> <span class="n">atomsel</span><span class="p">(</span><span class="s">&#39;residue </span><span class="si">%d</span><span class="s"> and not resname NMA&#39;</span> <span class="o">%</span> <span class="n">rid</span><span class="p">)</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s">&#39;resid&#39;</span><span class="p">)[</span><span class="mi">0</span><span class="p">]</span>
+                    <span class="k">if</span> <span class="nb">len</span><span class="p">(</span><span class="n">atomsel</span><span class="p">(</span><span class="s">&#39;(</span><span class="si">%s</span><span class="s">) and resid </span><span class="si">%d</span><span class="s">&#39;</span> <span class="o">%</span> <span class="p">(</span><span class="n">sel</span><span class="p">,</span> <span class="n">resid</span><span class="o">+</span><span class="mi">1</span><span class="p">))):</span>
+                        <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="s">&#39;NMA resid collision number </span><span class="si">%d</span><span class="s">&#39;</span> <span class="o">%</span> <span class="n">resid</span><span class="o">+</span><span class="mi">1</span><span class="p">)</span>
+
+                    <span class="n">atomsel</span><span class="p">(</span><span class="s">&#39;residue </span><span class="si">%d</span><span class="s"> and resname NMA&#39;</span>
+                            <span class="o">%</span> <span class="n">rid</span><span class="p">)</span><span class="o">.</span><span class="n">set</span><span class="p">(</span><span class="s">&#39;resid&#39;</span><span class="p">,</span> <span class="n">resid</span><span class="o">+</span><span class="mi">1</span><span class="p">)</span>
+                    <span class="c"># Handle all the NMA atoms after the others</span>
+                    <span class="n">atoms</span> <span class="o">=</span> <span class="n">atomsel</span><span class="p">(</span><span class="s">&#39;residue </span><span class="si">%d</span><span class="s"> and not resname NMA&#39;</span>
+                                    <span class="o">%</span> <span class="n">rid</span><span class="p">)</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s">&#39;index&#39;</span><span class="p">)</span>
+                    <span class="n">atoms</span><span class="o">.</span><span class="n">extend</span><span class="p">(</span><span class="n">atomsel</span><span class="p">(</span><span class="s">&#39;residue </span><span class="si">%d</span><span class="s"> and resname NMA&#39;</span>
+                                         <span class="o">%</span> <span class="n">rid</span><span class="p">)</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s">&#39;index&#39;</span><span class="p">))</span>
+
+            <span class="k">else</span><span class="p">:</span>
+                <span class="n">atoms</span> <span class="o">=</span> <span class="n">atomsel</span><span class="p">(</span><span class="s">&#39;residue </span><span class="si">%d</span><span class="s">&#39;</span> <span class="o">%</span> <span class="n">rid</span><span class="p">)</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s">&#39;index&#39;</span><span class="p">)</span>
+
+            <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="n">atoms</span><span class="p">:</span>
+                <span class="n">a</span> <span class="o">=</span> <span class="n">atomsel</span><span class="p">(</span><span class="s">&#39;index </span><span class="si">%d</span><span class="s">&#39;</span> <span class="o">%</span> <span class="n">i</span><span class="p">)</span>
+
+                <span class="n">entry</span> <span class="o">=</span> <span class="p">(</span><span class="s">&#39;</span><span class="si">%-6s%5d</span><span class="s"> </span><span class="si">%-5s%-4s%c%4d</span><span class="s">    </span><span class="si">%8.3f%8.3f%8.3f%6.2f%6.2f</span><span class="s">&#39;</span>
+                         <span class="s">&#39;     </span><span class="si">%-4s%2s</span><span class="se">\n</span><span class="s">&#39;</span> <span class="o">%</span> <span class="p">(</span><span class="s">&#39;ATOM&#39;</span><span class="p">,</span> <span class="n">idx</span><span class="p">,</span> <span class="n">a</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s">&#39;name&#39;</span><span class="p">)[</span><span class="mi">0</span><span class="p">],</span>
+                                             <span class="n">a</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s">&#39;resname&#39;</span><span class="p">)[</span><span class="mi">0</span><span class="p">],</span>
+                                             <span class="n">a</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s">&#39;chain&#39;</span><span class="p">)[</span><span class="mi">0</span><span class="p">],</span>
+                                             <span class="n">a</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s">&#39;resid&#39;</span><span class="p">)[</span><span class="mi">0</span><span class="p">],</span>
+                                             <span class="n">a</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s">&#39;x&#39;</span><span class="p">)[</span><span class="mi">0</span><span class="p">],</span>
+                                             <span class="n">a</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s">&#39;y&#39;</span><span class="p">)[</span><span class="mi">0</span><span class="p">],</span>
+                                             <span class="n">a</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s">&#39;z&#39;</span><span class="p">)[</span><span class="mi">0</span><span class="p">],</span>
+                                             <span class="mf">0.0</span><span class="p">,</span> <span class="mf">0.0</span><span class="p">,</span> <span class="n">a</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s">&#39;segname&#39;</span><span class="p">)[</span><span class="mi">0</span><span class="p">],</span>
+                                             <span class="n">a</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s">&#39;element&#39;</span><span class="p">)[</span><span class="mi">0</span><span class="p">]))</span>
+                <span class="n">idx</span> <span class="o">+=</span> <span class="mi">1</span>
+                <span class="n">fileh</span><span class="o">.</span><span class="n">write</span><span class="p">(</span><span class="n">entry</span><span class="p">)</span>
+        <span class="n">fileh</span><span class="o">.</span><span class="n">write</span><span class="p">(</span><span class="s">&#39;END</span><span class="se">\n</span><span class="s">&#39;</span><span class="p">)</span>
+        <span class="n">atomsel</span><span class="p">(</span><span class="n">sel</span><span class="p">)</span><span class="o">.</span><span class="n">set</span><span class="p">(</span><span class="s">&#39;user&#39;</span><span class="p">,</span> <span class="mf">0.0</span><span class="p">)</span> <span class="c"># Mark as written</span>
+        <span class="n">fileh</span><span class="o">.</span><span class="n">close</span><span class="p">()</span>
+        <span class="n">molecule</span><span class="o">.</span><span class="n">set_top</span><span class="p">(</span><span class="n">old_top</span><span class="p">)</span>
+
+
+    <span class="c">#==========================================================================</span>
+
+    <span class="k">def</span> <span class="nf">_check_psf_output</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Scans the output psf from psfgen for atoms where the coordinate</span>
+<span class="sd">        could not be set, indicating an unmatched atom. This checek is necessary</span>
+<span class="sd">        because sometimes psfgen will run with no errors or warnings but will</span>
+<span class="sd">        have unmatched atoms that are all at (0,0,0).</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+
+        <span class="c"># Check file was written at all</span>
+        <span class="k">if</span> <span class="ow">not</span> <span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">isfile</span><span class="p">(</span><span class="s">&#39;</span><span class="si">%s</span><span class="s">.pdb&#39;</span><span class="o">%</span> <span class="bp">self</span><span class="o">.</span><span class="n">psf_name</span><span class="p">):</span>
+            <span class="k">print</span><span class="p">(</span><span class="s">&quot;</span><span class="se">\n</span><span class="s">ERROR: psf file failed to write.</span><span class="se">\n</span><span class="s">&quot;</span>
+                  <span class="s">&quot;       Please see log above.</span><span class="se">\n</span><span class="s">&quot;</span><span class="p">)</span>
+            <span class="n">quit</span><span class="p">(</span><span class="mi">1</span><span class="p">)</span>
+
+        <span class="n">problem_lines</span> <span class="o">=</span> <span class="p">[]</span>
+        <span class="n">fileh</span> <span class="o">=</span> <span class="nb">open</span><span class="p">(</span><span class="s">&#39;</span><span class="si">%s</span><span class="s">.pdb&#39;</span><span class="o">%</span> <span class="bp">self</span><span class="o">.</span><span class="n">psf_name</span><span class="p">,</span> <span class="s">&#39;r&#39;</span><span class="p">)</span>
+        <span class="k">for</span> <span class="n">line</span> <span class="ow">in</span> <span class="nb">iter</span><span class="p">(</span><span class="n">fileh</span><span class="p">):</span>
+            <span class="c"># Use rsplit since some fields near beginning can mush together</span>
+            <span class="c"># 3rd field from end not fourth since element name will be absent</span>
+            <span class="n">words</span> <span class="o">=</span> <span class="n">line</span><span class="o">.</span><span class="n">rsplit</span><span class="p">()</span>
+            <span class="k">if</span> <span class="n">words</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span> <span class="o">==</span> <span class="s">&#39;ATOM&#39;</span> <span class="ow">and</span> <span class="n">words</span><span class="p">[</span><span class="o">-</span><span class="mi">3</span><span class="p">]</span> <span class="o">==</span> <span class="s">&#39;-1.00&#39;</span><span class="p">:</span>
+                <span class="n">problem_lines</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">line</span><span class="p">[:</span><span class="o">-</span><span class="mi">1</span><span class="p">])</span>
+        <span class="n">fileh</span><span class="o">.</span><span class="n">close</span><span class="p">()</span>
+
+        <span class="c"># Print out error messages</span>
+        <span class="k">if</span> <span class="nb">len</span><span class="p">(</span><span class="n">problem_lines</span><span class="p">):</span>
+            <span class="k">print</span><span class="p">(</span><span class="s">&quot;</span><span class="se">\n</span><span class="s">ERROR: Couldn&#39;t find the following atoms.</span><span class="se">\n</span><span class="s">&quot;</span>
+                  <span class="s">&quot;Check if they are present in the original structure. &quot;</span>
+                  <span class="s">&quot;If they are, check dabble name translation or file a &quot;</span>
+                  <span class="s">&quot;bug report to Robin.</span><span class="se">\n</span><span class="s">&quot;</span><span class="p">)</span>
+            <span class="k">print</span><span class="p">(</span><span class="s">&#39;</span><span class="se">\n</span><span class="s">&#39;</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="n">problem_lines</span><span class="p">))</span>
+            <span class="n">quit</span><span class="p">(</span><span class="mi">1</span><span class="p">)</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="k">print</span><span class="p">(</span><span class="s">&quot;</span><span class="se">\n</span><span class="s">INFO: Checked output pdb/psf has all atoms present &quot;</span>
+                  <span class="s">&quot;and correct.</span><span class="se">\n</span><span class="s">&quot;</span><span class="p">)</span>
+
+
+    <span class="c">#==========================================================================</span>
+
+    <span class="k">def</span> <span class="nf">_get_atoms_from_rtf</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">text</span><span class="p">,</span> <span class="n">resname</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Scans the input text for the residue with a given name. Once found,</span>
+<span class="sd">        pulls out all the atom names that comprise that residue.</span>
+
+<span class="sd">        Args:</span>
+<span class="sd">          text (str): Contents of an rtf file to scan</span>
+<span class="sd">          resname (str): Residue to look for</span>
+
+<span class="sd">        Returns:</span>
+<span class="sd">          atoms (set of str): Atom names in this residue, or the empyty set if</span>
+<span class="sd">              the residue was not found.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="n">atoms</span> <span class="o">=</span> <span class="p">[]</span>
+        <span class="n">found</span> <span class="o">=</span> <span class="bp">False</span>
+        <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="nb">len</span><span class="p">(</span><span class="n">text</span><span class="p">)):</span>
+            <span class="n">words</span> <span class="o">=</span> <span class="n">text</span><span class="p">[</span><span class="n">i</span><span class="p">]</span><span class="o">.</span><span class="n">split</span><span class="p">()</span>
+            <span class="k">if</span> <span class="ow">not</span> <span class="nb">len</span><span class="p">(</span><span class="n">words</span><span class="p">):</span>
+                <span class="k">continue</span>
+            <span class="k">if</span> <span class="ow">not</span> <span class="n">found</span> <span class="ow">and</span> <span class="n">words</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span> <span class="o">==</span> <span class="s">&#39;RESI&#39;</span> \
+               <span class="ow">and</span> <span class="n">words</span><span class="p">[</span><span class="mi">1</span><span class="p">]</span> <span class="o">==</span> <span class="n">resname</span><span class="p">:</span>
+                <span class="n">found</span> <span class="o">=</span> <span class="bp">True</span>
+            <span class="k">elif</span> <span class="n">found</span> <span class="ow">and</span> <span class="n">words</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span> <span class="o">==</span> <span class="s">&#39;ATOM&#39;</span><span class="p">:</span>
+                <span class="n">atoms</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">words</span><span class="p">[</span><span class="mi">1</span><span class="p">])</span>
+            <span class="k">elif</span> <span class="n">found</span> <span class="ow">and</span> <span class="n">words</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span> <span class="o">==</span> <span class="s">&#39;RESI&#39;</span><span class="p">:</span>
+                <span class="k">break</span>
+        <span class="k">return</span> <span class="nb">set</span><span class="p">(</span><span class="n">atoms</span><span class="p">)</span>
+
+    <span class="c">#==========================================================================</span>
+
+    <span class="k">def</span> <span class="nf">_find_residue_in_rtf</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">resname</span><span class="p">,</span> <span class="n">molid</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Scans the input topology files to find a name match for the given</span>
+<span class="sd">        residue name, then pulls out the atoms involved and checks that they</span>
+<span class="sd">        are all present in the input coordinates, prompting the user to correct</span>
+<span class="sd">        the names of atoms that could not be matched.</span>
+
+<span class="sd">        Residue ID is used because there can be multiple copies of a residue</span>
+<span class="sd">        with the same name, but only one has missing or extra atoms.</span>
+
+<span class="sd">        Args:</span>
+<span class="sd">          resname (str): Residue name to check</span>
+<span class="sd">          molid (int): VMD molecule ID</span>
+
+<span class="sd">        Returns:</span>
+<span class="sd">          True if all matching was successful</span>
+<span class="sd">          False if the residue name cannot be found</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+
+        <span class="k">print</span><span class="p">(</span><span class="s">&quot;Finding residue name </span><span class="si">%s</span><span class="s">&quot;</span> <span class="o">%</span> <span class="n">resname</span><span class="p">)</span>
+        <span class="k">for</span> <span class="n">top</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">topologies</span><span class="p">:</span>
+            <span class="n">topfile</span> <span class="o">=</span> <span class="nb">open</span><span class="p">(</span><span class="n">top</span><span class="p">,</span> <span class="s">&#39;r&#39;</span><span class="p">)</span>
+            <span class="n">topo_atoms</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_get_atoms_from_rtf</span><span class="p">(</span><span class="n">text</span><span class="o">=</span><span class="n">topfile</span><span class="o">.</span><span class="n">readlines</span><span class="p">(),</span>
+                                                  <span class="n">resname</span><span class="o">=</span><span class="n">resname</span><span class="p">)</span>
+            <span class="c"># Use first definition found of this residue</span>
+            <span class="k">if</span> <span class="nb">len</span><span class="p">(</span><span class="n">topo_atoms</span><span class="p">):</span>
+                <span class="k">break</span>
+            <span class="n">topfile</span><span class="o">.</span><span class="n">close</span><span class="p">()</span>
+        <span class="k">if</span> <span class="ow">not</span> <span class="nb">len</span><span class="p">(</span><span class="n">topo_atoms</span><span class="p">):</span>
+            <span class="k">return</span> <span class="bp">False</span>
+        <span class="k">print</span><span class="p">(</span><span class="s">&quot;INFO: Successfully found residue </span><span class="si">%s</span><span class="s"> in input topologies&quot;</span> <span class="o">%</span> <span class="n">resname</span><span class="p">)</span>
+
+        <span class="c"># Match up atoms with python sets</span>
+        <span class="n">pdb_atoms</span> <span class="o">=</span> <span class="nb">set</span><span class="p">(</span><span class="n">atomsel</span><span class="p">(</span><span class="s">&#39;resname </span><span class="si">%s</span><span class="s"> and user 1.0&#39;</span>
+                                <span class="o">%</span> <span class="n">resname</span><span class="p">,</span> <span class="n">molid</span><span class="o">=</span><span class="n">molid</span><span class="p">)</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s">&#39;name&#39;</span><span class="p">))</span>
+        <span class="n">pdb_only</span> <span class="o">=</span> <span class="n">pdb_atoms</span> <span class="o">-</span> <span class="n">topo_atoms</span>
+        <span class="n">topo_only</span> <span class="o">=</span> <span class="n">topo_atoms</span> <span class="o">-</span> <span class="n">pdb_atoms</span>
+
+        <span class="c"># If uneven number of atoms, there are missing or additional atoms</span>
+        <span class="k">if</span> <span class="nb">len</span><span class="p">(</span><span class="n">pdb_atoms</span><span class="p">)</span> <span class="o">&gt;</span> <span class="nb">len</span><span class="p">(</span><span class="n">topo_atoms</span><span class="p">):</span>
+            <span class="k">print</span><span class="p">(</span><span class="s">&quot;</span><span class="se">\n</span><span class="s">ERROR: Cannot process modified residue </span><span class="si">%s</span><span class="s">.</span><span class="se">\n</span><span class="s">&quot;</span>
+                  <span class="s">&quot;       There are </span><span class="si">%d</span><span class="s"> extra atoms in the input structure &quot;</span>
+                  <span class="s">&quot;that are undefined in the topology file. The &quot;</span>
+                  <span class="s">&quot;following atoms could not be matched and may &quot;</span>
+                  <span class="s">&quot;either be misnamed, or additional atoms. Please &quot;</span>
+                  <span class="s">&quot;check your input.&quot;</span>
+                  <span class="o">%</span> <span class="p">(</span><span class="n">resname</span><span class="p">,</span> <span class="nb">len</span><span class="p">(</span><span class="n">pdb_atoms</span><span class="p">)</span><span class="o">-</span><span class="nb">len</span><span class="p">(</span><span class="n">topo_atoms</span><span class="p">)))</span>
+            <span class="k">print</span><span class="p">(</span><span class="s">&quot;       [ </span><span class="si">%s</span><span class="s"> ]</span><span class="se">\n</span><span class="s">&quot;</span> <span class="o">%</span> <span class="s">&#39; &#39;</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="n">pdb_only</span><span class="p">))</span>
+            <span class="k">print</span><span class="p">(</span><span class="s">&quot;       Cannot continue.</span><span class="se">\n</span><span class="s">&quot;</span><span class="p">)</span>
+            <span class="n">quit</span><span class="p">(</span><span class="mi">1</span><span class="p">)</span>
+        <span class="k">if</span> <span class="nb">len</span><span class="p">(</span><span class="n">topo_atoms</span><span class="p">)</span> <span class="o">&gt;</span> <span class="nb">len</span><span class="p">(</span><span class="n">pdb_atoms</span><span class="p">):</span>
+            <span class="k">print</span><span class="p">(</span><span class="s">&quot;</span><span class="se">\n</span><span class="s">ERROR: Cannot process modified residue </span><span class="si">%s</span><span class="s">.</span><span class="se">\n</span><span class="s">&quot;</span>
+                  <span class="s">&quot;       There are </span><span class="si">%d</span><span class="s"> missing atoms in the input structure &quot;</span>
+                  <span class="s">&quot; that are defined in the topology file. The &quot;</span>
+                  <span class="s">&quot; following atoms could not be matched and may &quot;</span>
+                  <span class="s">&quot; either be misnamed or deleted atoms. Please &quot;</span>
+                  <span class="s">&quot; check your input.&quot;</span>
+                  <span class="o">%</span> <span class="p">(</span><span class="n">resname</span><span class="p">,</span> <span class="nb">len</span><span class="p">(</span><span class="n">topo_atoms</span><span class="p">)</span><span class="o">-</span><span class="nb">len</span><span class="p">(</span><span class="n">pdb_atoms</span><span class="p">)))</span>
+            <span class="k">print</span><span class="p">(</span><span class="s">&quot;       [ </span><span class="si">%s</span><span class="s"> ]</span><span class="se">\n</span><span class="s">&quot;</span> <span class="o">%</span> <span class="s">&#39; &#39;</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="n">topo_only</span><span class="p">))</span>
+            <span class="k">print</span><span class="p">(</span><span class="s">&quot;       Cannot continue.</span><span class="se">\n</span><span class="s">&quot;</span><span class="p">)</span>
+            <span class="k">print</span><span class="p">(</span><span class="s">&quot;Found is </span><span class="si">%s</span><span class="se">\n</span><span class="s">&quot;</span> <span class="o">%</span> <span class="n">pdb_atoms</span><span class="p">)</span>
+            <span class="n">quit</span><span class="p">(</span><span class="mi">1</span><span class="p">)</span>
+
+        <span class="c"># Offer to rename atoms that couldn&#39;t be matched to the topology</span>
+        <span class="k">if</span> <span class="nb">len</span><span class="p">(</span><span class="n">pdb_only</span><span class="p">):</span>
+            <span class="k">print</span><span class="p">(</span><span class="s">&quot;</span><span class="se">\n</span><span class="s">WARNING: Having some trouble with modified residue </span><span class="si">%s</span><span class="s">.</span><span class="se">\n</span><span class="s">&quot;</span>
+                  <span class="s">&quot;         The following atom names cannot be matched up &quot;</span>
+                  <span class="s">&quot; to the input topologies. They are probably &quot;</span>
+                  <span class="s">&quot; misnamed.</span><span class="se">\n</span><span class="s">&quot;</span> <span class="o">%</span> <span class="n">resname</span><span class="p">)</span>
+            <span class="k">print</span><span class="p">(</span><span class="s">&quot;         To help you, here are the atom names that &quot;</span>
+                  <span class="s">&quot; should be present according to the topology &quot;</span>
+                  <span class="s">&quot; but were not found:</span><span class="se">\n</span><span class="s">&quot;</span><span class="p">)</span>
+            <span class="k">print</span><span class="p">(</span><span class="s">&quot;         [ </span><span class="si">%s</span><span class="s"> ]</span><span class="se">\n</span><span class="s">&quot;</span> <span class="o">%</span> <span class="s">&#39; &#39;</span><span class="o">.</span><span class="n">join</span><span class="p">([</span><span class="nb">str</span><span class="p">(</span><span class="n">t</span><span class="p">)</span> <span class="k">for</span> <span class="n">t</span> <span class="ow">in</span> <span class="n">topo_only</span><span class="p">]))</span>
+            <span class="k">print</span><span class="p">(</span><span class="s">&quot; Please enter a valid name for each atom as &quot;</span>
+                  <span class="s">&quot;it appears or CTRL+D to quit..</span><span class="se">\n</span><span class="s">&quot;</span><span class="p">)</span>
+            <span class="k">for</span> <span class="n">unmatched</span> <span class="ow">in</span> <span class="n">pdb_only</span><span class="p">:</span>
+                <span class="k">print</span><span class="p">(</span><span class="s">&quot;Unmatched topology names: [ </span><span class="si">%s</span><span class="s"> ]&quot;</span>
+                      <span class="o">%</span> <span class="s">&#39; &#39;</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="n">topo_only</span><span class="p">))</span>
+
+                <span class="n">newname</span> <span class="o">=</span> <span class="nb">raw_input</span><span class="p">(</span><span class="s">&quot;  </span><span class="si">%s</span><span class="s">  -&gt; &quot;</span> <span class="o">%</span> <span class="n">unmatched</span><span class="p">)</span>
+                <span class="k">while</span> <span class="n">newname</span> <span class="ow">not</span> <span class="ow">in</span> <span class="n">topo_only</span><span class="p">:</span>
+                    <span class="k">print</span><span class="p">(</span><span class="s">&quot;&#39;</span><span class="si">%s</span><span class="s">&#39; is not an available name in the topology.&quot;</span>
+                          <span class="s">&quot;Please try again.</span><span class="se">\n</span><span class="s">&quot;</span> <span class="o">%</span> <span class="n">newname</span><span class="p">)</span>
+                    <span class="n">newname</span> <span class="o">=</span> <span class="nb">raw_input</span><span class="p">(</span><span class="s">&quot;  </span><span class="si">%s</span><span class="s">  -&gt; &quot;</span> <span class="o">%</span> <span class="n">unmatched</span><span class="p">)</span>
+                <span class="n">atomsel</span><span class="p">(</span><span class="s">&#39;resname </span><span class="si">%s</span><span class="s"> and user 1.0 and name </span><span class="si">%s</span><span class="s">&#39;</span>
+                        <span class="o">%</span> <span class="p">(</span><span class="n">resname</span><span class="p">,</span> <span class="n">unmatched</span><span class="p">))</span><span class="o">.</span><span class="n">set</span><span class="p">(</span><span class="s">&#39;name&#39;</span><span class="p">,</span> <span class="n">newname</span><span class="p">)</span>
+                <span class="n">pdb_atoms</span> <span class="o">=</span> <span class="nb">set</span><span class="p">(</span><span class="n">atomsel</span><span class="p">(</span><span class="s">&#39;resname </span><span class="si">%s</span><span class="s"> and user 1.0&#39;</span>
+                                        <span class="o">%</span> <span class="n">resname</span><span class="p">)</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s">&#39;name&#39;</span><span class="p">))</span>
+                <span class="n">topo_only</span> <span class="o">=</span> <span class="n">topo_atoms</span><span class="o">-</span><span class="n">pdb_atoms</span>
+                <span class="n">resname</span> <span class="o">=</span> <span class="n">newname</span>
+
+            <span class="c"># Recurse to check that everything is assigned correctly</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">_find_residue_in_rtf</span><span class="p">(</span><span class="n">resname</span><span class="p">,</span> <span class="n">molid</span><span class="p">)</span>
+        <span class="k">print</span><span class="p">(</span><span class="s">&quot;INFO: Matched up all atom names for resname </span><span class="si">%s</span><span class="se">\n</span><span class="s">&quot;</span> <span class="o">%</span> <span class="n">resname</span><span class="p">)</span>
+        <span class="k">return</span> <span class="bp">True</span>
+
+    <span class="c">#==========================================================================</span>
+
+    <span class="k">def</span> <span class="nf">_set_disulfide_bridges</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Adds PATCH lines corresponding to disulfide bridges.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+
+        <span class="c"># Simplify atom selection by putting relevant molecule on top</span>
+        <span class="n">old_top</span> <span class="o">=</span> <span class="n">molecule</span><span class="o">.</span><span class="n">get_top</span><span class="p">()</span>
+        <span class="n">molecule</span><span class="o">.</span><span class="n">set_top</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">molid</span><span class="p">)</span>
+
+        <span class="n">patches</span> <span class="o">=</span> <span class="s">&quot;&quot;</span>
+        <span class="c"># Rename cysteines to indicate we dont know what they are</span>
+        <span class="c"># Complicated selection to avoid resid bug with next to ACE or NMA</span>
+        <span class="n">cyss</span> <span class="o">=</span> <span class="nb">set</span><span class="p">(</span><span class="n">atomsel</span><span class="p">(</span><span class="s">&#39;resname CYS CYX CYD CYSD&#39;</span><span class="p">)</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s">&#39;resid&#39;</span><span class="p">))</span>
+        <span class="n">atomsel</span><span class="p">(</span><span class="s">&quot;resname CYS CYX CYD CYSD and resid </span><span class="si">%s</span><span class="s">&quot;</span>
+                <span class="o">%</span> <span class="s">&quot; &quot;</span><span class="o">.</span><span class="n">join</span><span class="p">([</span><span class="nb">str</span><span class="p">(</span><span class="n">x</span><span class="p">)</span> <span class="k">for</span> <span class="n">x</span> <span class="ow">in</span> <span class="n">cyss</span><span class="p">]))</span><span class="o">.</span><span class="n">set</span><span class="p">(</span><span class="s">&#39;resname&#39;</span><span class="p">,</span> <span class="s">&#39;baa&#39;</span><span class="p">)</span>
+        <span class="n">toupdate</span> <span class="o">=</span> <span class="nb">set</span><span class="p">(</span><span class="n">atomsel</span><span class="p">(</span><span class="s">&#39;resname baa&#39;</span><span class="p">)</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s">&#39;resid&#39;</span><span class="p">))</span>
+        <span class="k">while</span> <span class="nb">len</span><span class="p">(</span><span class="n">toupdate</span><span class="p">):</span>
+            <span class="n">resid</span> <span class="o">=</span> <span class="n">toupdate</span><span class="o">.</span><span class="n">pop</span><span class="p">()</span>
+            <span class="n">ressel</span> <span class="o">=</span> <span class="s">&quot;(resid </span><span class="si">%d</span><span class="s"> and resname baa)&quot;</span> <span class="o">%</span> <span class="n">resid</span>
+            <span class="n">seg1</span> <span class="o">=</span> <span class="n">atomsel</span><span class="p">(</span><span class="n">ressel</span><span class="p">)</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s">&#39;fragment&#39;</span><span class="p">)[</span><span class="mi">0</span><span class="p">]</span>
+            <span class="n">sulfidx</span> <span class="o">=</span> <span class="n">atomsel</span><span class="p">(</span><span class="s">&quot;</span><span class="si">%s</span><span class="s"> and name SG&quot;</span> <span class="o">%</span> <span class="n">ressel</span><span class="p">)</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s">&#39;index&#39;</span><span class="p">)</span>
+            <span class="k">if</span> <span class="nb">len</span><span class="p">(</span><span class="n">sulfidx</span><span class="p">)</span> <span class="o">&gt;</span> <span class="mi">1</span><span class="p">:</span>
+                <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="s">&quot;More than one sulfur in Cys </span><span class="si">%d</span><span class="s">&quot;</span> <span class="o">%</span> <span class="n">resid</span><span class="p">)</span>
+            <span class="n">bonded</span> <span class="o">=</span> <span class="n">atomsel</span><span class="p">(</span><span class="s">&quot;</span><span class="si">%s</span><span class="s"> and index </span><span class="si">%s</span><span class="s">&quot;</span> <span class="o">%</span> <span class="p">(</span><span class="n">ressel</span><span class="p">,</span> <span class="n">sulfidx</span><span class="p">[</span><span class="mi">0</span><span class="p">]))</span><span class="o">.</span><span class="n">bonds</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span>
+            <span class="n">elements</span> <span class="o">=</span> <span class="nb">set</span><span class="p">(</span><span class="n">atomsel</span><span class="p">(</span><span class="s">&quot;index </span><span class="si">%s</span><span class="s">&quot;</span> <span class="o">%</span> <span class="s">&quot; &quot;</span><span class="o">.</span><span class="n">join</span><span class="p">([</span><span class="nb">str</span><span class="p">(</span><span class="n">x</span><span class="p">)</span> <span class="k">for</span> <span class="n">x</span> <span class="ow">in</span> <span class="n">bonded</span><span class="p">]))</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s">&#39;element&#39;</span><span class="p">))</span>
+            <span class="k">if</span> <span class="p">{</span><span class="s">&quot;H&quot;</span><span class="p">,</span> <span class="s">&quot;C&quot;</span><span class="p">}</span> <span class="o">==</span> <span class="n">elements</span><span class="p">:</span> <span class="c"># Normal cysteine</span>
+                <span class="n">atomsel</span><span class="p">(</span><span class="n">ressel</span><span class="p">)</span><span class="o">.</span><span class="n">set</span><span class="p">(</span><span class="s">&#39;resname&#39;</span><span class="p">,</span> <span class="s">&#39;CYS&#39;</span><span class="p">)</span>
+            <span class="k">elif</span> <span class="p">{</span><span class="s">&quot;S&quot;</span><span class="p">,</span> <span class="s">&quot;C&quot;</span><span class="p">}</span> <span class="o">==</span> <span class="n">elements</span><span class="p">:</span> <span class="c"># Disulfide bridge</span>
+                <span class="n">partner</span> <span class="o">=</span> <span class="n">atomsel</span><span class="p">(</span><span class="s">&quot;element S and index </span><span class="si">%s</span><span class="s">&quot;</span> <span class="o">%</span> <span class="s">&quot; &quot;</span><span class="o">.</span><span class="n">join</span><span class="p">([</span><span class="nb">str</span><span class="p">(</span><span class="n">x</span><span class="p">)</span> <span class="k">for</span> <span class="n">x</span> <span class="ow">in</span> <span class="n">bonded</span><span class="p">]))</span>
+                <span class="n">res2</span> <span class="o">=</span> <span class="n">partner</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s">&#39;resid&#39;</span><span class="p">)[</span><span class="mi">0</span><span class="p">]</span>
+                <span class="n">seg2</span> <span class="o">=</span> <span class="n">partner</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s">&#39;fragment&#39;</span><span class="p">)[</span><span class="mi">0</span><span class="p">]</span>
+                <span class="n">atomsel</span><span class="p">(</span><span class="n">ressel</span><span class="p">)</span><span class="o">.</span><span class="n">set</span><span class="p">(</span><span class="s">&#39;resname&#39;</span><span class="p">,</span> <span class="s">&#39;CYX&#39;</span><span class="p">)</span>
+                <span class="n">atomsel</span><span class="p">(</span><span class="s">&quot;resname baa and resid </span><span class="si">%d</span><span class="s">&quot;</span> <span class="o">%</span> <span class="n">res2</span><span class="p">)</span><span class="o">.</span><span class="n">set</span><span class="p">(</span><span class="s">&#39;resname&#39;</span><span class="p">,</span> <span class="s">&#39;CYX&#39;</span><span class="p">)</span>
+
+                <span class="n">patches</span> <span class="o">+=</span> <span class="s">&#39;patch DISU P</span><span class="si">%s</span><span class="s">:</span><span class="si">%d</span><span class="s"> P</span><span class="si">%s</span><span class="s">:</span><span class="si">%d</span><span class="se">\n</span><span class="s">&#39;</span> <span class="o">%</span> <span class="p">(</span><span class="n">seg1</span><span class="p">,</span> <span class="n">resid</span><span class="p">,</span> <span class="n">seg2</span><span class="p">,</span> <span class="n">res2</span><span class="p">)</span>
+                <span class="k">print</span><span class="p">(</span><span class="s">&quot;INFO: Disulfide bond between residue </span><span class="si">%d</span><span class="s"> and </span><span class="si">%d</span><span class="s">&quot;</span> <span class="o">%</span> <span class="p">(</span><span class="n">resid</span><span class="p">,</span> <span class="n">res2</span><span class="p">))</span>
+            <span class="k">elif</span> <span class="p">{</span><span class="s">&quot;C&quot;</span><span class="p">}</span> <span class="o">==</span> <span class="n">elements</span><span class="p">:</span> <span class="c"># Deprotonated cysteine</span>
+                <span class="k">print</span><span class="p">(</span><span class="s">&quot;INFO: Found deprotonated Cys </span><span class="si">%d</span><span class="s">&quot;</span> <span class="o">%</span> <span class="n">resid</span><span class="p">)</span>
+                <span class="n">atomsel</span><span class="p">(</span><span class="n">ressel</span><span class="p">)</span><span class="o">.</span><span class="n">set</span><span class="p">(</span><span class="s">&#39;resname&#39;</span><span class="p">,</span> <span class="s">&#39;CYS&#39;</span><span class="p">)</span>
+                <span class="n">patches</span> <span class="o">+=</span> <span class="s">&#39;patch CYSD P</span><span class="si">%s</span><span class="s">:</span><span class="si">%d</span><span class="s">&#39;</span> <span class="o">%</span> <span class="p">(</span><span class="n">seg1</span><span class="p">,</span> <span class="n">resid</span><span class="p">)</span>
+            <span class="k">else</span><span class="p">:</span>
+                <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="s">&quot;Unknown modification to Cys </span><span class="si">%d</span><span class="s">&quot;</span> <span class="o">%</span> <span class="n">resid</span><span class="p">)</span>
+            <span class="n">toupdate</span> <span class="o">=</span> <span class="nb">set</span><span class="p">(</span><span class="n">atomsel</span><span class="p">(</span><span class="s">&#39;resname baa&#39;</span><span class="p">)</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s">&#39;resid&#39;</span><span class="p">))</span>
+
+        <span class="bp">self</span><span class="o">.</span><span class="n">file</span><span class="o">.</span><span class="n">write</span><span class="p">(</span><span class="n">patches</span><span class="p">)</span>
+        <span class="n">molecule</span><span class="o">.</span><span class="n">set_top</span><span class="p">(</span><span class="n">old_top</span><span class="p">)</span>
+
+    <span class="c">#==========================================================================</span>
+
+    <span class="k">def</span> <span class="nf">_get_bonded_atoms</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">molid</span><span class="p">,</span> <span class="n">index</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Returns the element of all atoms bonded to the current atom.</span>
+
+<span class="sd">        Args:</span>
+<span class="sd">           molid (int): VMD molecule ID to consider</span>
+<span class="sd">           index (int): Atom index to look at bonded atoms</span>
+
+<span class="sd">        Returns:</span>
+<span class="sd">          (list of str) elements of atoms bound to the current atom</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+
+        <span class="n">a</span> <span class="o">=</span> <span class="n">atomsel</span><span class="p">(</span><span class="s">&#39;index </span><span class="si">%d</span><span class="s">&#39;</span> <span class="o">%</span> <span class="n">index</span><span class="p">,</span> <span class="n">molid</span><span class="o">=</span><span class="n">molid</span><span class="p">)</span>
+        <span class="n">bound</span> <span class="o">=</span> <span class="p">[]</span>
+        <span class="k">for</span> <span class="n">atom</span> <span class="ow">in</span> <span class="n">a</span><span class="o">.</span><span class="n">bonds</span><span class="p">[</span><span class="mi">0</span><span class="p">]:</span>
+            <span class="n">bound</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">atomsel</span><span class="p">(</span><span class="s">&#39;index </span><span class="si">%d</span><span class="s">&#39;</span> <span class="o">%</span> <span class="n">atom</span><span class="p">)</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s">&#39;element&#39;</span><span class="p">)[</span><span class="mi">0</span><span class="p">])</span>
+        <span class="k">return</span> <span class="n">bound</span>
+
+    <span class="c">#==========================================================================</span>
+
+    <span class="k">def</span> <span class="nf">_get_patch</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">seg</span><span class="p">,</span> <span class="n">resid</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Prompts the user for a patch to apply for the given residue.</span>
+<span class="sd">        Gathers available patches from topology files</span>
+
+<span class="sd">        Args:</span>
+<span class="sd">          seg (str): Segment to apply the patch to</span>
+<span class="sd">          resid (int): Residue ID to apply the patch to</span>
+
+<span class="sd">        Returns:</span>
+<span class="sd">          (str) patch line to put in the psfgen input file</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="n">avail_patches</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_get_avail_patches</span><span class="p">()</span>
+        <span class="k">print</span><span class="p">(</span><span class="s">&quot;What is the patch name I should apply?&quot;</span><span class="p">)</span>
+        <span class="k">print</span><span class="p">(</span><span class="s">&quot;Type NONE for no patch, if your residue is completely &quot;</span>
+              <span class="s">&quot;defined in a str file&quot;</span><span class="p">)</span>
+        <span class="k">print</span><span class="p">(</span><span class="s">&quot;Or type HELP for a list of all patches I know about&quot;</span><span class="p">)</span>
+        <span class="n">patchname</span> <span class="o">=</span> <span class="nb">raw_input</span><span class="p">(</span><span class="s">&quot;&gt; &quot;</span><span class="p">)</span>
+        <span class="k">if</span> <span class="n">patchname</span> <span class="o">==</span> <span class="s">&quot;HELP&quot;</span><span class="p">:</span>
+            <span class="k">print</span><span class="p">(</span><span class="s">&quot;   PATCH     COMMENT&quot;</span><span class="p">)</span>
+            <span class="k">print</span><span class="p">(</span><span class="s">&quot;   -----     -------&quot;</span><span class="p">)</span>
+            <span class="k">for</span> <span class="n">p</span> <span class="ow">in</span> <span class="n">avail_patches</span><span class="p">:</span>
+                <span class="k">print</span><span class="p">(</span><span class="s">&quot;</span><span class="si">%7s</span><span class="s"> </span><span class="si">%s</span><span class="s">&quot;</span> <span class="o">%</span> <span class="p">(</span><span class="n">p</span><span class="p">,</span> <span class="n">avail_patches</span><span class="p">[</span><span class="n">p</span><span class="p">]))</span>
+            <span class="n">patchname</span> <span class="o">=</span> <span class="nb">raw_input</span><span class="p">(</span><span class="s">&quot;&gt; &quot;</span><span class="p">)</span>
+        <span class="k">while</span> <span class="p">(</span><span class="n">patchname</span> <span class="ow">not</span> <span class="ow">in</span> <span class="n">avail_patches</span><span class="p">)</span> <span class="ow">and</span> <span class="p">(</span><span class="n">patchname</span> <span class="o">!=</span> <span class="s">&quot;NONE&quot;</span><span class="p">):</span>
+            <span class="k">print</span><span class="p">(</span><span class="s">&quot;I don&#39;t know about patch </span><span class="si">%s</span><span class="s">&quot;</span> <span class="o">%</span> <span class="n">patchname</span><span class="p">)</span>
+            <span class="n">patchname</span> <span class="o">=</span> <span class="nb">raw_input</span><span class="p">(</span><span class="s">&quot;Try again &gt; &quot;</span><span class="p">)</span>
+        <span class="k">if</span> <span class="n">patchname</span> <span class="o">==</span> <span class="s">&quot;NONE&quot;</span><span class="p">:</span>
+            <span class="k">return</span> <span class="s">&quot;&quot;</span>
+
+        <span class="k">return</span> <span class="s">&quot;patch </span><span class="si">%s</span><span class="s"> </span><span class="si">%s</span><span class="s">:</span><span class="si">%d</span><span class="se">\n</span><span class="s">&quot;</span> <span class="o">%</span> <span class="p">(</span><span class="n">patchname</span><span class="p">,</span> <span class="n">seg</span><span class="p">,</span> <span class="n">resid</span><span class="p">)</span>
+
+    <span class="c">#==========================================================================</span>
+
+    <span class="k">def</span> <span class="nf">_get_avail_patches</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Gathers the patches defined in all topology files.</span>
+
+<span class="sd">        Returns:</span>
+<span class="sd">          (dict str -&gt; str): Patch names as keys, comment as value</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="n">avail_patches</span> <span class="o">=</span> <span class="p">{}</span>
+        <span class="k">for</span> <span class="n">top</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">topologies</span><span class="p">:</span>
+            <span class="n">topfile</span> <span class="o">=</span> <span class="nb">open</span><span class="p">(</span><span class="n">top</span><span class="p">,</span> <span class="s">&#39;r&#39;</span><span class="p">)</span>
+            <span class="k">for</span> <span class="n">line</span> <span class="ow">in</span> <span class="n">topfile</span><span class="p">:</span>
+                <span class="n">tokens</span> <span class="o">=</span> <span class="n">line</span><span class="o">.</span><span class="n">split</span><span class="p">()</span>
+                <span class="k">if</span> <span class="ow">not</span> <span class="nb">len</span><span class="p">(</span><span class="n">tokens</span><span class="p">):</span> <span class="k">continue</span>
+                <span class="k">if</span> <span class="n">tokens</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span> <span class="o">==</span> <span class="s">&quot;PRES&quot;</span><span class="p">:</span>
+                    <span class="n">comment</span> <span class="o">=</span> <span class="s">&#39; &#39;</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="n">tokens</span><span class="p">[</span><span class="n">tokens</span><span class="o">.</span><span class="n">index</span><span class="p">(</span><span class="s">&quot;!&quot;</span><span class="p">)</span><span class="o">+</span><span class="mi">1</span><span class="p">:])</span>
+                    <span class="n">avail_patches</span><span class="p">[</span><span class="n">tokens</span><span class="p">[</span><span class="mi">1</span><span class="p">]]</span> <span class="o">=</span> <span class="n">comment</span>
+        <span class="k">return</span> <span class="n">avail_patches</span>
+
+    <span class="c">#==========================================================================</span>
+
+    <span class="k">def</span> <span class="nf">_check_atom_names</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">molid</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Checks that there are no spaces in atom names. If spaces are</span>
+<span class="sd">        found, they are removed and a warning is printed</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+
+        <span class="n">names</span> <span class="o">=</span> <span class="nb">set</span><span class="p">(</span><span class="n">atomsel</span><span class="p">(</span><span class="n">molid</span><span class="o">=</span><span class="n">molid</span><span class="p">)</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s">&#39;name&#39;</span><span class="p">))</span>
+        <span class="k">for</span> <span class="n">name</span> <span class="ow">in</span> <span class="n">names</span><span class="p">:</span>
+            <span class="k">if</span> <span class="s">&#39; &#39;</span> <span class="ow">in</span> <span class="n">name</span><span class="p">:</span>
+                <span class="k">print</span><span class="p">(</span><span class="s">&quot;</span><span class="se">\n</span><span class="s">WARNING: Found space character in name &#39;</span><span class="si">%s</span><span class="s">&#39;</span><span class="se">\n</span><span class="s">&quot;</span>
+                      <span class="s">&quot;         Incompatible with charmm formats, removing it&quot;</span>
+                      <span class="o">%</span> <span class="n">name</span><span class="p">)</span>
+                <span class="n">atomsel</span><span class="p">(</span><span class="s">&#39;name </span><span class="si">%s</span><span class="s">&#39;</span><span class="p">,</span> <span class="n">molid</span><span class="o">=</span><span class="n">molid</span><span class="p">)</span><span class="o">.</span><span class="n">set</span><span class="p">(</span><span class="s">&#39;name&#39;</span><span class="p">,</span> <span class="n">name</span><span class="o">.</span><span class="n">replace</span><span class="p">(</span><span class="s">&#39; &#39;</span><span class="p">,</span> <span class="s">&#39;&#39;</span><span class="p">))</span>
+
+<span class="c">#++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++</span></div>
+</pre></div>
+
+          </div>
+          <footer>
+  
+
+  <hr/>
+
+  <div role="contentinfo">
+    <p>
+        &copy; Copyright 2015, Robin Betz.
+    </p>
+  </div>
+
+  Built with <a href="http://sphinx-doc.org/">Sphinx</a> using a <a href="https://github.com/snide/sphinx_rtd_theme">theme</a> provided by <a href="https://readthedocs.org">Read the Docs</a>.
+  
+</footer>
+        </div>
+      </div>
+
+    </section>
+
+  </div>
+  
+
+
+  
+
+    <script type="text/javascript">
+        var DOCUMENTATION_OPTIONS = {
+            URL_ROOT:'../../',
+            VERSION:'1.0a1',
+            COLLAPSE_INDEX:false,
+            FILE_SUFFIX:'.html',
+            HAS_SOURCE:  true
+        };
+    </script>
+      <script type="text/javascript" src="../../_static/jquery.js"></script>
+      <script type="text/javascript" src="../../_static/underscore.js"></script>
+      <script type="text/javascript" src="../../_static/doctools.js"></script>
+
+  
+
+  
+  
+    <script type="text/javascript" src="../../_static/js/theme.js"></script>
+  
+
+  
+  
+  <script type="text/javascript">
+      jQuery(function () {
+          SphinxRtdTheme.StickyNav.enable();
+      });
+  </script>
+   
+
+</body>
+</html>
