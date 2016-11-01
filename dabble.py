@@ -146,8 +146,6 @@ group.add_argument('-M', '--membrane-system', dest='membrane_system',
                    'to a POPC membrane')
 group.add_argument('-O', '--overwrite', dest='overwrite', action='store_true',
                    help='Overwrite output files, if found')
-group.add_argument('-q', '--quiet', dest='quiet',
-                   action='store_true', default=False)
 
 group = parser.add_argument_group('Parameterization Options')
 group.add_argument('-ff', '--forcefield', dest='forcefield',
