@@ -58,8 +58,10 @@ won't dabble.
 
 Dabble is licensed under the GPLv2 license.
 
+A lot of Dabble is powered by the `VMD Python API <http://www.ks.uiuc.edu/Research/vmd/current/ug/node160.html>`_. 
+
+- Source code: https://github.com/drorlab/dabble/
 - Issue tracker: https://github.com/drorlab/dabble/issues
-- Source code: https://github.com/drorlab/dabble/project
 
 Usage
 -----
@@ -68,6 +70,7 @@ Usage
 - :ref:`builder_api`
 - :ref:`parameter_api`
 - :ref:`utility_programs`
+- :ref:`api_examples`
 
 API Documentation
 -----------------
@@ -80,8 +83,7 @@ API Documentation
    builder_api
    parameter_api
    utility_programs
-   Dabble.rst
-   DabbleUtils.rst
+   api_examples
 
 * :ref:`search`
 
