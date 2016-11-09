@@ -7,7 +7,7 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   
-  <title>DabbleParam API &mdash; Dabble 1.0a1 documentation</title>
+  <title>DabbleParam API &mdash; Dabble 2.1.1 documentation</title>
   
 
   
@@ -30,9 +30,8 @@
   
 
   
-    <link rel="top" title="Dabble 1.0a1 documentation" href="index.html"/>
-        <link rel="next" title="Dabble package" href="Dabble.html"/>
-        <link rel="prev" title="Command-line Usage" href="command_line.html"/> 
+    <link rel="top" title="Dabble 2.1.1 documentation" href="index.html"/>
+        <link rel="prev" title="Dabble package" href="builder_api.html"/> 
 
   
   <script src="https://cdnjs.cloudflare.com/ajax/libs/modernizr/2.6.2/modernizr.min.js"></script>
@@ -73,19 +72,19 @@
 <li class="toctree-l2"><a class="reference internal" href="command_line.html#less-common-options">Less common options</a></li>
 </ul>
 </li>
-<li class="toctree-l1 current"><a class="current reference internal" href="">DabbleParam API</a><ul>
-<li class="toctree-l2"><a class="reference internal" href="#submodules">Submodules</a></li>
-<li class="toctree-l2"><a class="reference internal" href="#dabbleparam-amber-module">DabbleParam.amber module</a></li>
-<li class="toctree-l2"><a class="reference internal" href="#dabbleparam-charmm-module">DabbleParam.charmm module</a></li>
-<li class="toctree-l2"><a class="reference internal" href="#module-contents">Module contents</a></li>
+<li class="toctree-l1"><a class="reference internal" href="builder_api.html">Dabble package</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="builder_api.html#submodules">Submodules</a></li>
+<li class="toctree-l2"><a class="reference internal" href="builder_api.html#module-Dabble.builder">Dabble.builder module</a></li>
+<li class="toctree-l2"><a class="reference internal" href="builder_api.html#module-Dabble.fileutils">Dabble.fileutils module</a></li>
+<li class="toctree-l2"><a class="reference internal" href="builder_api.html#module-Dabble.molutils">Dabble.molutils module</a></li>
+<li class="toctree-l2"><a class="reference internal" href="builder_api.html#module-Dabble">Module contents</a></li>
 </ul>
 </li>
-<li class="toctree-l1"><a class="reference internal" href="Dabble.html">Dabble package</a><ul>
-<li class="toctree-l2"><a class="reference internal" href="Dabble.html#submodules">Submodules</a></li>
-<li class="toctree-l2"><a class="reference internal" href="Dabble.html#module-Dabble.builder">Dabble.builder module</a></li>
-<li class="toctree-l2"><a class="reference internal" href="Dabble.html#module-Dabble.fileutils">Dabble.fileutils module</a></li>
-<li class="toctree-l2"><a class="reference internal" href="Dabble.html#module-Dabble.molutils">Dabble.molutils module</a></li>
-<li class="toctree-l2"><a class="reference internal" href="Dabble.html#module-Dabble">Module contents</a></li>
+<li class="toctree-l1 current"><a class="current reference internal" href="">DabbleParam API</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="#submodules">Submodules</a></li>
+<li class="toctree-l2"><a class="reference internal" href="#module-Dabble.param">General Parameterization</a></li>
+<li class="toctree-l2"><a class="reference internal" href="#module-Dabble.param.amber">Amber-specific Parameterization</a></li>
+<li class="toctree-l2"><a class="reference internal" href="#module-Dabble.param.charmm">Charmm-specific Parameterization</a></li>
 </ul>
 </li>
 </ul>
@@ -128,14 +127,155 @@
 <div class="section" id="submodules">
 <h2>Submodules<a class="headerlink" href="#submodules" title="Permalink to this headline">¶</a></h2>
 </div>
-<div class="section" id="dabbleparam-amber-module">
-<h2>DabbleParam.amber module<a class="headerlink" href="#dabbleparam-amber-module" title="Permalink to this headline">¶</a></h2>
+<div class="section" id="module-Dabble.param">
+<span id="general-parameterization"></span><h2>General Parameterization<a class="headerlink" href="#module-Dabble.param" title="Permalink to this headline">¶</a></h2>
+<p>Parameterizes molecules for molecular dynamics simulations</p>
 </div>
-<div class="section" id="dabbleparam-charmm-module">
-<h2>DabbleParam.charmm module<a class="headerlink" href="#dabbleparam-charmm-module" title="Permalink to this headline">¶</a></h2>
+<div class="section" id="module-Dabble.param.amber">
+<span id="amber-specific-parameterization"></span><h2>Amber-specific Parameterization<a class="headerlink" href="#module-Dabble.param.amber" title="Permalink to this headline">¶</a></h2>
+<p>This module contains the AmberWriter class and associated methods,
+which outputs a prmtop/inpcrd file with CHARMM names and parameters
+for use with simulation with the AMBER molecular dynamics package.
+It does this by using the chamber functionality of ParmEd API.</p>
+<p>Author: Robin Betz</p>
+<p>Copyright (C) 2015 Robin Betz</p>
+<p>This program is free software; you can redistribute it and/or modify it under
+the terms of the GNU Lesser General Public License as published by the Free
+Software Foundation; either version 2 of the License, or (at your option) any
+later version.</p>
+<p>This program is distributed in the hope that it will be useful, but WITHOUT ANY
+WARRANTY; without even the implied warranty of MERCHANTABILITY or FITNESS FOR A
+PARTICULAR PURPOSE.  See the GNU Lesser General Public License for more details.</p>
+<p>You should have received a copy of the GNU Lesser General Public License along
+with this program; if not, write to the Free Software Foundation, Inc.,
+59 Temple Place - Suite 330
+Boston, MA 02111-1307, USA.</p>
+<dl class="class">
+<dt id="Dabble.param.amber.AmberWriter">
+<em class="property">class </em><code class="descclassname">Dabble.param.amber.</code><code class="descname">AmberWriter</code><span class="sig-paren">(</span><em>molid</em>, <em>tmp_dir</em>, <em>forcefield='charmm'</em>, <em>lipid_sel='lipid'</em>, <em>hmr=False</em>, <em>extra_topos=None</em>, <em>extra_params=None</em>, <em>override_defaults=False</em><span class="sig-paren">)</span><a class="headerlink" href="#Dabble.param.amber.AmberWriter" title="Permalink to this definition">¶</a></dt>
+<dd><p>Bases: <code class="xref py py-class docutils literal"><span class="pre">object</span></code></p>
+<p>Creates AMBER-format input files, using either CHARMM or AMBER parameters.</p>
+<p>When using the CHARMM parameters, creates a psf/pdb file and interfaces
+with ParmEd chamber command to create AMBER format files.
+When using the AMBER parameters, creates a pdb file and runs the amber
+lipid conversion script to create leap input files.</p>
+<dl class="method">
+<dt id="Dabble.param.amber.AmberWriter.write">
+<code class="descname">write</code><span class="sig-paren">(</span><em>prmtop_name</em><span class="sig-paren">)</span><a class="headerlink" href="#Dabble.param.amber.AmberWriter.write" title="Permalink to this definition">¶</a></dt>
+<dd><p>Creates a prmtop with either AMBER or CHARMM parameters.</p>
+</dd></dl>
+
+</dd></dl>
+
 </div>
-<div class="section" id="module-contents">
-<h2>Module contents<a class="headerlink" href="#module-contents" title="Permalink to this headline">¶</a></h2>
+<div class="section" id="module-Dabble.param.charmm">
+<span id="charmm-specific-parameterization"></span><h2>Charmm-specific Parameterization<a class="headerlink" href="#module-Dabble.param.charmm" title="Permalink to this headline">¶</a></h2>
+<p>This module contains the CharmmWriter class and associated methods,
+which outputs a psf/pdb file with CHARMM names and parameters.
+It does this by converting atom names to CHARMM names, writing
+intermediate files as necessary to invoke the vmd psfgen plugin.</p>
+<p>Author: Robin Betz</p>
+<p>Copyright (C) 2015 Robin Betz</p>
+<p>This program is free software; you can redistribute it and/or modify it under
+the terms of the GNU Lesser General Public License as published by the Free
+Software Foundation; either version 2 of the License, or (at your option) any
+later version.</p>
+<p>This program is distributed in the hope that it will be useful, but WITHOUT ANY
+WARRANTY; without even the implied warranty of MERCHANTABILITY or FITNESS FOR A
+PARTICULAR PURPOSE.  See the GNU Lesser General Public License for more details.</p>
+<p>You should have received a copy of the GNU Lesser General Public License along
+with this program; if not, write to the Free Software Foundation, Inc.,
+59 Temple Place - Suite 330
+Boston, MA 02111-1307, USA.</p>
+<dl class="class">
+<dt id="Dabble.param.charmm.CharmmWriter">
+<em class="property">class </em><code class="descclassname">Dabble.param.charmm.</code><code class="descname">CharmmWriter</code><span class="sig-paren">(</span><em>tmp_dir</em>, <em>molid</em>, <em>lipid_sel='lipid'</em>, <em>extra_topos=None</em>, <em>override_defaults=False</em><span class="sig-paren">)</span><a class="headerlink" href="#Dabble.param.charmm.CharmmWriter" title="Permalink to this definition">¶</a></dt>
+<dd><p>Bases: <code class="xref py py-class docutils literal"><span class="pre">object</span></code></p>
+<p>An object that handles all the conversions to a psf file
+by interfacing with psfgen.</p>
+<p>Writes a pdb/psf file pair from the current molecule using the
+CHARMM36 topology and atom names/types. Interfaces with psfgen by
+dynamically generating the .tcl file that psfgen takes as input.
+Prompts the user for additional topology files and helps with
+matching atom names that cannot be automatically translated to the
+charmm naming conventions.</p>
+<dl class="attribute">
+<dt id="Dabble.param.charmm.CharmmWriter.file">
+<code class="descname">file</code><a class="headerlink" href="#Dabble.param.charmm.CharmmWriter.file" title="Permalink to this definition">¶</a></dt>
+<dd><p><em>file handle</em> &#8211; Temporary file to write TCL script that invokes
+psfgen</p>
+</dd></dl>
+
+<dl class="attribute">
+<dt id="Dabble.param.charmm.CharmmWriter.tmp_dir">
+<code class="descname">tmp_dir</code><a class="headerlink" href="#Dabble.param.charmm.CharmmWriter.tmp_dir" title="Permalink to this definition">¶</a></dt>
+<dd><p><em>string</em> &#8211; Directory where temporary files are stored</p>
+</dd></dl>
+
+<dl class="attribute">
+<dt id="Dabble.param.charmm.CharmmWriter.psf_name">
+<code class="descname">psf_name</code><a class="headerlink" href="#Dabble.param.charmm.CharmmWriter.psf_name" title="Permalink to this definition">¶</a></dt>
+<dd><p><em>str</em> &#8211; Prefix for the pdb/psf output files, extension will
+be appended</p>
+</dd></dl>
+
+<dl class="attribute">
+<dt id="Dabble.param.charmm.CharmmWriter.molid">
+<code class="descname">molid</code><a class="headerlink" href="#Dabble.param.charmm.CharmmWriter.molid" title="Permalink to this definition">¶</a></dt>
+<dd><p><em>str,optional</em> &#8211; the VMD molecule id to write. Defaults to 0.</p>
+</dd></dl>
+
+<dl class="attribute">
+<dt id="Dabble.param.charmm.CharmmWriter.lipid_sel">
+<code class="descname">lipid_sel</code><a class="headerlink" href="#Dabble.param.charmm.CharmmWriter.lipid_sel" title="Permalink to this definition">¶</a></dt>
+<dd><p><em>str,optional</em> &#8211; atomselect string describing what should count
+as &#8220;lipid&#8221;.  Defaults to &#8220;lipid&#8221;</p>
+</dd></dl>
+
+<dl class="attribute">
+<dt id="Dabble.param.charmm.CharmmWriter.topologies">
+<code class="descname">topologies</code><a class="headerlink" href="#Dabble.param.charmm.CharmmWriter.topologies" title="Permalink to this definition">¶</a></dt>
+<dd><p><em>list of str</em> &#8211; Topology files that were used in creating the
+psf</p>
+</dd></dl>
+
+<dl class="attribute">
+<dt id="Dabble.param.charmm.CharmmWriter.prompt_topos">
+<code class="descname">prompt_topos</code><a class="headerlink" href="#Dabble.param.charmm.CharmmWriter.prompt_topos" title="Permalink to this definition">¶</a></dt>
+<dd><p><em>bool</em> &#8211; Whether to ask for more topology files</p>
+</dd></dl>
+
+<dl class="attribute">
+<dt id="Dabble.param.charmm.CharmmWriter.matcher">
+<code class="descname">matcher</code><a class="headerlink" href="#Dabble.param.charmm.CharmmWriter.matcher" title="Permalink to this definition">¶</a></dt>
+<dd><p><em>CharmmMatcher</em> &#8211; Molecular graph matcher object</p>
+</dd></dl>
+
+<dl class="method">
+<dt id="Dabble.param.charmm.CharmmWriter.write">
+<code class="descname">write</code><span class="sig-paren">(</span><em>psf_name</em><span class="sig-paren">)</span><a class="headerlink" href="#Dabble.param.charmm.CharmmWriter.write" title="Permalink to this definition">¶</a></dt>
+<dd><p>Writes the pdb/psf file.</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><strong>psf_name</strong> (<em>str</em>) &#8211; Prefix for the pdb/psf output files, extension
+will be appended</td>
+</tr>
+<tr class="field-even field"><th class="field-name">Returns:</th><td class="field-body"><dl class="docutils">
+<dt>Topology files that were used in creating</dt>
+<dd>the psf</dd>
+</dl>
+</td>
+</tr>
+<tr class="field-odd field"><th class="field-name">Return type:</th><td class="field-body">topologies (list of str)</td>
+</tr>
+</tbody>
+</table>
+</dd></dl>
+
+</dd></dl>
+
 </div>
 </div>
 
@@ -145,10 +285,8 @@
   
     <div class="rst-footer-buttons" role="navigation" aria-label="footer navigation">
       
-        <a href="Dabble.html" class="btn btn-neutral float-right" title="Dabble package">Next <span class="fa fa-arrow-circle-right"></span></a>
       
-      
-        <a href="command_line.html" class="btn btn-neutral" title="Command-line Usage"><span class="fa fa-arrow-circle-left"></span> Previous</a>
+        <a href="builder_api.html" class="btn btn-neutral" title="Dabble package"><span class="fa fa-arrow-circle-left"></span> Previous</a>
       
     </div>
   
@@ -157,7 +295,7 @@
 
   <div role="contentinfo">
     <p>
-        &copy; Copyright 2015, Robin Betz.
+        &copy; Copyright 2016, Robin Betz.
     </p>
   </div>
 
@@ -178,7 +316,7 @@
     <script type="text/javascript">
         var DOCUMENTATION_OPTIONS = {
             URL_ROOT:'./',
-            VERSION:'1.0a1',
+            VERSION:'2.1.1',
             COLLAPSE_INDEX:false,
             FILE_SUFFIX:'.html',
             HAS_SOURCE:  true
