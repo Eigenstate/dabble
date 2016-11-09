@@ -1,6 +1,3 @@
-# This module contains functions for manipulating files using
-# the VMD python API.
-# 
 # Author: Robin Betz
 # 
 # Copyright (C) 2015 Robin Betz
@@ -18,7 +15,10 @@
 # with this program; if not, write to the Free Software Foundation, Inc.,
 # 59 Temple Place - Suite 330
 # Boston, MA 02111-1307, USA.
-
+"""
+This module contains functions for manipulating files using
+the VMD python API.
+""" 
 
 from __future__ import print_function
 import os
