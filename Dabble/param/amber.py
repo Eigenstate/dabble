@@ -1,27 +1,26 @@
-"""
-This module contains the AmberWriter class and associated methods,
-which outputs a prmtop/inpcrd file with CHARMM names and parameters
-for use with simulation with the AMBER molecular dynamics package.
-It does this by using the chamber functionality of ParmEd API.
+# This module contains the AmberWriter class and associated methods,
+# which outputs a prmtop/inpcrd file with CHARMM names and parameters
+# for use with simulation with the AMBER molecular dynamics package.
+# It does this by using the chamber functionality of ParmEd API.
+# 
+# Author: Robin Betz
+# 
+# Copyright (C) 2015 Robin Betz
+# 
+# This program is free software; you can redistribute it and/or modify it under
+# the terms of the GNU Lesser General Public License as published by the Free
+# Software Foundation; either version 2 of the License, or (at your option) any
+# later version.
+# 
+# This program is distributed in the hope that it will be useful, but WITHOUT ANY
+# WARRANTY; without even the implied warranty of MERCHANTABILITY or FITNESS FOR A
+# PARTICULAR PURPOSE.  See the GNU Lesser General Public License for more details.
+# 
+# You should have received a copy of the GNU Lesser General Public License along
+# with this program; if not, write to the Free Software Foundation, Inc.,
+# 59 Temple Place - Suite 330
+# Boston, MA 02111-1307, USA.
 
-Author: Robin Betz
-
-Copyright (C) 2015 Robin Betz
-
-This program is free software; you can redistribute it and/or modify it under
-the terms of the GNU Lesser General Public License as published by the Free
-Software Foundation; either version 2 of the License, or (at your option) any
-later version.
-
-This program is distributed in the hope that it will be useful, but WITHOUT ANY
-WARRANTY; without even the implied warranty of MERCHANTABILITY or FITNESS FOR A
-PARTICULAR PURPOSE.  See the GNU Lesser General Public License for more details.
-
-You should have received a copy of the GNU Lesser General Public License along
-with this program; if not, write to the Free Software Foundation, Inc.,
-59 Temple Place - Suite 330
-Boston, MA 02111-1307, USA.
-"""
 from __future__ import print_function
 import os
 import sys
@@ -68,7 +67,6 @@ class AmberWriter(object):
                 resource_filename(__name__, "charmm_parameters/toppar_water_ions.str"),
                 resource_filename(__name__, "charmm_parameters/par_all36_cgenff.prm"),
                 resource_filename(__name__, "charmm_parameters/par_all36_prot.prm"),
-                resource_filename(__name__, "charmm_parameters/par_all36_lipid.prm"),
                 resource_filename(__name__, "charmm_parameters/par_all36_carb.prm"),
                 resource_filename(__name__, "charmm_parameters/par_all36_na.prm"),
                 resource_filename(__name__, "charmm_parameters/toppar_all36_prot_na_combined.str")

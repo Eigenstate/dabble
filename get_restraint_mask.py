@@ -105,7 +105,7 @@ residues = set()
 resids = parseSelection(inputstr)
       
 for r in resids:
-    rs = set(atomsel('resname %s and resid %d' % (_acids, r)).get('residue'))
+    rs = set(atomsel("resname '%s' and resid %d" % (_acids, r)).get('residue'))
     if len(rs) != 1:
         raise Exception("None or duplicate residue matching resid %d" % r) 
     residues.add(int(rs.pop())+1)

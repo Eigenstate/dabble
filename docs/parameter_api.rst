@@ -1,4 +1,4 @@
-.. highlight:: bash
+.. highlight:: python
 .. _parameter_api:
 
 DabbleParam API
@@ -7,27 +7,27 @@ DabbleParam API
 Submodules
 ----------
 
-DabbleParam.amber module
+General Parameterization
 ------------------------
 
-.. automodule:: DabbleParam.amber
+.. automodule:: Dabble.param
     :members:
     :undoc-members:
     :show-inheritance:
 
-DabbleParam.charmm module
--------------------------
+Amber-specific Parameterization
+-------------------------------
 
-.. automodule:: DabbleParam.charmm
+.. automodule:: Dabble.param.amber
     :members:
     :undoc-members:
     :show-inheritance:
 
+Charmm-specific Parameterization
+--------------------------------
 
-Module contents
----------------
-
-.. automodule:: DabbleParam
+.. automodule:: Dabble.param.charmm
     :members:
     :undoc-members:
     :show-inheritance:
+
