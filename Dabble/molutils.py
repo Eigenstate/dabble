@@ -268,8 +268,8 @@ def lipid_composition(lipid_sel, molid):
         sel = atomsel_remaining(molid, 'not element H C and (%s) and (%s)'
                                 % (lipid_sel, leaflet_sel))
         resnames = set(sel.get('resname'))
-        dct = dict([(s, len(set(atomsel_remaining(molid, 'not element H C and ' \
-             'resname %s and (%s) and (%s)' % (s, lipid_sel, leaflet_sel) \
+        dct = dict([(s, len(set(atomsel_remaining(molid, "not element H C and " \
+             "resname '%s' and (%s) and (%s)" % (s, lipid_sel, leaflet_sel) \
              ).get('fragment')))) for s in resnames])
         return dct
 

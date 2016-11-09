@@ -158,7 +158,7 @@ class MoleculeMatcher(object): # pylint: disable=too-few-public-methods
 
         # Try to print out a helpful error message here if matching failed
         if print_warning:
-            print("\nERROR: Couldn't find a topological match for resname %s" % resname)
+            print("\nERROR: Couldn't find a topological match for resname '%s'" % resname)
             if self.known_res.get(resname):
                 print("      I found a residue definition with the same name, but "
                       "it didn't match up")

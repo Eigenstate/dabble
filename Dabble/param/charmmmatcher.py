@@ -113,7 +113,7 @@ class CharmmMatcher(MoleculeMatcher):
                 logger.info("Detected patch %s", names[1])
                 return (names[0], names[1], matcher.match().next())
 
-        logger.error("Couldn't find a patch for resname %s. Dumping as 'rgraph.dot'", resname)
+        logger.error("Couldn't find a patch for resname '%s'. Dumping as 'rgraph.dot'", resname)
         nx.write_dot(rgraph, "rgraph.dot")
         return (None, None, None)
 
@@ -539,7 +539,7 @@ class CharmmMatcher(MoleculeMatcher):
 
             element = self.nodenames.get(typestr)
             if not element:
-                raise ValueError("Unknown atom type %s, name %s"
+                raise ValueError("Unknown atom type %s, name '%s'"
                                  % (typestr, node))
             data['element'] = element
 

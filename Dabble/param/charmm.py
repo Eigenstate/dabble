@@ -189,11 +189,11 @@ class CharmmWriter(object):
         if len(atomsel(self.lipid_sel)):
             self._write_lipid_blocks()
 
-        if not len(atomsel('resname %s' % _acids, molid=self.molid)):
+        if not len(atomsel("resname '%s'" % _acids, molid=self.molid)):
             print("\tDidn't find any protein.\n")
 
         # Pull out the protein, one fragment at a time
-        for frag in set(atomsel('resname %s' % _acids).get('fragment')):
+        for frag in set(atomsel("resname '%s'" % _acids).get('fragment')):
             self._write_protein_blocks(frag=frag)
         # TODO: does patches care about order?
         # End protein
@@ -397,7 +397,7 @@ class CharmmWriter(object):
                 raise NotImplementedError("Lipid %s unsupported" % resname)
 
             for name in names:
-                atomsel('residue %d and name %s'
+                atomsel("residue %d and name '%s'"
                         % (res, name)).set('name', names[name])
 
         # Write temporary lipid pdb
@@ -507,15 +507,15 @@ class CharmmWriter(object):
 
         # Sanity check that there is no discrepancy between defined resids and
         # residues as interpreted by VMD.
-        residues = list(set(atomsel('user 1.0 and resname %s' % resname).get('residue')))
-        resids = list(set(atomsel('user 1.0 and resname %s' % resname).get('resid')))
+        residues = list(set(atomsel("user 1.0 and resname '%s'" % resname).get('residue')))
+        resids = list(set(atomsel("user 1.0 and resname '%s'" % resname).get('resid')))
         if len(residues) != len(resids):
-            raise ValueError("VMD found %d residues for resname %s, but there "
+            raise ValueError("VMD found %d residues for resname '%s', but there "
                              "are %d resids! Check input." % (len(residues), resname, 
                                                               len(resids)))
 
         for residue in residues:
-            sel = atomsel('residue %s and resname %s and user 1.0' % (residue, resname))
+            sel = atomsel("residue %s and resname '%s' and user 1.0" % (residue, resname))
             (newname, atomnames) = self.matcher.get_names(sel, print_warning=True)
             if not newname:
                 (resname, patch, atomnames) = self.matcher.get_patches(sel)
@@ -929,7 +929,7 @@ class CharmmWriter(object):
           False if the residue name cannot be found
         """
 
-        print("Finding residue name %s" % resname)
+        print("Finding residue name '%s'" % resname)
         for top in self.topologies:
             topfile = open(top, 'r')
             topo_atoms = self._get_atoms_from_rtf(text=topfile.readlines(),
@@ -943,7 +943,7 @@ class CharmmWriter(object):
         print("Successfully found residue %s in input topologies" % resname)
 
         # Match up atoms with python sets
-        pdb_atoms = set(atomsel('resname %s and user 1.0'
+        pdb_atoms = set(atomsel("resname '%s' and user 1.0"
                                 % resname, molid=molid).get('name'))
         pdb_only = pdb_atoms - topo_atoms
         topo_only = topo_atoms - pdb_atoms
@@ -994,16 +994,16 @@ class CharmmWriter(object):
                     print("'%s' is not an available name in the topology."
                           "Please try again.\n" % newname)
                     newname = raw_input("  %s  -> " % unmatched)
-                atomsel('resname %s and user 1.0 and name %s'
+                atomsel("resname '%s' and user 1.0 and name '%s'"
                         % (resname, unmatched)).set('name', newname)
-                pdb_atoms = set(atomsel('resname %s and user 1.0'
+                pdb_atoms = set(atomsel("resname '%s' and user 1.0"
                                         % resname).get('name'))
                 topo_only = topo_atoms-pdb_atoms
                 resname = newname
 
             # Recurse to check that everything is assigned correctly
             self._find_residue_in_rtf(resname, molid)
-        print("Matched up all atom names for resname %s\n" % resname)
+        print("Matched up all atom names for resname '%s'\n" % resname)
         return True
 
     #==========================================================================
@@ -1095,6 +1095,6 @@ class CharmmWriter(object):
                 print("\nWARNING: Found space character in name '%s'\n"
                       "         Incompatible with charmm formats, removing it"
                       % name)
-                atomsel('name %s', molid=molid).set('name', name.replace(' ', ''))
+                atomsel("name '%s'", molid=molid).set('name', name.replace(' ', ''))
 
 #++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
