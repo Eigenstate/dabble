@@ -3,6 +3,7 @@
 #
 # Hey robin don't forget the subree:
 # git subtree push --prefix docs/_build/html origin gh-pages
+# git push origin `git subtree split --prefix docs/_build/html master`:gh-pages --force
 #
 # Also if you run make clean don't forget about _build/html/.nojekyll
 
