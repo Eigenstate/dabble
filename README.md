@@ -8,7 +8,7 @@ No more messing with atom names or lipid membranes, Dabble does all the work for
 Supports multiple forcefields (CHARMM and AMBER), and simulation packages! Currently,
 that's CHARMM, AMBER, Desmond, and Anton!
 
-[![Built system](http://dabble.robinbetz.com/_images/dabblebox.png =300x)](http://dabble.robinbetz.com)
+[<img src="http://dabble.robinbetz.com/_images/dabblebox.png" width="300px">](http://dabble.robinbetz.com)
 
 # <center> [Read the Documentation!](http://dabble.robinbetz.com) </center>
 
