@@ -3,6 +3,8 @@
 #
 # Hey robin don't forget the subree:
 # git subtree push --prefix docs/_build/html origin gh-pages
+#
+# Also if you run make clean don't forget about _build/html/.nojekyll
 
 # You can set these variables from the command line.
 SPHINXOPTS    =
