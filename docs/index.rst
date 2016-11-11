@@ -6,6 +6,11 @@
 Dabble
 ======
 
+.. image:: _static/dabblebox.png
+    :align: right
+    :width: 300px
+    :alt: Prepared system with lipid, water, protein, ligand, and ions
+
 Dabble is a tool for building membrane protein systems. The ultimate goal of the
 project is to create an easy to use, one stop tool for system construction and
 parameterization.
@@ -17,10 +22,6 @@ To get started via `Anaconda Python <https://www.continuum.io/downloads>`_,
 use::
     
     conda install -c rbetz dabble
-
-.. figure:: _static/dabblebox.png
-    :align: right
-    Prepared system with lipid, water, protein, ligand, and ions
     
 Features
 --------
