@@ -31,6 +31,7 @@ from subprocess import check_output
 import vmd
 import molecule
 from atomsel import atomsel
+import networkx as nx
 
 from parmed.tools import chamber, parmout, HMassRepartition, checkValidity
 from parmed.amber import AmberParm
@@ -119,34 +120,47 @@ class AmberWriter(object):
 
         # Amber forcefield
         elif self.forcefield == 'amber':
+
             # Initialize the matcher
             self.matcher = AmberMatcher(self.topologies)
             print("Using the following topologies:")
             for top in self.topologies:
                 print("  - %s" % top.split("/")[-1])
-            # Save and reload so residue looping is correct
+                top = os.path.abspath(top)
+
+            for par in self.parameters:
+                par = os.path.abspath(par)
+
+            # Assign atom types
             print("Assigning AMBER atom types...")
             self._split_caps()
-            disulfides = self._rename_atoms_amber()
-            
+            conect = self._rename_atoms_amber()
+
             # Create temporary pdb files that will be leap inputs
             pdbs = []
             pdbs.append(self._write_lipids())
-            prot_pdbs = self._write_protein()
+            prot_pdbseq = self._write_protein()
             pdbs.extend(self._write_solvent())
             ligfiles = self._write_ligands()
 
+            # Remove lines from leaprcs that will make leap misbehave
+            #self._alter_leaprcs()
+
             # Now invoke leap to create the prmtop and inpcrd
-            outfile = self._run_leap(ligfiles, prot_pdbs, pdbs,
-                                     disulfides)
+            outfile = self._run_leap(ligfiles, prot_pdbseq, pdbs,
+                                     conect)
 
             # Check validity of output prmtop using parmed
-            print("\nChecking for problems with the prmtop...")
-            print("        Verify all warnings!")
-            parm = AmberParm(prm_name=outfile+".prmtop",
-                             xyz=outfile+".inpcrd")
-            action = checkValidity(parm)
-            action.execute()
+            try:
+                print("\nChecking for problems with the prmtop...")
+                print("        Verify all warnings!")
+                parm = AmberParm(prm_name=outfile+".prmtop",
+                                 xyz=outfile+".inpcrd")
+                action = checkValidity(parm)
+                action.execute()
+            except Exception as e:
+                print("   Had a problem: %s" % e)
+                pass # hack hack hack
 
             # Repartion hydrogen masses if requested
             if self.hmr:
@@ -177,10 +191,10 @@ class AmberWriter(object):
             ValueError if a residue definition could not be found
         """
 
-        nonlips = set(atomsel("not %s" % self.lipid_sel,
+        nonlips = set(atomsel("not (%s)" % self.lipid_sel,
                               molid=self.molid).get("residue"))
         n_res = len(nonlips)
-        disulfides = set()
+        conect = set() # Atom indices bound to noncanonical residues
         while nonlips:
             if len(nonlips) % 500 == 0:
                 sys.stdout.write("Renaming residues.... %.0f%%  \r"
@@ -189,26 +203,30 @@ class AmberWriter(object):
 
             residue = nonlips.pop()
             sel = atomsel("residue %s" % residue)
-            resnames, atomnames = self.matcher.get_names(sel, print_warning=False)
+            resnames, atomnames, atomtypes = self.matcher.get_names(sel, print_warning=False)
             
-            # Check if it's disulfide bond
+            # Check if it's a linkage to another amino acid
             if not resnames:
-                resnames, atomnames, conect = self.matcher.get_disulfide(sel, self.molid)
-                disulfides.add(tuple(sorted([sel.get('residue')[0], conect])))
+                print("\tCan't find simple match for: %s:%d" % (sel.get("resname")[0],
+                                                                sel.get("resid")[0]))
+                resnames, atomnames, atomtypes, other = self.matcher.get_linkage(sel, self.molid)
                 if not resnames:
-                    import networkx as nx
                     rgraph = self.matcher.parse_vmd_graph(sel)[0]
                     nx.write_dot(rgraph, "rgraph.dot")
                     raise ValueError("ERROR: Could not find a residue definition "
                                      "for %s:%s" % (sel.get("resname")[0],
                                                     sel.get("resid")[0]))
 
+                print("\tBonded residue: %s:%d -> %s" % (sel.get("resname")[0],
+                                                   sel.get("resid")[0], resnames.values()[0]))
+                conect.add(other)
+
             # Do the renaming
-            self._apply_naming_dictionary(resnames, atomnames)
+            self._apply_naming_dictionary(resnames, atomnames, atomtypes)
 
         atomsel('all').set('user', 1.0)
         sys.stdout.write("\n")
-        return disulfides
+        return conect 
 
     #==========================================================================
 
@@ -287,6 +305,10 @@ class AmberWriter(object):
         Raises:
             ValueError if an invalid lipid is found
         """
+        lipid_res = set(atomsel(self.lipid_sel).get('residue'))
+        n_lips = len(lipid_res)
+        if not n_lips:
+            return None
 
         molecule.set_top(self.molid)
         temp = tempfile.mkstemp(suffix='.pdb', prefix='amber_lipids_',
@@ -297,8 +319,6 @@ class AmberWriter(object):
         # the selection 
         resid = 1
         idx = 1
-        lipid_res = set(atomsel(self.lipid_sel).get('residue'))
-        n_lips = len(lipid_res)
         while lipid_res:
             residue = lipid_res.pop()
             if len(lipid_res) % 1 == 0:
@@ -401,18 +421,15 @@ class AmberWriter(object):
 
     #==========================================================================
     
-    def _apply_naming_dictionary(self, resnames, atomnames):
+    def _apply_naming_dictionary(self, resnames, atomnames, atomtypes):
         """
         Applies the names from a matcher.
         """
         for idx, name in atomnames.iteritems():
             atom = atomsel('index %s' % idx)
             if atom.get('name')[0] != name:
-                #print("Renaming %s:%s: %s -> %s:%s" % (atom.get('resname')[0],
-                #                                       atom.get('resid')[0],
-                #                                       atom.get('name')[0],
-                #                                       resnames[idx], name))
                 atom.set('name', name)
+            atom.set('type', atomtypes[idx])
             atom.set('resname', resnames[idx])
 
     #==========================================================================
@@ -625,51 +642,39 @@ class AmberWriter(object):
         numbering in leap.
 
         Returns:
-            (list of (int,str)) Fragment, name of the pdb files written
+            (str, str) Name of pdb file written, and UNIT sequence
+                inside
         """
-        written = []
-        for frag in set(atomsel("protein or resname ACE NMA and "
-                                "user 1.0").get('fragment')):
-            temp = tempfile.mkstemp(suffix='_prot.pdb', prefix='amber_prot_',
-                                    dir=self.tmp_dir)[1]
-            
-            idx = 1
-            with open(temp, 'w') as fileh:
+        # Renumber resids from 1, that info is lost in prmtop anyway
+        psel = atomsel("protein or resname ACE NMA NME and user 1.0")
+        startres = min(psel.get("residue"))
+        psel.set("resid", [r-startres for r in psel.get("residue")])
+        resseq = []
+
+        temp = tempfile.mkstemp(suffix='_prot.pdb', prefix='amber_prot_',
+                                dir=self.tmp_dir)[1]
+        with open(temp, 'w') as fileh:
+            for i, frag in enumerate(set(psel.get('fragment'))):
+                idx = 1
+
                 for resid in sorted(set(atomsel("fragment %s" 
                                                 % frag).get('resid'))):
                     sel = atomsel("fragment %s and resid %s and "
                                   "user 1.0" % (frag, resid))
                     sel.set('user', 0.0)
                     idx = self._write_residue(sel, fileh, idx, hetatm=False)
-                fileh.write("TER\n") # TER card separates chains
+                    resseq.append(sel.get("resname")[0])
+                fileh.write("TER\n")
+            fileh.write("END\n")
+            fileh.close()
 
-            # Write the disulfide bonds
-#            idx = 1
-#            print("Wrigin disu: %s" % disulfides)
-#            for disu in disulfides:
-#                s1 = atomsel("residue %d" % disu[0])
-#                s2 = atomsel("residue %d" % disu[1])
-#                #entry = ("%7 %3d %3s %c %4d%c   %3s %c %4d%c%4 %30s", # from leap pdb_format.c
-#                entry = ("%7 %3d %3s %c %4d    %3s %c %4d \n"
-#                         % ('SSBOND', idx,
-#                            s1.get('resname')[0],
-#                            s1.get('chain')[0],
-#                            s1.get('resid')[0],
-#                            s2.get('resname')[0],
-#                            s2.get('chain')[0],
-#                            s2.get('resid')[0]))
-#                fileh.write(entry)
-#                idx += 1
-#
-                fileh.write("END\n")
-                fileh.close()
-            written.append((frag, temp))
+        atomsel("fragment %s" % frag).set("segid", "0") # FIX FIX
 
-        return written
+        return (temp, " ".join(resseq))
 
     #==========================================================================
 
-    def _run_leap(self, ligfiles, prot_pdbs, pdbs, disulfides):
+    def _run_leap(self, ligfiles, prot_pdbseq, pdbs, conect):
         """
         Runs leap, creating a prmtop and inpcrd from the given pdb and off
         library files.
@@ -678,11 +683,10 @@ class AmberWriter(object):
             ligfiles (dict str -> str): UNIT name and filename of mol2 file
                 for each ligand. The unit name is necessary here to add
                 the right variable names in leap because it is the worst.
-            prot_pdbs (list of (int, str)): PDB files containing protein fragments
-                Predictably named for disulfide-ing.
-                The int is the fragment in each
+            prot_pdbseq (tuple str,str): PDB file containing protein fragments,
+                sequence of UNITs for those fragments
             pdbs (list of str): PDB or Mol2 files to combine
-            disulfides (set of tuple (int,int)): Residues to disulfide bond
+            conect (set of int): Atom indices connected by an extraresidue bond
 
         Returns:
             (str) Prefix of file written
@@ -718,6 +722,7 @@ class AmberWriter(object):
                     raise ValueError("Unknown topology type: %s" % i)
             fileh.write('\n')
 
+            pdbs = [_ for _ in pdbs if _ is not None]
             for i in range(len(pdbs)):
                 if "pdb" in pdbs[i]:
                     fileh.write("p%s = loadpdb %s\n" % (i, pdbs[i]))
@@ -727,9 +732,6 @@ class AmberWriter(object):
                     raise ValueError("Unknown coordinate type: %s"
                                      % pdbs[i])
 
-            for p in prot_pdbs:
-                fileh.write("pp%s = loadpdb %s\n" % (p[0], p[1]))
-
             for unit, f in ligfiles.iteritems():
                 if "pdb" in f:
                     fileh.write("%s = loadpdb %s\n" % (unit, f))
@@ -737,28 +739,37 @@ class AmberWriter(object):
                     fileh.write("%s = loadmol2 %s\n" % (unit, f))
                 else:
                     raise ValueError("Unknown ligand file type: %s" % f)
-            
+
             # Add off files here since they need to be stated after
-            # things are read in
+            # ligands are read in
             for i in [_ for _ in self.topologies + self.parameters if ".off" in _]:
                 fileh.write("loadoff %s\n" %i )
 
+            fileh.write("pp = loadpdbusingseq %s { %s }\n" % prot_pdbseq)
 
-            # Create disulfides
-            for d in disulfides:
-                s1 = atomsel("residue %s" % d[0])
-                s2 = atomsel("residue %s" % d[1])
+            # Create bond lines
+            while conect:
+                # Pull out two atoms bound to each other
+                idx = conect.pop()
+                s1 = atomsel("index %d" % idx)
+                other = [s for s in s1.bonds[0] if s in conect]
+                if len(other) != 1:
+                    raise ValueError("Problem with bonds to index %d" % idx)
+                other = other[0]
+                s2 = atomsel("index %d" % other)
+                conect.remove(other)
+                atomsel("same residue as index %d %d" % (other, idx)).write('mol2', '%d.mol2' % other)
+                
+                fileh.write("bond pp.{0}.{1} pp.{2}.{3}\n".format(
+                            s1.get('resid')[0], s1.get('name')[0],
+                            s2.get('resid')[0], s2.get('name')[0]))
 
-                # Use new format strings here so the "." doesn't break it augh
-                fileh.write("bond pp{0}.{1}.SG pp{2}.{3}.SG\n".format(
-                            s1.get('fragment')[0], s1.get('resid')[0],
-                            s2.get('fragment')[0], s2.get('resid')[0]))
-
-            fileh.write("\np = combine { %s }\n"
+            fileh.write("\np = combine { pp %s }\n"
                          % ' '.join(["p%d"%i for i in range(len(pdbs))]))
-            fileh.write("p = combine { p %s }\n" % ' '.join(ligfiles.keys()))
-            fileh.write("p = combine { p %s }\n"
-                         % ' '.join(["pp%d" % i[0] for i in prot_pdbs]))
+            if ligfiles.keys():
+                fileh.write("p = combine { p %s }\n" % ' '.join(ligfiles.keys()))
+            #fileh.write("p = combine { p %s }\n"
+            #             % ' '.join(["pp%d" % i for i in range(len(prot_pdbseq))]))
             fileh.write("setbox p centers 0.0\n")
             fileh.write("saveamberparm p %s.prmtop %s.inpcrd\n"
                          % (outfile, outfile))
@@ -770,11 +781,51 @@ class AmberWriter(object):
         try:
             out = check_output(["%s/bin/tleap" % os.environ.get("AMBERHOME"),
                                 "-f", leapin])
+            if "not saved" in out:
+                print("Call to tleap failed: Output was:\n%s"% out)
+                print("Saving system as mol2")
+                atomsel("all").write("mol2", self.tmp_dir+"/saved.mol2")
+                quit(1)
         except:
             print("Call to tleap failed! Output was:\n%s" % out)
             quit(1)
         
         return outfile
+
+    #==========================================================================
+
+    def _alter_leaprcs(self):
+        """
+        Makes a copy of all passed leaprcs. Removes lines that will cause
+        leap to make assumptions about the system that could break it, such
+        as pdb terminal residues.
+        """
+
+        new_topos = []
+        for t in self.topologies:
+            if "leaprc" not in t: 
+                new_topos.append(t)
+                continue
+
+            temp = tempfile.mkstemp(suffix=".leaprc", prefix="amber_",
+                                    dir=self.tmp_dir)[1]
+            inpdb = False
+            with open(t, 'r') as fn:
+                with open(temp, 'w') as tf:
+                    for line in fn:
+                        if inpdb and line == "}\n":
+                            inpdb = False
+                        elif "addpdbresmap" in line.lower():
+                            inpdb = True
+
+                        if not inpdb:
+                            tf.write(line)
+
+                    tf.close()
+                    fn.close()
+            new_topos.append(temp)
+
+        self.topologies = new_topos
 
 #++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
 

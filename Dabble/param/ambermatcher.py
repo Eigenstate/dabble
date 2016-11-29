@@ -110,6 +110,7 @@ class AmberMatcher(MoleculeMatcher):
         Returns:
             (dict int->str) Atom index to resname matched
             (dict int->str) Atom index to atom name matched up
+            (dict int->str) Atom index to atom type matched up
 
         Raises:
             KeyError: if no matching possible
@@ -127,8 +128,9 @@ class AmberMatcher(MoleculeMatcher):
             if matcher.is_isomorphic():
                 matched = True
                 match = matcher.match().next()
-        else:
-            # If that didn't work, loop through all known residues
+
+        # If that didn't work, loop through all known residues
+        if not matched:
             for matchname in self.known_res.keys():
                 graph = self.known_res[matchname]
                 matcher = isomorphism.GraphMatcher(rgraph, graph,
@@ -146,8 +148,11 @@ class AmberMatcher(MoleculeMatcher):
             resmatch = dict((i, graph.node[match[i]].get("resname")) \
                             for i in match.keys() if \
                             graph.node[match[i]].get("residue") == "self")
+            typmatch = dict((i, graph.node[match[i]].get("type")) \
+                            for i in match.keys() if \
+                            graph.node[match[i]].get("residue") == "self")
 
-            return (resmatch, nammatch)
+            return (resmatch, nammatch, typmatch)
 
         # Try to print out a helpful error message here if matching failed
         if print_warning:
@@ -163,7 +168,7 @@ class AmberMatcher(MoleculeMatcher):
                 print("      I couldn't find any residues with that name. Did you "
                       "forget to provide a topology file?")
 
-        return (None, None)
+        return (None, None, None)
 
     #=========================================================================
 
@@ -193,6 +198,105 @@ class AmberMatcher(MoleculeMatcher):
             if matcher.is_isomorphic():
                 return matchname
         return None
+
+    #=========================================================================
+
+    def get_linkage(self, selection, molid):
+        """
+        Checks if the selection corresponds to a residue that is covalently
+        bonded to some other residue other than the normal + or - peptide bonds.
+        Sets the patch line (bond line for leap) appropriately and matches
+        atom names using a maximal subgraph isomorphism to the normal residue.
+
+        Args:
+            selection (VMD atomsel): Selection to check
+            molid (int): VMD molecule ID to look for other bonded residue in
+
+        Returns:
+            resnames (dict int -> str) Residue name translation dictionary
+            atomnames (dict int -> str) Atom name translation dictionary
+            typnames (dict int -> str): Atom type translation dictionary
+            conect (str) Leap patch line to apply for this linkage
+        """
+        # Sanity check selection corresponds to one resid
+        resids = set(selection.get("resid"))
+        if len(resids) > 1:
+            raise ValueError("Multiple resids in selection: %s" % resids)
+
+        # Get externally bonded atoms
+        rgraph, dump = self.parse_vmd_graph(selection)
+        externs = [n for n in rgraph.nodes() if \
+                   rgraph.node[n]["residue"] != "self"]
+
+        # Create a subgraph with no externally bonded atoms for matching
+        # Otherwise, extra bonded atom will prevent matches from happening
+        noext = rgraph.copy()
+        noext.remove_nodes_from([i for i in noext.nodes()
+                                 if noext.node[i].get("residue") != "self"])
+
+        # Find all possible subgraph matches, only amino acids for now, otherwise
+        # weird terminal versions like NLYS instead of LYS could be chosen
+        matches = {}
+        for names in self.known_res:
+            graph = self.known_res.get(names).copy()
+            graph.remove_nodes_from([i for i in graph.nodes()
+                                     if graph.node[i].get("residue") != "self"])
+            #if not graph:
+            #    continue
+            matcher = isomorphism.GraphMatcher(noext, graph,
+                        node_match=super(AmberMatcher,self)._check_atom_match)
+            #if matcher.subgraph_is_isomorphic():
+            #     matches[names] = matcher.match()
+
+            if names == "GLYP":
+                nx.write_dot(graph, "glyp_noext.dot")
+                nx.write_dot(self.known_res["GLYP"], "glyp.dot")
+            if matcher.is_isomorphic():
+                matches[names] = matcher.match()
+
+                #mapping = matcher.match().next()
+                #matchname = names
+                #break
+            #    nx.write_dot(noext, "rgraph.dot")
+            #    quit(1)
+            #    break
+       
+        if not matches:
+            nx.write_dot(noext, "noext.dot")
+            return (None, None, None, None)
+
+        # Want minimumally different thing, ie fewest _join atoms different
+        matchname = min(matches.keys(),
+                        key=lambda x: len(self.known_res[x])-len(noext))
+        # Invert mapping so it's idx-> name. It's backwards b/c of subgraph
+        mapping = dict((k,v) for (k,v) in matches[matchname].next().iteritems())
+        graph = self.known_res.get(matchname) 
+
+        # Generate naming dictionaries to return
+        nammatch = dict ((i, graph.node[mapping[i]].get("atomname")) \
+                         for i in mapping.keys() if \
+                         graph.node[mapping[i]].get("residue") == "self")
+        resmatch = dict((i, graph.node[mapping[i]].get("resname")) \
+                        for i in mapping.keys() if \
+                        graph.node[mapping[i]].get("residue") == "self")
+        typmatch = dict((i, graph.node[mapping[i]].get("type")) \
+                        for i in mapping.keys() if \
+                        graph.node[mapping[i]].get("residue") == "self")
+
+        # Find resid and fragment for other molecule
+        partners = []
+        resid = selection.get("resid")[0]
+        for n in externs:
+            rid = atomsel("index %d" % n, molid=molid).get("resid")[0]
+            if rid != resid+1 and rid != resid-1:
+                partners.append(n)
+        if len(partners) != 1:
+            return (None, None, None, None)
+            #raise ValueError("Don't know what to do with resid %d, "
+            #                 "it has %s possible covalent linkers"
+            #                 % (resid, partners))
+
+        return (resmatch, nammatch, typmatch, partners[0])
 
     #=========================================================================
 

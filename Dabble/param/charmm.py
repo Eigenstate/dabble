@@ -511,9 +511,7 @@ class CharmmWriter(object):
                                         % (resname, chain)).get('residue')))
             resids = list(set(atomsel("user 1.0 and resname '%s' and chain %s"
                                       % (resname, chain)).get('resid')))
-            # TODO: Multiple copies of same chain
             if len(residues) != len(resids):
-                #pass # DEBUG
                 raise ValueError("VMD found %d residues for resname '%s', but there "
                                  "are %d resids! Check input." % (len(residues), resname, 
                                                                   len(resids)))
