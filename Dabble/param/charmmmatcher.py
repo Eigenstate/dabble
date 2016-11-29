@@ -1,25 +1,26 @@
-# This module contains the CharmmMatcher class. It is used to apply
-# atom names from known topologies to the molecule by using a graph-based
-# representation of each molecule.
-# 
-# Author: Robin Betz
-# 
-# Copyright (C) 2015 Robin Betz
-# 
+"""
+ This module contains the CharmmMatcher class. It is used to apply
+ atom names from known topologies to the molecule by using a graph-based
+ representation of each molecule.
+
+ Author: Robin Betz
+
+ Copyright (C) 2015 Robin Betz
+
+"""
 # This program is free software; you can redistribute it and/or modify it under
 # the terms of the GNU Lesser General Public License as published by the Free
 # Software Foundation; either version 2 of the License, or (at your option) any
 # later version.
-# 
+#
 # This program is distributed in the hope that it will be useful, but WITHOUT ANY
 # WARRANTY; without even the implied warranty of MERCHANTABILITY or FITNESS FOR A
 # PARTICULAR PURPOSE.  See the GNU Lesser General Public License for more details.
-# 
+#
 # You should have received a copy of the GNU Lesser General Public License along
 # with this program; if not, write to the Free Software Foundation, Inc.,
 # 59 Temple Place - Suite 330
 # Boston, MA 02111-1307, USA.
-
 
 from __future__ import print_function
 import logging
@@ -138,8 +139,8 @@ class CharmmMatcher(MoleculeMatcher):
         whole_sel = atomsel("%s and fragment %s" % (selstring, fragment),
                             molid=molid)
 
-        (rgraph, dump) = self.parse_vmd_graph(selection)
-        (whole, dump) = self.parse_vmd_graph(whole_sel)
+        rgraph, _ = self.parse_vmd_graph(selection)
+        whole, _ = self.parse_vmd_graph(whole_sel)
 
         # Check for the 3 join atoms corresponding to the disulfide bonds
         externs = [n for n in whole.nodes() \
@@ -170,8 +171,8 @@ class CharmmMatcher(MoleculeMatcher):
             return (None, None, None)
 
         # Invert mapping so it's idx->name. It's currently backwards
-        # because of the need to find a subgraph. 
-        atomnames = dict((v,k) for (k,v) in matches[matchname].next().iteritems())
+        # because of the need to find a subgraph.
+        atomnames = dict((v, k) for (k, v) in matches[matchname].next().iteritems())
 
         # Now we know it's a cysteine in a disulfide bond
         # Identify which resid and fragment corresponds to the other cysteine
@@ -226,8 +227,8 @@ class CharmmMatcher(MoleculeMatcher):
         Raises:
             ValueError if more than one residue name is matched
         """
-        (resnames, atomnames) = super(CharmmMatcher,self).get_names(selection,
-                                                                    print_warning)
+        (resnames, atomnames) = super(CharmmMatcher, self).get_names(selection,
+                                                                     print_warning)
         if not resnames:
             return (None, None)
 
@@ -239,7 +240,8 @@ class CharmmMatcher(MoleculeMatcher):
                              "belonging to a single residue in CHARMM matching."
                              " Not sure how this happened; something is really "
                              "really wrong. Residue was: %s:%d" %
-                             (sel.get("resname")[0], sel.get("resid")[0]))
+                             (selection.get("resname")[0],
+                              selection.get("resid")[0]))
 
         return (resname.pop(), atomnames)
 
@@ -268,8 +270,8 @@ class CharmmMatcher(MoleculeMatcher):
         data = ""
         patch = False
 
-        with open(filename, 'r') as fh:
-            for line in fh:
+        with open(filename, 'r') as fileh:
+            for line in fileh:
                 # Remove comments except "special" graphmatcher directives
                 # This directive is only really used to parse the bond on NMA
                 # that attaches to the previous residue, in order for its extra
@@ -372,7 +374,7 @@ class CharmmMatcher(MoleculeMatcher):
                 for txn in range(1, len(tokens), 2):
                     node1 = tokens[txn]
                     node2 = tokens[txn+1]
-                    if not self._define_bond(graph, node1, node2, bool(patch)):
+                    if not _define_bond(graph, node1, node2, bool(patch)):
                         return None
 
             # CMAP terms add edges. This makes amino acids work since the
@@ -392,7 +394,7 @@ class CharmmMatcher(MoleculeMatcher):
                          for j in range(len(tokens)/4) \
                          for i in range(j, j+3)]  # oo i love one liners
                 for (node1, node2) in nodes:
-                    if not self._define_bond(graph, node1, node2, bool(patch)):
+                    if not _define_bond(graph, node1, node2, bool(patch)):
                         return None
 
             # Check for atom definitions
@@ -436,61 +438,6 @@ class CharmmMatcher(MoleculeMatcher):
             nx.set_node_attributes(graph, "patched", False)
 
         return graph
-
-    #=========================================================================
-
-    def _define_bond(self, graph, node1, node2, patch):
-        """
-        Process a bond defined in a psf file and adds it to the graph.
-        Checks for + or - in bonded atom name and sets the node "residue"
-        attribute accordingly if it is present.
-
-        Args:
-          graph (networkx graph): Graph to add bond to
-          node1 (str): Atom name from psf file of first atom
-          node2 (str): Atom name from psf file of second atom
-          patch (bool): If this bond is defined by a patch
-
-        Returns:
-          (bool) if bond could be defined
-
-        Raises:
-            ValueError if a non +- atom name is not defined in the MASS
-              line dictionary
-        """
-
-        # Sanity check and process first atom name
-        if "+" in node1:
-            graph.add_node(node1, type="", residue="+", patched=patch)
-        elif "-" in node1:
-            graph.add_node(node1, type="", residue="-", patched=patch)
-        elif node1 not in graph.nodes():
-            return False
-
-        # Now sanity check and process second atom name
-        if "+" in node2:
-            graph.add_node(node2, type="", residue="+", patched=patch)
-        elif "-" in node2:
-            graph.add_node(node2, type="", residue="-", patched=patch)
-        elif node2 not in graph.nodes():
-            return False
-
-        # If we are applying a patch and there are _join atoms attached
-        # to the atom we are applying a bond to, delete the _join atom.
-        # It can be added back later if it was actually needed.
-        if graph.node[node1]["patched"] and not graph.node[node2]["patched"]:
-            neighbor_joins = [e[1] for e in nx.edges_iter(graph, nbunch=[node2]) \
-                              if graph.node[e[1]]["residue"] != "self" and \
-                              not graph.node[e[1]]["patched"]]
-            graph.remove_nodes_from(neighbor_joins)
-        elif graph.node[node2]["patched"] and not graph.node[node1]["patched"]:
-            neighbor_joins = [e[1] for e in nx.edges_iter(graph, nbunch=[node1]) \
-                              if graph.node[e[1]]["residue"] != "self" and \
-                              not graph.node[e[1]]["patched"]]
-            graph.remove_nodes_from(neighbor_joins)
-
-        graph.add_edge(node1, node2, patched=patch)
-        return True
 
     #=========================================================================
 
@@ -542,31 +489,88 @@ class CharmmMatcher(MoleculeMatcher):
                                  % (typestr, node))
             data['element'] = element
 
-    #=========================================================================
+#++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+#                                FUNCTIONS                                    #
+#++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
 
-    def _prune_joins(self, graph):
-        """
-        Prunes _join elements that have been fulfilled by the addition of
-        this patch.
+def _define_bond(graph, node1, node2, patch):
+    """
+    Process a bond defined in a psf file and adds it to the graph.
+    Checks for + or - in bonded atom name and sets the node "residue"
+    attribute accordingly if it is present.
 
-        DEPRECATED! But a useful function for detecting fulfilled +- joins
-                    that match by element so I'm keeping it.
-                    Pruning now done in _define_bond
+    Args:
+      graph (networkx graph): Graph to add bond to
+      node1 (str): Atom name from psf file of first atom
+      node2 (str): Atom name from psf file of second atom
+      patch (bool): If this bond is defined by a patch
 
-        Args:
-           graph (networkx graph): The residue to prun
-        """
+    Returns:
+      (bool) if bond could be defined
 
-        unpatched = [n for n in graph.nodes() if not graph.node[n]["patched"]]
-        for u in unpatched:
-            neighbor_joins = [e[1] for e in nx.edges_iter(graph, nbunch=[u]) if \
-                              graph.node[e[1]]["residue"] != "self" and \
-                                      not graph.node[e[1]]["patched"]]
-            for n in neighbor_joins:
-                if any(graph.node[e[1]]["element"]==graph.node[n]["element"] for \
-                       e in nx.edges_iter(graph, nbunch=[u]) if \
-                       graph.node[e[1]]["patched"]):
-                    graph.remove_node(n)
+    Raises:
+        ValueError if a non +- atom name is not defined in the MASS
+          line dictionary
+    """
 
-    #=========================================================================
+    # Sanity check and process first atom name
+    if "+" in node1:
+        graph.add_node(node1, type="", residue="+", patched=patch)
+    elif "-" in node1:
+        graph.add_node(node1, type="", residue="-", patched=patch)
+    elif node1 not in graph.nodes():
+        return False
+
+    # Now sanity check and process second atom name
+    if "+" in node2:
+        graph.add_node(node2, type="", residue="+", patched=patch)
+    elif "-" in node2:
+        graph.add_node(node2, type="", residue="-", patched=patch)
+    elif node2 not in graph.nodes():
+        return False
+
+    # If we are applying a patch and there are _join atoms attached
+    # to the atom we are applying a bond to, delete the _join atom.
+    # It can be added back later if it was actually needed.
+    if graph.node[node1]["patched"] and not graph.node[node2]["patched"]:
+        neighbor_joins = [e[1] for e in nx.edges_iter(graph, nbunch=[node2]) \
+                          if graph.node[e[1]]["residue"] != "self" and \
+                          not graph.node[e[1]]["patched"]]
+        graph.remove_nodes_from(neighbor_joins)
+    elif graph.node[node2]["patched"] and not graph.node[node1]["patched"]:
+        neighbor_joins = [e[1] for e in nx.edges_iter(graph, nbunch=[node1]) \
+                          if graph.node[e[1]]["residue"] != "self" and \
+                          not graph.node[e[1]]["patched"]]
+        graph.remove_nodes_from(neighbor_joins)
+
+    graph.add_edge(node1, node2, patched=patch)
+    return True
+
+#=========================================================================
+
+def _prune_joins(graph):
+    """
+    Prunes _join elements that have been fulfilled by the addition of
+    this patch.
+
+    DEPRECATED! But a useful function for detecting fulfilled +- joins
+                that match by element so I'm keeping it.
+                Pruning now done in _define_bond
+
+    Args:
+       graph (networkx graph): The residue to prun
+    """
+
+    unpatched = [n for n in graph.nodes() if not graph.node[n]["patched"]]
+    for uun in unpatched:
+        neighbor_joins = [e[1] for e in nx.edges_iter(graph, nbunch=[uun]) if \
+                          graph.node[e[1]]["residue"] != "self" and \
+                                  not graph.node[e[1]]["patched"]]
+        for nei in neighbor_joins:
+            if any(graph.node[e[1]]["element"] == graph.node[nei]["element"] for \
+                   e in nx.edges_iter(graph, nbunch=[uun]) if \
+                   graph.node[e[1]]["patched"]):
+                graph.remove_node(nei)
+
+#=========================================================================
 

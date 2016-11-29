@@ -1,21 +1,23 @@
-# This module contains the AmberWriter class and associated methods,
-# which outputs a prmtop/inpcrd file with CHARMM names and parameters
-# for use with simulation with the AMBER molecular dynamics package.
-# It does this by using the chamber functionality of ParmEd API.
-# 
-# Author: Robin Betz
-# 
-# Copyright (C) 2015 Robin Betz
-# 
+"""
+ This module contains the AmberWriter class and associated methods,
+ which outputs a prmtop/inpcrd file with CHARMM names and parameters
+ for use with simulation with the AMBER molecular dynamics package.
+ It does this by using the chamber functionality of ParmEd API.
+
+ Author: Robin Betz
+
+ Copyright (C) 2015 Robin Betz
+"""
+#
 # This program is free software; you can redistribute it and/or modify it under
 # the terms of the GNU Lesser General Public License as published by the Free
 # Software Foundation; either version 2 of the License, or (at your option) any
 # later version.
-# 
+#
 # This program is distributed in the hope that it will be useful, but WITHOUT ANY
 # WARRANTY; without even the implied warranty of MERCHANTABILITY or FITNESS FOR A
 # PARTICULAR PURPOSE.  See the GNU Lesser General Public License for more details.
-# 
+#
 # You should have received a copy of the GNU Lesser General Public License along
 # with this program; if not, write to the Free Software Foundation, Inc.,
 # 59 Temple Place - Suite 330
@@ -25,12 +27,14 @@ from __future__ import print_function
 import os
 import sys
 import tempfile
-from pkg_resources import resource_filename
 from subprocess import check_output
+from pkg_resources import resource_filename
 
+# pylint: disable=import-error, unused-import
 import vmd
 import molecule
 from atomsel import atomsel
+# pylint: enable=import-error, unused-import
 import networkx as nx
 
 from parmed.tools import chamber, parmout, HMassRepartition, checkValidity
@@ -60,6 +64,7 @@ class AmberWriter(object):
         self.tmp_dir = tmp_dir
         self.hmr = hmr
         self.extra_topos = extra_topos
+        self.prmtop_name = ""
         if forcefield not in ['amber', 'charmm']:
             raise ValueError("Unsupported forcefield: %s" % forcefield)
         self.forcefield = forcefield
@@ -78,12 +83,16 @@ class AmberWriter(object):
                 raise ValueError("AMBERHOME must be set to use AMBER forcefield!")
 
             self.topologies = [
-                os.path.join(os.environ["AMBERHOME"],"dat","leap","cmd","leaprc.protein.ff14SB"),
-                os.path.join(os.environ["AMBERHOME"],"dat","leap","cmd","leaprc.lipid14"),
-                os.path.join(os.environ["AMBERHOME"],"dat","leap","cmd","leaprc.lipid16"),
-                os.path.join(os.environ["AMBERHOME"],"dat","leap","cmd","leaprc.water.tip3p"),
-                os.path.join(os.environ["AMBERHOME"],"dat","leap","cmd","leaprc.gaff2"),
-               ]
+                "leaprc.protein.ff14SB",
+                "leaprc.lipid14",
+                "leaprc.lipid16",
+                "leaprc.water.tip3p",
+                "leaprc.gaff2",
+            ]
+            for i, top in enumerate(self.topologies):
+                self.topologies[i] = os.path.join(os.environ["AMBERHOME"],
+                                                  "dat", "leap", "cmd", top)
+
             self.parameters = []
             self.matcher = None
 
@@ -110,7 +119,7 @@ class AmberWriter(object):
 
         # Charmm forcefield
         if self.forcefield == 'charmm':
-            psfgen = CharmmWriter(molid=self.molid, 
+            psfgen = CharmmWriter(molid=self.molid,
                                   tmp_dir=self.tmp_dir,
                                   lipid_sel=self.lipid_sel,
                                   extra_topos=self.extra_topos,
@@ -160,7 +169,6 @@ class AmberWriter(object):
                 action.execute()
             except Exception as e:
                 print("   Had a problem: %s" % e)
-                pass # hack hack hack
 
             # Repartion hydrogen masses if requested
             if self.hmr:
@@ -176,7 +184,7 @@ class AmberWriter(object):
     #========================================================================#
     #                           Private methods                              #
     #========================================================================#
-    
+
     def _rename_atoms_amber(self):
         """
         Matches up atom names with those in the provided topologies and
@@ -203,13 +211,13 @@ class AmberWriter(object):
 
             residue = nonlips.pop()
             sel = atomsel("residue %s" % residue)
-            resnames, atomnames, atomtypes = self.matcher.get_names(sel, print_warning=False)
-            
+            resnames, atomnames = self.matcher.get_names(sel, print_warning=False)
+
             # Check if it's a linkage to another amino acid
             if not resnames:
                 print("\tCan't find simple match for: %s:%d" % (sel.get("resname")[0],
                                                                 sel.get("resid")[0]))
-                resnames, atomnames, atomtypes, other = self.matcher.get_linkage(sel, self.molid)
+                resnames, atomnames, other = self.matcher.get_linkage(sel, self.molid)
                 if not resnames:
                     rgraph = self.matcher.parse_vmd_graph(sel)[0]
                     nx.write_dot(rgraph, "rgraph.dot")
@@ -218,15 +226,16 @@ class AmberWriter(object):
                                                     sel.get("resid")[0]))
 
                 print("\tBonded residue: %s:%d -> %s" % (sel.get("resname")[0],
-                                                   sel.get("resid")[0], resnames.values()[0]))
+                                                         sel.get("resid")[0],
+                                                         resnames.values()[0]))
                 conect.add(other)
 
             # Do the renaming
-            self._apply_naming_dictionary(resnames, atomnames, atomtypes)
+            self._apply_naming_dictionary(resnames, atomnames)
 
         atomsel('all').set('user', 1.0)
         sys.stdout.write("\n")
-        return conect 
+        return conect
 
     #==========================================================================
 
@@ -312,11 +321,11 @@ class AmberWriter(object):
 
         molecule.set_top(self.molid)
         temp = tempfile.mkstemp(suffix='.pdb', prefix='amber_lipids_',
-                                 dir=self.tmp_dir)[1]
+                                dir=self.tmp_dir)[1]
         fileh = open(temp, 'w')
 
         # Check if it's a normal residue first in case cholesterol etc in
-        # the selection 
+        # the selection
         resid = 1
         idx = 1
         while lipid_res:
@@ -353,7 +362,7 @@ class AmberWriter(object):
                 # An atom index that's in the minus tail is given by get_lipid_head.
 
                 # First tail
-                firstdict = [_ for _ in taildicts if minusidx in _[0].keys()] 
+                firstdict = [_ for _ in taildicts if minusidx in _[0].keys()]
                 if len(firstdict) != 1:
                     raise ValueError("Error finding tails for lipid %s:%s" %
                                      (sel.get('resname')[0], sel.get('resid')[0]))
@@ -420,8 +429,8 @@ class AmberWriter(object):
         return idx
 
     #==========================================================================
-    
-    def _apply_naming_dictionary(self, resnames, atomnames, atomtypes):
+
+    def _apply_naming_dictionary(self, resnames, atomnames):
         """
         Applies the names from a matcher.
         """
@@ -429,17 +438,16 @@ class AmberWriter(object):
             atom = atomsel('index %s' % idx)
             if atom.get('name')[0] != name:
                 atom.set('name', name)
-            atom.set('type', atomtypes[idx])
             atom.set('resname', resnames[idx])
 
     #==========================================================================
 
     def _split_caps(self):
         """
-        Pulls out ACE and NMA caps, renumbers residues, and loads that 
+        Pulls out ACE and NMA caps, renumbers residues, and loads that
         renumbered molecule. Closes the old molecule and sets this as
         the top one.
-        
+
         Returns:
             (int): Molid of new molecule
         """
@@ -517,7 +525,7 @@ class AmberWriter(object):
             sel.set('user', 0.0)
             sel.set('resid', idx)
             sel.write('mol2', temp)
-            unit = self.matcher.get_unit(sel, molecule.get_top()) 
+            unit = self.matcher.get_unit(sel)
             mol2s[unit] = temp
             idx += 1
         return mol2s
@@ -538,10 +546,10 @@ class AmberWriter(object):
                                 dir=self.tmp_dir)[1]
         ionnames = [_ for _ in self.matcher.known_res.keys() if '+' in _ or '-' in _]
         ions = atomsel("resname NA CL %s and user 1.0" % ' '.join("'%s'" % _ for _ in ionnames))
-        ions.set('resid', range(1,len(ions)+1))
+        ions.set('resid', range(1, len(ions)+1))
         ions.write('pdb', temp)
         ions.set('user', 0.0)
-        written = [ temp ]
+        written = [temp]
 
         # Select all the unwritten waters, using the user field to track which
         # ones have been written.
@@ -562,13 +570,12 @@ class AmberWriter(object):
 
         # Pull out and write 10k waters at a time if we have normal waters
         if allw:
-            idx = 1
             for i in range(num_written):
                 temp = tempfile.mkstemp(suffix='_%d.pdb' % i, prefix='amber_wat_',
                                         dir=self.tmp_dir)[1]
                 written.append(temp)
                 residues = list(set(allw.get('residue')))[:9999]
-               
+
                 batch = atomsel('residue %s' % ' '.join([str(x) for x in residues]))
                 try:
                     batch.set('resid', [k for k in range(1, len(batch)/3+1)
@@ -587,7 +594,7 @@ class AmberWriter(object):
         if problems:
             written.append(self._write_unorderedindex_waters(problems))
 
-        return written 
+        return written
 
     #==========================================================================
 
@@ -606,20 +613,20 @@ class AmberWriter(object):
         """
         temp = tempfile.mkstemp(suffix='_indexed.pdb', prefix='amber_wat_',
                                 dir=self.tmp_dir)[1]
-        fileh = open(temp , 'w')
+        fileh = open(temp, 'w')
 
         idx = 1
-        for r in range(len(residues)):
-            res = atomsel('residue %d' % residues[r])
+        for residx, residue in enumerate(residues):
+            res = atomsel('residue %d' % residue)
             res.set('user', 0.0)
-            
+
             for i in res.get('index'):
                 a = atomsel('index %d' % i) # pylint: disable=invalid-name
                 entry = ('%-6s%5d %-5s%-4s%c%4d    %8.3f%8.3f%8.3f%6.2f%6.2f'
                          '     %-4s%2s\n' % ('ATOM', idx, a.get('name')[0],
                                              a.get('resname')[0],
                                              a.get('chain')[0],
-                                             r+1,
+                                             residx+1,
                                              a.get('x')[0],
                                              a.get('y')[0],
                                              a.get('z')[0],
@@ -630,13 +637,13 @@ class AmberWriter(object):
 
         fileh.write('END\n')
         fileh.close()
-        return temp 
+        return temp
 
     #==========================================================================
 
     def _write_protein(self):
         """
-        Writes the protein chain to a pdb file. Writes each fragment to a 
+        Writes the protein chain to a pdb file. Writes each fragment to a
         separate file. This is somewhat inelegant but necessary in order to
         have disulfide bonds between different fragments have sane residue
         numbering in leap.
@@ -657,7 +664,7 @@ class AmberWriter(object):
             for i, frag in enumerate(set(psel.get('fragment'))):
                 idx = 1
 
-                for resid in sorted(set(atomsel("fragment %s" 
+                for resid in sorted(set(atomsel("fragment %s"
                                                 % frag).get('resid'))):
                     sel = atomsel("fragment %s and resid %s and "
                                   "user 1.0" % (frag, resid))
@@ -667,8 +674,6 @@ class AmberWriter(object):
                 fileh.write("TER\n")
             fileh.write("END\n")
             fileh.close()
-
-        atomsel("fragment %s" % frag).set("segid", "0") # FIX FIX
 
         return (temp, " ".join(resseq))
 
@@ -723,14 +728,14 @@ class AmberWriter(object):
             fileh.write('\n')
 
             pdbs = [_ for _ in pdbs if _ is not None]
-            for i in range(len(pdbs)):
-                if "pdb" in pdbs[i]:
-                    fileh.write("p%s = loadpdb %s\n" % (i, pdbs[i]))
-                elif "mol2" in pdbs[i]:
-                    fileh.write("p%s = loadmol2 %s\n" % (i, pdbs[i]))
+            for i, pdb in enumerate(pdbs):
+                if "pdb" in pdb:
+                    fileh.write("p%s = loadpdb %s\n" % (i, pdb))
+                elif "mol2" in pdb:
+                    fileh.write("p%s = loadmol2 %s\n" % (i, pdb))
                 else:
                     raise ValueError("Unknown coordinate type: %s"
-                                     % pdbs[i])
+                                     % pdb)
 
             for unit, f in ligfiles.iteritems():
                 if "pdb" in f:
@@ -743,7 +748,7 @@ class AmberWriter(object):
             # Add off files here since they need to be stated after
             # ligands are read in
             for i in [_ for _ in self.topologies + self.parameters if ".off" in _]:
-                fileh.write("loadoff %s\n" %i )
+                fileh.write("loadoff %s\n" %i)
 
             fileh.write("pp = loadpdbusingseq %s { %s }\n" % prot_pdbseq)
 
@@ -758,21 +763,22 @@ class AmberWriter(object):
                 other = other[0]
                 s2 = atomsel("index %d" % other)
                 conect.remove(other)
-                atomsel("same residue as index %d %d" % (other, idx)).write('mol2', '%d.mol2' % other)
-                
+                atomsel("same residue as index %d %d"
+                        % (other, idx)).write('mol2', '%d.mol2' % other)
+
                 fileh.write("bond pp.{0}.{1} pp.{2}.{3}\n".format(
-                            s1.get('resid')[0], s1.get('name')[0],
-                            s2.get('resid')[0], s2.get('name')[0]))
+                    s1.get('resid')[0], s1.get('name')[0],
+                    s2.get('resid')[0], s2.get('name')[0]))
 
             fileh.write("\np = combine { pp %s }\n"
-                         % ' '.join(["p%d"%i for i in range(len(pdbs))]))
+                        % ' '.join(["p%d"%i for i in range(len(pdbs))]))
             if ligfiles.keys():
                 fileh.write("p = combine { p %s }\n" % ' '.join(ligfiles.keys()))
             #fileh.write("p = combine { p %s }\n"
             #             % ' '.join(["pp%d" % i for i in range(len(prot_pdbseq))]))
             fileh.write("setbox p centers 0.0\n")
             fileh.write("saveamberparm p %s.prmtop %s.inpcrd\n"
-                         % (outfile, outfile))
+                        % (outfile, outfile))
             fileh.write("quit\n")
             fileh.close()
 
@@ -789,7 +795,7 @@ class AmberWriter(object):
         except:
             print("Call to tleap failed! Output was:\n%s" % out)
             quit(1)
-        
+
         return outfile
 
     #==========================================================================
@@ -803,7 +809,7 @@ class AmberWriter(object):
 
         new_topos = []
         for t in self.topologies:
-            if "leaprc" not in t: 
+            if "leaprc" not in t:
                 new_topos.append(t)
                 continue
 

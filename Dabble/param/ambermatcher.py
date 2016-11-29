@@ -1,38 +1,39 @@
-# This module contains the AmberMatcher class. It is used to apply
-# atom names from known topologies to the molecule by using a graph-based
-# representation of each molecule.
-# 
-# Author: Robin Betz
-# 
-# Copyright (C) 2015 Robin Betz
-# 
+"""
+ This module contains the AmberMatcher class. It is used to apply
+ atom names from known topologies to the molecule by using a graph-based
+ representation of each molecule.
+
+ Author: Robin Betz
+
+ Copyright (C) 2015 Robin Betz
+"""
+#
 # This program is free software; you can redistribute it and/or modify it under
 # the terms of the GNU Lesser General Public License as published by the Free
 # Software Foundation; either version 2 of the License, or (at your option) any
 # later version.
-# 
+#
 # This program is distributed in the hope that it will be useful, but WITHOUT ANY
 # WARRANTY; without even the implied warranty of MERCHANTABILITY or FITNESS FOR A
 # PARTICULAR PURPOSE.  See the GNU Lesser General Public License for more details.
-# 
+#
 # You should have received a copy of the GNU Lesser General Public License along
 # with this program; if not, write to the Free Software Foundation, Inc.,
 # 59 Temple Place - Suite 330
 # Boston, MA 02111-1307, USA.
 
 from __future__ import print_function
-import logging, os
-from itertools import product
-
+import os
+import logging
 import networkx as nx
+
 from networkx.algorithms import isomorphism
+from pkg_resources import resource_filename
+
 # pylint: disable=import-error, unused-import
 import vmd
 from atomsel import atomsel
 # pylint: enable=import-error, unused-import
-
-from parmed.periodic_table import AtomicNum
-from pkg_resources import resource_filename
 
 from . import MoleculeMatcher
 logger = logging.getLogger(__name__) # pylint: disable=invalid-name
@@ -60,7 +61,7 @@ class AmberMatcher(MoleculeMatcher):
         as known molecules
         """
 
-        # Parent calls parse topologies 
+        # Parent calls parse topologies
         super(AmberMatcher, self).__init__(topologies=topologies)
 
         # Add the water without TIP3 bond
@@ -110,7 +111,6 @@ class AmberMatcher(MoleculeMatcher):
         Returns:
             (dict int->str) Atom index to resname matched
             (dict int->str) Atom index to atom name matched up
-            (dict int->str) Atom index to atom type matched up
 
         Raises:
             KeyError: if no matching possible
@@ -139,7 +139,7 @@ class AmberMatcher(MoleculeMatcher):
                     matched = True
                     match = matcher.match().next()
                     break
-   
+
         # Only return within-residue atom naming dictionary (no _join)
         if matched:
             nammatch = dict((i, graph.node[match[i]].get("atomname")) \
@@ -148,11 +148,8 @@ class AmberMatcher(MoleculeMatcher):
             resmatch = dict((i, graph.node[match[i]].get("resname")) \
                             for i in match.keys() if \
                             graph.node[match[i]].get("residue") == "self")
-            typmatch = dict((i, graph.node[match[i]].get("type")) \
-                            for i in match.keys() if \
-                            graph.node[match[i]].get("residue") == "self")
 
-            return (resmatch, nammatch, typmatch)
+            return (resmatch, nammatch)
 
         # Try to print out a helpful error message here if matching failed
         if print_warning:
@@ -168,16 +165,16 @@ class AmberMatcher(MoleculeMatcher):
                 print("      I couldn't find any residues with that name. Did you "
                       "forget to provide a topology file?")
 
-        return (None, None, None)
+        return (None, None)
 
     #=========================================================================
 
-    def get_unit(self, selection, molid):
+    def get_unit(self, selection):
         """
         Gets the UNIT name corresponding to a selection. Helpful when matching
         ligands that may have a residue name different from unit name since
         the average user doesn't know what a unit name is when creating a library.
-        This isn't as efficient as it could be because it is called 
+        This isn't as efficient as it could be because it is called
         infrequently, on ligands only.
 
         Args:
@@ -185,11 +182,9 @@ class AmberMatcher(MoleculeMatcher):
             molid (int): VMD molecule ID to look in
 
         Returns:
-            (str) The unit name, or None if there was no match 
+            (str) The unit name, or None if there was no match
         """
-        resname = selection.get('resname')[0]
         rgraph = self.parse_vmd_graph(selection)[0]
-        matched = False
 
         for matchname in self.known_res.keys():
             graph = self.known_res[matchname]
@@ -215,7 +210,6 @@ class AmberMatcher(MoleculeMatcher):
         Returns:
             resnames (dict int -> str) Residue name translation dictionary
             atomnames (dict int -> str) Atom name translation dictionary
-            typnames (dict int -> str): Atom type translation dictionary
             conect (str) Leap patch line to apply for this linkage
         """
         # Sanity check selection corresponds to one resid
@@ -224,7 +218,7 @@ class AmberMatcher(MoleculeMatcher):
             raise ValueError("Multiple resids in selection: %s" % resids)
 
         # Get externally bonded atoms
-        rgraph, dump = self.parse_vmd_graph(selection)
+        rgraph, _ = self.parse_vmd_graph(selection)
         externs = [n for n in rgraph.nodes() if \
                    rgraph.node[n]["residue"] != "self"]
 
@@ -241,26 +235,13 @@ class AmberMatcher(MoleculeMatcher):
             graph = self.known_res.get(names).copy()
             graph.remove_nodes_from([i for i in graph.nodes()
                                      if graph.node[i].get("residue") != "self"])
-            #if not graph:
-            #    continue
-            matcher = isomorphism.GraphMatcher(noext, graph,
-                        node_match=super(AmberMatcher,self)._check_atom_match)
-            #if matcher.subgraph_is_isomorphic():
-            #     matches[names] = matcher.match()
 
-            if names == "GLYP":
-                nx.write_dot(graph, "glyp_noext.dot")
-                nx.write_dot(self.known_res["GLYP"], "glyp.dot")
+            matcher = isomorphism.GraphMatcher(noext, graph, \
+                        node_match=super(AmberMatcher, self)._check_atom_match)
+
             if matcher.is_isomorphic():
                 matches[names] = matcher.match()
 
-                #mapping = matcher.match().next()
-                #matchname = names
-                #break
-            #    nx.write_dot(noext, "rgraph.dot")
-            #    quit(1)
-            #    break
-       
         if not matches:
             nx.write_dot(noext, "noext.dot")
             return (None, None, None, None)
@@ -269,34 +250,29 @@ class AmberMatcher(MoleculeMatcher):
         matchname = min(matches.keys(),
                         key=lambda x: len(self.known_res[x])-len(noext))
         # Invert mapping so it's idx-> name. It's backwards b/c of subgraph
-        mapping = dict((k,v) for (k,v) in matches[matchname].next().iteritems())
-        graph = self.known_res.get(matchname) 
+
+        mapping = matches[matchname].next()
+        graph = self.known_res.get(matchname)
 
         # Generate naming dictionaries to return
-        nammatch = dict ((i, graph.node[mapping[i]].get("atomname")) \
+        nammatch = dict((i, graph.node[mapping[i]].get("atomname")) \
                          for i in mapping.keys() if \
                          graph.node[mapping[i]].get("residue") == "self")
         resmatch = dict((i, graph.node[mapping[i]].get("resname")) \
-                        for i in mapping.keys() if \
-                        graph.node[mapping[i]].get("residue") == "self")
-        typmatch = dict((i, graph.node[mapping[i]].get("type")) \
                         for i in mapping.keys() if \
                         graph.node[mapping[i]].get("residue") == "self")
 
         # Find resid and fragment for other molecule
         partners = []
         resid = selection.get("resid")[0]
-        for n in externs:
-            rid = atomsel("index %d" % n, molid=molid).get("resid")[0]
+        for num in externs:
+            rid = atomsel("index %d" % num, molid=molid).get("resid")[0]
             if rid != resid+1 and rid != resid-1:
-                partners.append(n)
+                partners.append(num)
         if len(partners) != 1:
             return (None, None, None, None)
-            #raise ValueError("Don't know what to do with resid %d, "
-            #                 "it has %s possible covalent linkers"
-            #                 % (resid, partners))
 
-        return (resmatch, nammatch, typmatch, partners[0])
+        return (resmatch, nammatch, partners[0])
 
     #=========================================================================
 
@@ -313,9 +289,9 @@ class AmberMatcher(MoleculeMatcher):
         Returns:
             resnames (dict int -> str) Residue name translation dictionary
             atomnames (dict int -> str) Atom name translation dictionary
-            conect (int) Residue this one is connected to 
+            conect (int) Residue this one is connected to
        """
-        (rgraph, dump) = self.parse_vmd_graph(selection)
+        rgraph, _ = self.parse_vmd_graph(selection)
 
         # Sanity check
         if not self.known_res.get("CYX"):
@@ -333,7 +309,7 @@ class AmberMatcher(MoleculeMatcher):
         matcher = isomorphism.GraphMatcher(rgraph, graph, \
                                            node_match=self._check_atom_match)
         if matcher.subgraph_is_isomorphic():
-           match = matcher.match().next()
+            match = matcher.match().next()
         else:
             return (None, None, None)
 
@@ -363,7 +339,7 @@ class AmberMatcher(MoleculeMatcher):
     def get_lipid_head(self, selection):
         """
         Obtains a name mapping for a lipid head group given a selection
-        describing a possible lipid. 
+        describing a possible lipid.
 
         Args:
             selection (VMD atomsel): Selection to set names for
@@ -379,7 +355,6 @@ class AmberMatcher(MoleculeMatcher):
 
         resname = selection.get('resname')[0]
         rgraph = self.parse_vmd_graph(selection)[0]
-        matched = False
 
         # Check if a lipid head group is part of this selection.
         # Remove _join residues from the head so that subgraph match can
@@ -393,7 +368,7 @@ class AmberMatcher(MoleculeMatcher):
             matcher = isomorphism.GraphMatcher(rgraph, truncated,
                                                node_match=self._check_atom_match)
             if matcher.subgraph_is_isomorphic():
-               matches[matchname] = matcher.match().next()
+                matches[matchname] = matcher.match().next()
 
         if not matches:
             return (None, None, None)
@@ -450,12 +425,12 @@ class AmberMatcher(MoleculeMatcher):
         resname = selection.get('resname')[0]
         rgraph = self.parse_vmd_graph(selection)[0]
         rgraph.remove_nodes_from(head)
-        
+
         if nx.number_connected_components(rgraph) != 2:
             raise ValueError("Incorrect number of tails attached to %s:%s!" %
                              (resname, selection.get('resid')[0]))
 
-        taildicts = []                        
+        taildicts = []
         for tgraph in nx.connected_component_subgraphs(rgraph, copy=True):
             matched = False
             for matchname in (_ for _ in self.lipid_tails if \
@@ -516,8 +491,8 @@ class AmberMatcher(MoleculeMatcher):
         leapdir = os.path.join(os.environ["AMBERHOME"], "dat", "leap")
 
         incmd = ""
-        with open(filename, 'r') as fh:
-            for line in fh:
+        with open(filename, 'r') as fileh:
+            for line in fileh:
                 if "#" in line:
                     line = line[:line.index("#")]
                 if not len(line):
@@ -525,7 +500,7 @@ class AmberMatcher(MoleculeMatcher):
                 tokens = [i.strip(" \t'\"\n") for i in line.split()]
                 if not len(tokens):
                     continue
-                
+
                 # addAtomTypes adds more atoms
                 if not incmd and tokens[0].lower() == "addatomtypes":
                     incmd = "addatomtypes"
@@ -539,7 +514,7 @@ class AmberMatcher(MoleculeMatcher):
                         raise ValueError("Malformed line in %s: %s"
                                          % (filename, line))
                     if not tokens[2]:
-                        logger.warning("Ignoring pseudoatom %s" % tokens[1])
+                        logger.warning("Ignoring pseudoatom %s", tokens[1])
                         continue
 
                     if tokens[2] not in self.MASS_LOOKUP.values() and \
@@ -603,24 +578,24 @@ class AmberMatcher(MoleculeMatcher):
         """
         incmd = ""
 
-        with open(filename, 'r') as fh:
-            for line in fh:
+        with open(filename, 'r') as fileh:
+            for line in fileh:
                 if not len(line):
                     continue
                 tokens = [i.strip(" \t\"\n") for i in line.split()]
                 if not len(tokens) or not len(tokens[0]):
                     continue
-                
+
                 # Find the MASS lines
                 if len(tokens) == 1:
                     incmd = tokens[0].lower()
-                elif incmd == "mass": 
+                elif incmd == "mass":
                     if "+" in tokens[0] or "-" in tokens[0]:
                         unit = tokens[0]
                         if not self.known_res.get(unit):
                             self.known_res[unit] = nx.Graph()
                         graph = self.known_res[unit]
-                       
+
                         element = self.nodenames.get(tokens[0], "Other")
                         graph.add_node("1", type=tokens[0],
                                        element=element,
@@ -649,8 +624,8 @@ class AmberMatcher(MoleculeMatcher):
         incmd = ""
         cmdidx = 1
 
-        with open(filename, 'r') as fh:
-            for line in fh:
+        with open(filename, 'r') as fileh:
+            for line in fileh:
                 if not len(line):
                     continue
                 tokens = [i.strip(" \t\"\n") for i in line.split()]
@@ -698,7 +673,7 @@ class AmberMatcher(MoleculeMatcher):
                     node1 = graph.node.get(tokens[0])
                     node2 = graph.node.get(tokens[1])
                     if not node1 or not node2:
-                        print(node1,node2)
+                        print(node1, node2)
                         print(graph.node.keys())
                         raise ValueError("Can't parse bond for unit %s, file %s\n"
                                          "Line was: %s" % (unit, filename, line))
@@ -716,15 +691,15 @@ class AmberMatcher(MoleculeMatcher):
                                    element="_join")
                     if not graph.node.get(tokens[0]):
                         raise ValueError("Can't parse extra residue bond for "
-                                         "unit %s, file %s\nLine was: %s" 
+                                         "unit %s, file %s\nLine was: %s"
                                          % (unit, filename, line))
                     graph.add_edge(node1, tokens[0])
 
                 elif incmd == "name":
-                    for n in (n for n in graph.nodes() if \
+                    for nod in (n for n in graph.nodes() if \
                               graph.node[n].get("residue") == tokens[1]):
-                        graph.node[n]["resname"] = tokens[0]
-                        graph.node[n]["residue"] = "self"
+                        graph.node[nod]["resname"] = tokens[0]
+                        graph.node[nod]["residue"] = "self"
 
                 cmdidx += 1
 

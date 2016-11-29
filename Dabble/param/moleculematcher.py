@@ -1,25 +1,26 @@
-# This module contains the MoleculeMatcher class. It is used to apply
-# atom names from known topologies to the molecule by using a graph-based
-# representation of each molecule.
-# 
-# Author: Robin Betz
-# 
-# Copyright (C) 2015 Robin Betz
-# 
+"""
+This module contains the MoleculeMatcher class. It is used to apply
+atom names from known topologies to the molecule by using a graph-based
+representation of each molecule.
+
+Author: Robin Betz
+
+Copyright (C) 2015 Robin Betz
+"""
+
 # This program is free software; you can redistribute it and/or modify it under
 # the terms of the GNU Lesser General Public License as published by the Free
 # Software Foundation; either version 2 of the License, or (at your option) any
 # later version.
-# 
+#
 # This program is distributed in the hope that it will be useful, but WITHOUT ANY
 # WARRANTY; without even the implied warranty of MERCHANTABILITY or FITNESS FOR A
 # PARTICULAR PURPOSE.  See the GNU Lesser General Public License for more details.
-# 
+#
 # You should have received a copy of the GNU Lesser General Public License along
 # with this program; if not, write to the Free Software Foundation, Inc.,
 # 59 Temple Place - Suite 330
 # Boston, MA 02111-1307, USA.
-
 
 from __future__ import print_function
 import abc
@@ -87,7 +88,7 @@ class MoleculeMatcher(object): # pylint: disable=too-few-public-methods
 
         Args:
             topologies (list of str): Topologies to initialize
-            matcher (MoleculeMatcher): 
+            matcher (MoleculeMatcher):
                 Copy constructor that can be used to convert between classes.
                 For example, can create an AmberMatcher using the known_res and
                 nodenames from CharmmMatcher, then write amber off files with it
@@ -103,7 +104,7 @@ class MoleculeMatcher(object): # pylint: disable=too-few-public-methods
                 self._parse_topology(filename)
 
         elif kwargs.get("matcher"):
-            assert(isinstance(matcher, MoleculeMatcher))
+            assert isinstance(matcher, MoleculeMatcher)
             self.known_res = matcher.known_res
             self.nodenames = matcher.nodenames
         else:
@@ -151,7 +152,7 @@ class MoleculeMatcher(object): # pylint: disable=too-few-public-methods
 
             if matcher.is_isomorphic():
                 match = matcher.match().next()
-                resmatch = dict((i,graph.node[match[i]].get("resname")) \
+                resmatch = dict((i, graph.node[match[i]].get("resname")) \
                                 for i in match.keys())
                 return (resmatch, match)
 

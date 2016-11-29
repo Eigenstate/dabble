@@ -1,34 +1,32 @@
-# This module contains the CharmmWriter class and associated methods,
-# which outputs a psf/pdb file with CHARMM names and parameters.
-# It does this by converting atom names to CHARMM names, writing
-# intermediate files as necessary to invoke the vmd psfgen plugin.
-# 
-# Author: Robin Betz
-# 
-# Copyright (C) 2015 Robin Betz
-# 
+"""
+This module contains the CharmmWriter class and associated methods,
+which outputs a psf/pdb file with CHARMM names and parameters.
+It does this by converting atom names to CHARMM names, writing
+intermediate files as necessary to invoke the vmd psfgen plugin.
+
+Author: Robin Betz
+
+Copyright (C) 2015 Robin Betz
+"""
+
 # This program is free software; you can redistribute it and/or modify it under
 # the terms of the GNU Lesser General Public License as published by the Free
 # Software Foundation; either version 2 of the License, or (at your option) any
 # later version.
-# 
+#
 # This program is distributed in the hope that it will be useful, but WITHOUT ANY
 # WARRANTY; without even the implied warranty of MERCHANTABILITY or FITNESS FOR A
 # PARTICULAR PURPOSE.  See the GNU Lesser General Public License for more details.
-# 
+#
 # You should have received a copy of the GNU Lesser General Public License along
 # with this program; if not, write to the Free Software Foundation, Inc.,
 # 59 Temple Place - Suite 330
 # Boston, MA 02111-1307, USA.
 
-
 from __future__ import print_function
-import sys
 import os
 import tempfile
 from pkg_resources import resource_filename
-
-from Dabble.param import CharmmMatcher
 
 # pylint: disable=import-error, unused-import
 import vmd
@@ -36,6 +34,8 @@ import molecule
 from atomsel import atomsel
 from VMD import evaltcl
 # pylint: enable=import-error, unused-import
+
+from Dabble.param import CharmmMatcher
 
 #++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
 #                                CONSTANTS                                    #
@@ -94,20 +94,26 @@ class CharmmWriter(object):
             self.topologies = []
         else:
             self.topologies = [
-                resource_filename(__name__, "charmm_parameters/top_all36_caps.rtf"),
-                resource_filename(__name__, "charmm_parameters/top_water_ions.rtf"),
-                resource_filename(__name__, "charmm_parameters/top_all36_cgenff.rtf"),
-                resource_filename(__name__, "charmm_parameters/top_all36_prot.rtf"),
-                resource_filename(__name__, "charmm_parameters/top_all36_lipid.rtf"),
-                resource_filename(__name__, "charmm_parameters/top_all36_carb.rtf"),
-                resource_filename(__name__, "charmm_parameters/top_all36_na.rtf"),
-                resource_filename(__name__, "charmm_parameters/toppar_all36_prot_na_combined.str"),
-                resource_filename(__name__, "charmm_parameters/toppar_all36_prot_fluoro_alkanes.str"),
-                ]
+                "top_all36_caps.rtf",
+                "top_water_ions.rtf",
+                "top_all36_cgenff.rtf",
+                "top_all36_prot.rtf",
+                "top_all36_lipid.rtf",
+                "top_all36_carb.rtf",
+                "top_all36_na.rtf",
+                "toppar_all36_prot_na_combined.str",
+                "toppar_all36_prot_fluoro_alkanes.str",
+            ]
+            for i, top in enumerate(self.topologies):
+                self.topologies[i] = resource_filename(__name__,
+                                                       os.path.join("charmm_parameters",
+                                                                    top))
 
         if extra_topos:
             self.topologies.extend(extra_topos)
-        self.prompt_topos = False
+
+        # Initialize graph matcher with topologies we know about
+        self.matcher = CharmmMatcher(self.topologies)
 
     #=========================================================================
 
@@ -146,35 +152,16 @@ class CharmmWriter(object):
         old_top = molecule.get_top()
         molecule.set_top(self.molid)
 
-        # Ask the user for additional topology files
-        if self.prompt_topos:
-            sys.stdout.flush()
-            print("\nCurrently using the following topology files:")
-            for top in self.topologies:
-                print("  - %s" % top.split("/")[-1])
-
-            print("Enter the path to the filename(s) from the current working "
-                  "directory, separated by a comma, of any additional rtf or str files "
-                  "you wish to use.\n")
-            sys.stdout.flush()
-            inp = raw_input('> ')
-            if inp:
-                self.topologies.extend(inp.split(','))
-        else:
-            print("Using the following topologies:")
-            for top in self.topologies:
-                print("  - %s" % top.split("/")[-1])
-
+        # Print out topology files
         self.file.write('\n')
+        print("Using the following topologies:")
         for top in self.topologies:
+            print("  - %s" % top.split("/")[-1])
             self.file.write('   topology %s\n' % top)
-
-        # Initialize graph matcher with topologies we know about
-        self.matcher = CharmmMatcher(self.topologies)
 
         # Mark all atoms as unsaved with the user field
         atomsel('all', molid=self.molid).set('user', 1.0)
-        self._check_atom_names(molid=self.molid)
+        check_atom_names(molid=self.molid)
 
         # Now ions if present, changing the atom names
         if len(atomsel('element Na Cl K', molid=self.molid)) > 0:
@@ -261,12 +248,11 @@ class CharmmWriter(object):
 
         # Pull out and write 10k waters at a time if we have normal waters
         if allw:
-            idx = 1
             for i in range(num_written):
                 temp = tempfile.mkstemp(suffix='_%d.pdb' % i, prefix='psf_wat_',
                                         dir=self.tmp_dir)[1]
                 residues = list(set(allw.get('residue')))[:9999]
-               
+
                 batch = atomsel('residue %s' % ' '.join([str(x) for x in residues]))
                 try:
                     batch.set('resid', [k for k in range(1, len(batch)/3+1)
@@ -321,19 +307,19 @@ class CharmmWriter(object):
         """
         temp = tempfile.mkstemp(suffix='_indexed.pdb', prefix='psf_wat_',
                                 dir=self.tmp_dir)[1]
-        fileh = open(temp , 'w')
+        fileh = open(temp, 'w')
 
         idx = 1
-        for r in range(len(residues)):
-            res = atomsel('residue %d' % residues[r], molid=molid)
-            
+        for ridx, residue in enumerate(residues):
+            res = atomsel('residue %d' % residue, molid=molid)
+
             for i in res.get('index'):
                 a = atomsel('index %d' % i, molid) # pylint: disable=invalid-name
                 entry = ('%-6s%5d %-5s%-4s%c%4d    %8.3f%8.3f%8.3f%6.2f%6.2f'
                          '     %-4s%2s\n' % ('ATOM', idx, a.get('name')[0],
                                              a.get('resname')[0],
                                              a.get('chain')[0],
-                                             r+1,
+                                             ridx+1,
                                              a.get('x')[0],
                                              a.get('y')[0],
                                              a.get('z')[0],
@@ -513,7 +499,7 @@ class CharmmWriter(object):
                                       % (resname, chain)).get('resid')))
             if len(residues) != len(resids):
                 raise ValueError("VMD found %d residues for resname '%s', but there "
-                                 "are %d resids! Check input." % (len(residues), resname, 
+                                 "are %d resids! Check input." % (len(residues), resname,
                                                                   len(resids)))
 
         for residue in residues:
@@ -526,7 +512,7 @@ class CharmmWriter(object):
                           % (resname, residue))
                     raise NotImplementedError("No residue definition for %s:%s"
                                               % (resname, residue))
-                print("\tApplying patch %s to ligand %s" % (patch, name))
+                print("\tApplying patch %s to ligand %s" % (patch, newname))
 
             # Do the renaming
             for idx, name in atomnames.iteritems():
@@ -613,13 +599,12 @@ class CharmmWriter(object):
         # Sanity check that there is no discrepancy between defined resids and
         # residues as interpreted by VMD.
         residues = list(set(atomsel('all').get('residue')))
-        resids = list(set(atomsel('all').get('resid')))
 
         for residue in residues:
             sel = atomsel('residue %s' % residue)
             resid = sel.get('resid')[0]
             (newname, atomnames) = self.matcher.get_names(sel,
-                                                           print_warning=False)
+                                                          print_warning=False)
 
             # Couldn't find a match. See if it's a disulfide bond participant
             # Need to do this selection by resid, not residue since it is
@@ -652,8 +637,8 @@ class CharmmWriter(object):
             sel.set('resname', newname)
 
         # Save protein chain in the correct order
-        filename = self.tmp_dir + '/psf_protein_%s.pdb' % seg 
-        self._write_ordered_pdb(filename, 'all', prot_molid)
+        filename = self.tmp_dir + '/psf_protein_%s.pdb' % seg
+        _write_ordered_pdb(filename, 'all', prot_molid)
         print("\tWrote %d atoms to the protein segment %s"
               % (len(atomsel('all')), seg))
 
@@ -692,7 +677,7 @@ class CharmmWriter(object):
         so that ACE and NMA caps appear to be different residues to VMD.
         This is necessary so that they don't appear as patches. Proteins with
         non standard capping groups will have the patches applied.
-        
+
         Args:
             fragment (int): Fragment to consider
             molid (int): VMD molecule ID of entire system
@@ -753,99 +738,6 @@ class CharmmWriter(object):
 
     #==========================================================================
 
-    def _write_ordered_pdb(self, filename, sel, molid):
-        """
-        Writes a pdb file in order of residues, renumbering the atoms
-        accordingly, since psfgen wants each residue sequentially while
-        VMD will write them in the same order as input, which from Maestro
-        created files has some guessed atoms at the end.
-
-        Args:
-          filename (str): Name of the pdb file to write
-          sel (str): VMD atomsel string for atoms that will be written
-          molid (int): VMD molecule ID to write from
-        """
-        old_top = molecule.get_top()
-        molecule.set_top(molid)
-
-        fileh = open(filename, 'w')
-        # Use resids since order can be wrong when sorting by residue
-        # Then, use residue to pull out each one since it is much much
-        # faster then trying to pull out residues
-        resids = set(atomsel(sel).get('resid'))
-
-        # Add additional residue constraint to selection since pulling out
-        # by resid can match something in a different chain
-        resstr = ' '.join([str(x) for x in set(atomsel(sel).get('residue'))])
-
-        idx = 1
-        # For renumbering capping groups
-        for resid in sorted(resids):
-            rid = atomsel('resid %d and residue %s'
-                          % (resid,resstr)).get('residue')[0]
-#            names = set(atomsel('residue %d'% rid).get('resname'))
-#            assert len(names) < 3, ("More than 2 residues with same number... "
-#                                    "currently unhandled. Report a bug")
-#
-#            if len(names) > 1:
-#                if 'ACE' in names and 'NMA' in names:
-#                    print("ERROR: Both ACE and NMA were given the same resid"
-#                          "Check your input structure")
-#                    quit(1)
-#
-#                if 'ACE' in names:
-#                    # Set ACE residue number as one less
-#                    resid = atomsel('residue %d and not resname ACE' % rid).get('resid')[0]
-#                    if len(atomsel('(%s) and resid %d' % (sel, resid-1))):
-#                        raise ValueError('ACE resid collision number %d' % resid-1)
-#                    atomsel('residue %d and resname ACE'
-#                            % rid).set('resid', resid-1)
-#
-#                    # Handle all of the ACE atoms before the others
-#                    atoms = atomsel('residue %d and resname ACE'
-#                                    % rid).get('index')
-#                    atoms.extend(atomsel('residue %d and not resname ACE'
-#                                         % rid).get('index'))
-#
-#                elif 'NMA' in names:
-#                    # Set NMA residue number as one more
-#                    resid = atomsel('residue %d and not resname NMA' % rid).get('resid')[0]
-#                    if len(atomsel('(%s) and resid %d' % (sel, resid+1))):
-#                        raise ValueError('NMA resid collision number %d' % resid+1)
-#
-#                    atomsel('residue %d and resname NMA'
-#                            % rid).set('resid', resid+1)
-#                    # Handle all the NMA atoms after the others
-#                    atoms = atomsel('residue %d and not resname NMA'
-#                                    % rid).get('index')
-#                    atoms.extend(atomsel('residue %d and resname NMA'
-#                                         % rid).get('index'))
-#
-#            else:
-#                atoms = atomsel('residue %d' % rid).get('index')
-
-            for i in atomsel('residue %d' % rid).get('index'):
-                a = atomsel('index %d' % i) # pylint: disable=invalid-name
-                entry = ('%-6s%5d %-5s%-4s%c%4d    %8.3f%8.3f%8.3f%6.2f%6.2f'
-                         '     %-4s%2s\n' % ('ATOM', idx, a.get('name')[0],
-                                             a.get('resname')[0],
-                                             a.get('chain')[0],
-                                             a.get('resid')[0],
-                                             a.get('x')[0],
-                                             a.get('y')[0],
-                                             a.get('z')[0],
-                                             0.0, 0.0, a.get('segname')[0],
-                                             a.get('element')[0]))
-                idx += 1
-                fileh.write(entry)
-        fileh.write('END\n')
-        atomsel(sel).set('user', 0.0) # Mark as written
-        fileh.close()
-        molecule.set_top(old_top)
-
-
-    #==========================================================================
-
     def _check_psf_output(self):
         """
         Scans the output psf from psfgen for atoms where the coordinate
@@ -869,7 +761,7 @@ class CharmmWriter(object):
             print("\nERROR: Couldn't find the following atoms.")
             for i in range(len(errors)):
                 print("  %s%s:%s" % (errors.get("resname")[i], errors.get("resid")[i],
-                                   errors.get("name")[i]))
+                                     errors.get("name")[i]))
 
             print("Check if they are present in the original structure.\n"
                   "If they are, check dabble name translation or file a "
@@ -879,36 +771,6 @@ class CharmmWriter(object):
             print("\nChecked output pdb/psf has all atoms present "
                   "and correct.\n")
 
-
-    #==========================================================================
-
-    def _get_atoms_from_rtf(self, text, resname):
-        """
-        Scans the input text for the residue with a given name. Once found,
-        pulls out all the atom names that comprise that residue.
-
-        Args:
-          text (str): Contents of an rtf file to scan
-          resname (str): Residue to look for
-
-        Returns:
-          atoms (set of str): Atom names in this residue, or the empyty set if
-              the residue was not found.
-        """
-        atoms = []
-        found = False
-        for i in range(len(text)):
-            words = text[i].split()
-            if not len(words):
-                continue
-            if not found and words[0] == 'RESI' \
-               and words[1] == resname:
-                found = True
-            elif found and words[0] == 'ATOM':
-                atoms.append(words[1])
-            elif found and words[0] == 'RESI':
-                break
-        return set(atoms)
 
     #==========================================================================
 
@@ -934,8 +796,8 @@ class CharmmWriter(object):
         print("Finding residue name '%s'" % resname)
         for top in self.topologies:
             topfile = open(top, 'r')
-            topo_atoms = self._get_atoms_from_rtf(text=topfile.readlines(),
-                                                  resname=resname)
+            topo_atoms = _get_atoms_from_rtf(text=topfile.readlines(),
+                                             resname=resname)
             # Use first definition found of this residue
             if len(topo_atoms):
                 break
@@ -1010,26 +872,6 @@ class CharmmWriter(object):
 
     #==========================================================================
 
-    def _get_bonded_atoms(self, molid, index):
-        """
-        Returns the element of all atoms bonded to the current atom.
-
-        Args:
-           molid (int): VMD molecule ID to consider
-           index (int): Atom index to look at bonded atoms
-
-        Returns:
-          (list of str) elements of atoms bound to the current atom
-        """
-
-        asel = atomsel('index %d' % index, molid=molid)
-        bound = []
-        for atom in asel.bonds[0]:
-            bound.append(atomsel('index %d' % atom).get('element')[0])
-        return bound
-
-    #==========================================================================
-
     def _get_patch(self, seg, resid):
         """
         Prompts the user for a patch to apply for the given residue.
@@ -1083,20 +925,123 @@ class CharmmWriter(object):
                     avail_patches[tokens[1]] = comment
         return avail_patches
 
-    #==========================================================================
-
-    def _check_atom_names(self, molid):
-        """
-        Checks that there are no spaces in atom names. If spaces are
-        found, they are removed and a warning is printed
-        """
-
-        names = set(atomsel(molid=molid).get('name'))
-        for name in names:
-            if ' ' in name:
-                print("\nWARNING: Found space character in name '%s'\n"
-                      "         Incompatible with charmm formats, removing it"
-                      % name)
-                atomsel("name '%s'", molid=molid).set('name', name.replace(' ', ''))
 
 #++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+#                                 FUNCTIONS                                   #
+#++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+
+def _write_ordered_pdb(filename, sel, molid):
+    """
+    Writes a pdb file in order of residues, renumbering the atoms
+    accordingly, since psfgen wants each residue sequentially while
+    VMD will write them in the same order as input, which from Maestro
+    created files has some guessed atoms at the end.
+
+    Args:
+      filename (str): Name of the pdb file to write
+      sel (str): VMD atomsel string for atoms that will be written
+      molid (int): VMD molecule ID to write from
+    """
+    old_top = molecule.get_top()
+    molecule.set_top(molid)
+
+    fileh = open(filename, 'w')
+    # Use resids since order can be wrong when sorting by residue
+    # Then, use residue to pull out each one since it is much much
+    # faster then trying to pull out residues
+    resids = set(atomsel(sel).get('resid'))
+
+    # Add additional residue constraint to selection since pulling out
+    # by resid can match something in a different chain
+    resstr = ' '.join([str(x) for x in set(atomsel(sel).get('residue'))])
+
+    idx = 1
+    # For renumbering capping groups
+    for resid in sorted(resids):
+        rid = atomsel('resid %d and residue %s'
+                      % (resid, resstr)).get('residue')[0]
+
+        for i in atomsel('residue %d' % rid).get('index'):
+            a = atomsel('index %d' % i) # pylint: disable=invalid-name
+            entry = ('%-6s%5d %-5s%-4s%c%4d    %8.3f%8.3f%8.3f%6.2f%6.2f'
+                     '     %-4s%2s\n' % ('ATOM', idx, a.get('name')[0],
+                                         a.get('resname')[0],
+                                         a.get('chain')[0],
+                                         a.get('resid')[0],
+                                         a.get('x')[0],
+                                         a.get('y')[0],
+                                         a.get('z')[0],
+                                         0.0, 0.0, a.get('segname')[0],
+                                         a.get('element')[0]))
+            idx += 1
+            fileh.write(entry)
+    fileh.write('END\n')
+    atomsel(sel).set('user', 0.0) # Mark as written
+    fileh.close()
+    molecule.set_top(old_top)
+
+#==========================================================================
+
+def _get_atoms_from_rtf(text, resname):
+    """
+    Scans the input text for the residue with a given name. Once found,
+    pulls out all the atom names that comprise that residue.
+
+    Args:
+      text (str): Contents of an rtf file to scan
+      resname (str): Residue to look for
+
+    Returns:
+      atoms (set of str): Atom names in this residue, or the empyty set if
+          the residue was not found.
+    """
+    atoms = []
+    found = False
+    for line in text:
+        words = line.split()
+        if not len(words):
+            continue
+        if not found and words[0] == 'RESI' \
+           and words[1] == resname:
+            found = True
+        elif found and words[0] == 'ATOM':
+            atoms.append(words[1])
+        elif found and words[0] == 'RESI':
+            break
+    return set(atoms)
+
+#==========================================================================
+
+def get_bonded_atoms(molid, index):
+    """
+    Returns the element of all atoms bonded to the current atom.
+
+    Args:
+       molid (int): VMD molecule ID to consider
+       index (int): Atom index to look at bonded atoms
+
+    Returns:
+      (list of str) elements of atoms bound to the current atom
+    """
+
+    asel = atomsel('index %d' % index, molid=molid)
+    bound = []
+    for atom in asel.bonds[0]:
+        bound.append(atomsel('index %d' % atom).get('element')[0])
+    return bound
+
+#==========================================================================
+
+def check_atom_names(molid):
+    """
+    Checks that there are no spaces in atom names. If spaces are
+    found, they are removed and a warning is printed
+    """
+
+    names = set(atomsel(molid=molid).get('name'))
+    for name in names:
+        if ' ' in name:
+            print("\nWARNING: Found space character in name '%s'\n"
+                  "         Incompatible with charmm formats, removing it"
+                  % name)
+            atomsel("name '%s'", molid=molid).set('name', name.replace(' ', ''))
