@@ -188,11 +188,11 @@ class CharmmWriter(object):
         if len(atomsel(self.lipid_sel)):
             self._write_lipid_blocks()
 
-        if not len(atomsel("resname '%s'" % _acids, molid=self.molid)):
+        if not len(atomsel("resname %s" % _acids, molid=self.molid)):
             print("\tDidn't find any protein.\n")
 
         # Pull out the protein, one fragment at a time
-        for frag in set(atomsel("resname '%s'" % _acids).get('fragment')):
+        for frag in set(atomsel("resname %s" % _acids).get('fragment')):
             self._write_protein_blocks(frag=frag)
         # TODO: does patches care about order?
         # End protein
@@ -506,12 +506,17 @@ class CharmmWriter(object):
 
         # Sanity check that there is no discrepancy between defined resids and
         # residues as interpreted by VMD.
-        residues = list(set(atomsel("user 1.0 and resname '%s'" % resname).get('residue')))
-        resids = list(set(atomsel("user 1.0 and resname '%s'" % resname).get('resid')))
-        if len(residues) != len(resids):
-            raise ValueError("VMD found %d residues for resname '%s', but there "
-                             "are %d resids! Check input." % (len(residues), resname, 
-                                                              len(resids)))
+        for chain in set(atomsel("user 1.0 and resname '%s'" % resname).get('chain')):
+            residues = list(set(atomsel("user 1.0 and resname '%s' and chain %s"
+                                        % (resname, chain)).get('residue')))
+            resids = list(set(atomsel("user 1.0 and resname '%s' and chain %s"
+                                      % (resname, chain)).get('resid')))
+            # TODO: Multiple copies of same chain
+            if len(residues) != len(resids):
+                #pass # DEBUG
+                raise ValueError("VMD found %d residues for resname '%s', but there "
+                                 "are %d resids! Check input." % (len(residues), resname, 
+                                                                  len(resids)))
 
         for residue in residues:
             sel = atomsel("residue %s and resname '%s' and user 1.0" % (residue, resname))
