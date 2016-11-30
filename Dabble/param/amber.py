@@ -73,6 +73,7 @@ class AmberWriter(object):
                 resource_filename(__name__, "charmm_parameters/toppar_water_ions.str"),
                 resource_filename(__name__, "charmm_parameters/par_all36_cgenff.prm"),
                 resource_filename(__name__, "charmm_parameters/par_all36_prot.prm"),
+                resource_filename(__name__, "charmm_parameters/par_all36_lipid.prm"),
                 resource_filename(__name__, "charmm_parameters/par_all36_carb.prm"),
                 resource_filename(__name__, "charmm_parameters/par_all36_na.prm"),
                 resource_filename(__name__, "charmm_parameters/toppar_all36_prot_na_combined.str")
