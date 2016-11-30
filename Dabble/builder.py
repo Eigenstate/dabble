@@ -486,7 +486,7 @@ class DabbleBuilder(object):
         while len(chains):
             chn = chains.pop() # have to handle first separately because of or
             sel += "(chain %s and resid " % (chn) + \
-                   " ".join([str(i) for i in \
+                   " ".join(["'%d'" % i for i in \
                        set(atomsel('chain %s' % chn, molid=molid).get('resid'))]) + \
                    ")"
             if len(chains):
