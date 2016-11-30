@@ -11,8 +11,7 @@ Copyright (C) 2015 Robin Betz
 
 # This program is free software; you can redistribute it and/or modify it under
 # the terms of the GNU Lesser General Public License as published by the Free
-# Software Foundation; either version 2 of the License, or (at your option) any
-# later version.
+# Software Foundation; either version 2 of the License, or (at your option) any # later version.
 #
 # This program is distributed in the hope that it will be useful, but WITHOUT ANY
 # WARRANTY; without even the implied warranty of MERCHANTABILITY or FITNESS FOR A
@@ -359,31 +358,43 @@ class CharmmWriter(object):
         if len(residues) >= 10000:
             raise NotImplementedError("More than 10k lipids found")
 
+        # Rename lipid residues by resname
+        # This assumes all lipids with the same resname are the same
+        # If that's not the case, the system is really broken in some way
+#        for resname in set(alll.get('resname')):
+#            ressel = atomsel("(%s) and user 1.0 and resname '%s'"
+#                             % (self.lipid_sel, resname))
+#
+#            # Get naming dictionary for one representative residue
+#            repsel = atomsel('residue %s' % ressel.get('residue')[0])
+#            (newname, atomnames) = self.matcher.get_names(sel)
+#            
+#            # Apply naming dictionary to all of these residues
+#            for idx, name in atomnames.iteritems():
+#                oldname = atomsel('index %s' % idx).get('name')
+#                if oldname != name:
+
         # Loop through all residues and renumber and correctly name them
         counter = 1
         for res in residues:
             # Renumber residue
-            atomsel('residue %d' % res).set('resid', counter)
+            sel = atomsel('residue %s' % res)
+            sel.set('resid', counter)
             counter = counter + 1
 
-            # Pick which naming dictionary to use
-            resname = set(atomsel('residue %d' % res).get('resname'))
-            if len(resname) != 1:
-                raise ValueError("More than one name for residue %d" % res)
-            resname = resname.pop()
-            names = {}
-            if resname == "POPC":
-                pass
-            elif resname == "POPE":
-                pass
-            elif resname == "POPG":
-                pass
-            else:
-                raise NotImplementedError("Lipid %s unsupported" % resname)
-
-            for name in names:
-                atomsel("residue %d and name '%s'"
-                        % (res, name)).set('name', names[name])
+            # Rename residue
+#            (newname, atomnames) = self.matcher.get_names(sel,
+#                                                          print_warning=False)
+#
+#            for idx, name in atomnames.iteritems():
+#                atom = atomsel('index %s' % idx)
+#                if atom.get('name')[0] != name:
+#                    print("Renaming %s:%s: %s -> %s" % (sel.get('resname')[0],
+#                                                        sel.get('resid')[0],
+#                                                        atom.get('name')[0],
+#                                                        name))
+#                    atom.set('name', name)
+#            sel.set('resname', newname)
 
         # Write temporary lipid pdb
         temp = tempfile.mkstemp(suffix='.pdb', prefix='psf_lipid_',
@@ -695,7 +706,8 @@ class CharmmWriter(object):
             # neighboring amino acid Maestro writes it this way for some
             # reason but it causes problems down the line when psfgen doesn't
             # understand the weird combined residue
-            rid = atomsel('fragment %d and resid %d' % (frag, resid)).get('residue')[0]
+            rid = atomsel("fragment '%s' and resid '%d'"
+                          % (frag, resid)).get('residue')[0]
             names = set(atomsel('residue %d'% rid).get('resname'))
             assert len(names) < 3, ("More than 2 residues with same number... "
                                     "currently unhandled. Report a bug")
@@ -709,7 +721,7 @@ class CharmmWriter(object):
                 if 'ACE' in names:
                     # Set ACE residue number as one less
                     resid = atomsel('residue %d and not resname ACE' % rid).get('resid')[0]
-                    if len(atomsel('fragment %s and resid %d' % (frag, resid-1))):
+                    if len(atomsel("fragment '%s' and resid '%d'" % (frag, resid-1))):
                         raise ValueError('ACE resid collision number %d' % resid-1)
                     atomsel('residue %d and resname ACE'
                             % rid).set('resid', resid-1)
@@ -718,7 +730,7 @@ class CharmmWriter(object):
                 elif 'NMA' in names:
                     # Set NMA residue number as one more
                     resid = atomsel('residue %d and not resname NMA' % rid).get('resid')[0]
-                    if len(atomsel('fragment %s and resid %d' % (frag, resid+1))):
+                    if len(atomsel("fragment '%s' and resid '%d'" % (frag, resid+1))):
                         raise ValueError('NMA resid collision number %d' % resid+1)
 
                     atomsel('residue %d and resname NMA'
@@ -958,7 +970,7 @@ def _write_ordered_pdb(filename, sel, molid):
     idx = 1
     # For renumbering capping groups
     for resid in sorted(resids):
-        rid = atomsel('resid %d and residue %s'
+        rid = atomsel("resid '%d' and residue %d"
                       % (resid, resstr)).get('residue')[0]
 
         for i in atomsel('residue %d' % rid).get('index'):

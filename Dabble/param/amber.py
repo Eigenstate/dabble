@@ -271,7 +271,7 @@ class AmberWriter(object):
         args = "-crd %s.pdb -psf %s.psf" % (self.prmtop_name, self.prmtop_name)
 
         # Add topology and parameter arguments
-        for inp in self.topologies + self.parameters:
+        for inp in set(self.topologies + self.parameters):
             args += ' -toppar %s' % inp
 
         # Add box information since it is not in the pdb
@@ -463,7 +463,8 @@ class AmberWriter(object):
                 # neighboring amino acid Maestro writes it this way for some
                 # reason but it causes problems down the line when psfgen doesn't
                 # understand the weird combined residue
-                rid = atomsel('fragment %d and resid %d' % (frag, resid)).get('residue')[0]
+                rid = atomsel("fragment '%d' and resid '%d'"
+                              % (frag, resid)).get('residue')[0]
                 names = set(atomsel('residue %d'% rid).get('resname'))
                 assert len(names) < 3, ("More than 2 residues with same number... "
                                         "currently unhandled. Report a bug")
@@ -477,7 +478,7 @@ class AmberWriter(object):
                     if 'ACE' in names:
                         # Set ACE residue number as one less
                         resid = atomsel('residue %d and not resname ACE' % rid).get('resid')[0]
-                        if len(atomsel('fragment %s and resid %d' % (frag, resid-1))):
+                        if len(atomsel("fragment '%s' and resid '%d'" % (frag, resid-1))):
                             raise ValueError('ACE resid collision number %d' % resid-1)
                         atomsel('residue %d and resname ACE'
                                 % rid).set('resid', resid-1)
@@ -486,7 +487,7 @@ class AmberWriter(object):
                     elif 'NMA' in names:
                         # Set NMA residue number as one more
                         resid = atomsel('residue %d and not resname NMA' % rid).get('resid')[0]
-                        if len(atomsel('fragment %s and resid %d' % (frag, resid+1))):
+                        if len(atomsel("fragment '%s' and resid '%d'" % (frag, resid+1))):
                             raise ValueError('NMA resid collision number %d' % resid+1)
 
                         atomsel('residue %d and resname NMA'
@@ -667,7 +668,7 @@ class AmberWriter(object):
 
                 for resid in sorted(set(atomsel("fragment %s"
                                                 % frag).get('resid'))):
-                    sel = atomsel("fragment %s and resid %s and "
+                    sel = atomsel("fragment '%s' and resid '%d' and "
                                   "user 1.0" % (frag, resid))
                     sel.set('user', 0.0)
                     idx = self._write_residue(sel, fileh, idx, hetatm=False)
@@ -789,12 +790,10 @@ class AmberWriter(object):
             out = check_output(["%s/bin/tleap" % os.environ.get("AMBERHOME"),
                                 "-f", leapin])
             if "not saved" in out:
-                print("Call to tleap failed: Output was:\n%s"% out)
-                print("Saving system as mol2")
-                atomsel("all").write("mol2", self.tmp_dir+"/saved.mol2")
-                quit(1)
+                raise ValueError("Tleap call failed")
         except:
-            print("Call to tleap failed! Output was:\n%s" % out)
+            print(out)
+            print("\n\nCall to tleap failed! See above output for errors")
             quit(1)
 
         return outfile
