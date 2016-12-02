@@ -104,6 +104,7 @@ class MoleculeMatcher(object): # pylint: disable=too-few-public-methods
                 self._parse_topology(filename)
 
         elif kwargs.get("matcher"):
+            matcher = kwargs.get("matcher")
             assert isinstance(matcher, MoleculeMatcher)
             self.known_res = matcher.known_res
             self.nodenames = matcher.nodenames
