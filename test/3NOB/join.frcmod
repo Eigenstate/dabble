@@ -1,0 +1,18 @@
+Remark line goes here
+MASS
+
+BOND
+
+ANGLE
+c1-c3-n2   68.013     109.895   Calculated with empirical approach for c1-c3-n2
+c3-c1-o    57.938     180.000   Calculated with empirical approach for c3-c1-o
+
+DIHE
+
+IMPROPER
+c3-n -c -o         10.5          180.0         2.0          Using general improper torsional angle  X- X- c- o, penalty score=  6.0)
+
+NONBON
+
+
+

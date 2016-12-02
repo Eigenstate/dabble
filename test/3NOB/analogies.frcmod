@@ -1,0 +1,37 @@
+Analogy parameters joining gaff2 terms for modified residues
+MASS
+
+BOND
+C -n2   490.0   1.335   ! C-N
+c1-N    490.0   1.335   ! C-N
+
+ANGLE
+CX-C -n2   70.0       116.60    ! CX-C-N
+C -n2-c3   50.0       121.90    ! C-N-CT
+C -n2-hn   50.0       120.00    ! C-N-H
+c1-N -H    50.0       120.00    ! C-N-H
+o -c1-N    80.0       122.90    ! N-C-O 
+O -C -n2   80.0       122.90    ! N-C-O
+c3-c1-N    70.0       116.60    ! CT-C-N
+c1-N -CX   50.0       121.90    ! C-N-CX
+
+DIHE
+CX-C -n2-c3     4   10.00   180.0    2.   ! X-C-N-X
+CX-C -n2-hn     4   10.00   180.0    2.   ! X-C-N-X
+O -C -n2-c3     4   10.00   180.0    2.   ! X-C-N-X
+O -C -n2-hn     1    2.50   180.0   -2.   ! H-N-C-O term 2
+O -C -n2-hn     1    2.00     0.0    1.   ! H-N-C-O term 1
+c3-c1-N -H      4   10.00   180.0    2.   ! X-C-N-X
+c3-c1-N -CX     4   10.00   180.0    2.   ! X-C-N-X
+o -c1-N -H      1    2.50   180.0   -2.   ! H-N-C-O term 2
+o -c1-N -H      1    2.00     0.0    1.   ! H-N-C-O term 1
+o -c1-N -CX     4   10.00   180.0    2.   ! X-C-N-X
+CX-C -n2-c3     4   10.00   180.0    2.   ! X-C-N-X
+CX-C -n2-hn     4   10.00   180.0    2.   ! X-C-N-X
+
+IMPROPER
+
+NONBON
+
+
+
