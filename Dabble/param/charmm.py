@@ -970,7 +970,7 @@ def _write_ordered_pdb(filename, sel, molid):
     idx = 1
     # For renumbering capping groups
     for resid in sorted(resids):
-        rid = atomsel("resid '%d' and residue %d"
+        rid = atomsel("resid '%s' and residue %s"
                       % (resid, resstr)).get('residue')[0]
 
         for i in atomsel('residue %d' % rid).get('index'):
