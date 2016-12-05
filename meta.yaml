@@ -1,6 +1,6 @@
 package:
     name: dabble
-    version: "2.2.1"
+    version: "2.2.2"
 
 source:
     git_url: https://github.com/drorlab/dabble.git
