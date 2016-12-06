@@ -160,27 +160,27 @@ class AmberWriter(object):
             outfile = self._run_leap(ligfiles, prot_pdbseq, pdbs,
                                      conect)
 
-            # Check validity of output prmtop using parmed
-            try:
-                print("\nChecking for problems with the prmtop...")
-                print("        Verify all warnings!")
-                parm = AmberParm(prm_name=outfile+".prmtop",
-                                 xyz=outfile+".inpcrd")
-                action = checkValidity(parm)
-                action.execute()
-            except Exception as e:
-                print("   Had a problem: %s" % e)
-
             # Repartion hydrogen masses if requested
             if self.hmr:
                 print("\nRepartitioning hydrogen masses...")
                 #print("WARNING: Prmtop will not be vmd compatible! Visualize:\n"
                 #      "    %s.prmtop" % outfile)
-                action = HMassRepartition(action.parm, "dowater")
+                parm = AmberParm(prm_name=outfile+".prmtop",
+                                 xyz=outfile+".inpcrd")
+                action = HMassRepartition(parm, "dowater")
                 action.execute()
-                write = parmout(action.parm, "%s.prmtop %s.inpcrd" % (self.prmtop_name,
-                                                                      self.prmtop_name))
+                write = parmout(action.parm, "%s.prmtop" % self.prmtop_name)
+                                                                      #self.prmtop_name))
                 write.execute()
+
+            # Check validity of output prmtop using parmed
+            try:
+                print("\nChecking for problems with the prmtop...")
+                print("        Verify all warnings!")
+                action = checkValidity(write.parm)
+                action.execute()
+            except Exception as e:
+                print("   Had a problem: %s" % e)
 
     #========================================================================#
     #                           Private methods                              #
@@ -706,12 +706,6 @@ class AmberWriter(object):
         if not os.environ.get("AMBERHOME"):
             raise ValueError("AMBERHOME must be set to use leap!")
 
-        # Set output file name as temporary if we're hmr'ing
-        if self.hmr:
-            outfile = self.prmtop_name + "_vmd"
-        else:
-            outfile = self.prmtop_name
-
         # Create the leap input file
         leapin = tempfile.mkstemp(suffix='.in', prefix='dabble_leap_',
                                   dir=self.tmp_dir)[1]
@@ -780,7 +774,7 @@ class AmberWriter(object):
             #             % ' '.join(["pp%d" % i for i in range(len(prot_pdbseq))]))
             fileh.write("setbox p centers 0.0\n")
             fileh.write("saveamberparm p %s.prmtop %s.inpcrd\n"
-                        % (outfile, outfile))
+                        % (self.prmtop_name, self.prmtop_name))
             fileh.write("quit\n")
             fileh.close()
 
@@ -796,7 +790,7 @@ class AmberWriter(object):
             print("\n\nCall to tleap failed! See above output for errors")
             quit(1)
 
-        return outfile
+        return self.prmtop_name 
 
     #==========================================================================
 
