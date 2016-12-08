@@ -18,10 +18,11 @@ def test_amber_custom_residues(tmpdir):
                     extra_topos=["glx.off", "lyx.off"],
                     extra_params=["join.frcmod", "analogies.frcmod"],
                     override_defaults=False)
-    w.write("test")
+    w.write(os.path.join(p, "test"))
 
     # Load the output file and start checking it
-    m2 = molecule.load("parm7", "test.prmtop", "rst7", "test.inpcrd")
+    m2 = molecule.load("parm7", os.path.join(p, "test.prmtop"),
+                       "rst7", os.path.join(p, "test.inpcrd"))
     molecule.set_top(m2)
 
     # Check the two custom residues are present
