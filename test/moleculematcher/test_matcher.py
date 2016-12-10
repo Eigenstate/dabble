@@ -10,6 +10,8 @@ logging.basicConfig()
 
 dir = os.path.dirname(__file__)
 
+#==============================================================================
+
 def create_leaprc(tmpdir, libfile):
     """
     Creates a leaprc pointing to libfile with atom types
@@ -22,6 +24,8 @@ def create_leaprc(tmpdir, libfile):
     a.close()
     return os.path.abspath(filename)
 
+#==============================================================================
+
 def test_atom_naming(tmpdir):
     """
     Tests if atom names are read in correctly from a leaprc file
@@ -30,11 +34,13 @@ def test_atom_naming(tmpdir):
 
     # Generate a leaprc file with correct paths
     a = AmberMatcher([create_leaprc(str(tmpdir), "ala.lib")])
-    assert(len(a.nodenames) == 80)
-    assert("CT" in a.nodenames.keys())
-    assert("C" in a.nodenames.values())
-    assert("LP" not in a.nodenames.keys())
-    assert(a.nodenames.get("CA")=="C")
+    assert len(a.nodenames) == 80
+    assert "CT" in a.nodenames.keys()
+    assert "C" in a.nodenames.values()
+    assert "LP" not in a.nodenames.keys()
+    assert a.nodenames.get("CA")=="C"
+
+#==============================================================================
 
 def test_residue_parsing(tmpdir):
     """
@@ -45,19 +51,37 @@ def test_residue_parsing(tmpdir):
     tmpdir = str(tmpdir)
 
     a = AmberMatcher([create_leaprc(tmpdir, "ala.lib")])
+
     # Check residue exists
-    assert(a.known_res.get("ALA"))
+    assert a.known_res.get("ALA")
     ala = a.known_res.get("ALA")
+
     # Check names and types
-    assert(ala.node.get("CB").get("type") == "CT")
-    assert(ala.node.get("CB").get("resname") == "HALLO")
+    print(ala.node.keys())
+    assert "CB" in [ala.node[x].get("atomname") for x in ala.nodes()]
+    cbs = [x for x in ala.nodes() if ala.node[x].get("atomname") == "CB"]
+    assert len(cbs) == 1
+    assert cbs[0] == "5"
+    assert ala.node[cbs[0]].get("type") and ala.node[cbs[0]].get("type") == "CT"
+    assert set([ala.node[x].get("resname") for x in ala.nodes()]) == set(["HALLO", None])
+
     # Check connectivity
-    assert(("C","CA") in ala.edges())
-    assert(("CB","HB1") in ala.edges())
-    assert(("HB2","HB3") not in ala.edges())
+    C = [x for x in ala.nodes() if ala.node[x].get("atomname") == "C"][0]
+    CA = [x for x in ala.nodes() if ala.node[x].get("atomname") == "CA"][0]
+    CB = [x for x in ala.nodes() if ala.node[x].get("atomname") == "CB"][0]
+    HB1 = [x for x in ala.nodes() if ala.node[x].get("atomname") == "HB1"][0]
+    HB2 = [x for x in ala.nodes() if ala.node[x].get("atomname") == "HB2"][0]
+    HB3 = [x for x in ala.nodes() if ala.node[x].get("atomname") == "HB3"][0]
+
+    assert (C, CA) in ala.edges() or (CA, C) in ala.edges()
+    assert (CB, HB1) in ala.edges() or (HB1, CB) in ala.edges()
+    assert (HB2, HB3) not in ala.edges() and (HB3, HB2) not in ala.edges()
+
     # Check extra bonds
-    assert(("C","+") in ala.edges())
+    assert (C, "+") in ala.edges() or ("+", C) in ala.edges()
     assert("-" not in ala.nodes())
+
+#==============================================================================
 
 def test_residue_renaming(tmpdir):
     """
@@ -79,11 +103,16 @@ def test_residue_renaming(tmpdir):
 
     molid = molecule.load("mae", os.path.join(dir, "lsd_prot.mae"))
     g = AmberMatcher([filename])
-    (resnaem, mdict) = g.get_names(atomsel())
+    (resnaem, _, mdict) = g.get_names(atomsel())
 
-    assert(set(resnaem.values()) == set(["LIG"]))
-    assert(mdict=={0: 'C13', 1: 'N2', 2: 'C12', 3: 'C11', 4: 'C15', 5: 'C7', 6: 'C3', 7: 'C8', 8: 'N1', 9: 'C1', 10: 'C4', 11: 'C5', 12: 'C2', 13: 'C6', 14: 'C9', 15: 'C10', 16: 'C14', 17: 'C16', 18: 'O1', 19: 'N3', 20: 'C17', 21: 'C18', 22: 'C19', 23: 'C20', 24: 'H131', 25: 'H132', 26: 'H121', 27: 'H122', 28: 'H123', 29: 'H11', 30: 'H151', 31: 'H8', 32: 'H4', 33: 'H5', 34: 'H2', 35: 'H10', 36: 'H14', 37: 'H171', 38: 'H172', 39: 'H181', 40: 'H182', 41: 'H183', 42: 'H191', 43: 'H192', 44: 'H201', 45: 'H202', 46: 'H203', 47: 'H152', 48: 'HN1', 49: 'HN2'})
+    # Check matching. Ignore hydrogens since those can vary
+    assert set(resnaem.values()) == set(["LIG"])
+    nohdict = dict((k,v) for k,v in mdict.iteritems() if v[0] != "H")
+    assert nohdict == {0: 'C13', 1: 'N2', 2: 'C12', 3: 'C11', 4: 'C15', 5: 'C7',
+                       6: 'C3', 7: 'C8', 8: 'N1', 9: 'C1', 10: 'C4', 11: 'C5',
+                       12: 'C2', 13: 'C6', 14: 'C9', 15: 'C10', 16: 'C14',
+                       17: 'C16', 18: 'O1', 19: 'N3', 20: 'C19', 21: 'C20',
+                       22: 'C17', 23: 'C18'}
 
-
-
+#==============================================================================
 
