@@ -69,3 +69,18 @@ class VmdSilencer:
 
     #==========================================================================
 
+    def __exit__(self, *args):
+        sys = self.sys
+        # flush any pending output
+        sys.__stdout__.flush()
+        # restore original streams and file descriptors
+        os.dup2(self.saved_fd, self.fd)
+        sys.stdout = self.saved_stream
+        # clean up
+        try: self.null_stream.close()
+        except: pass
+        os.close(self.saved_fd)
+        return False
+
+    #==========================================================================
+

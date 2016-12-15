@@ -95,9 +95,10 @@ psf = raw_input("> ")
 molid = molecule.load('psf', psf)
 
 print("\n-----------------------------------------------------------------------")
-print("Enter your selection set of resids here.")
-print("Comma separated entries and ranges with - are allowed")
-print("Example: '1,2-5,6-10'")
+print("Enter a valid VMD atom selection string here")
+#print("Enter your selection set of resids here.")
+#print("Comma separated entries and ranges with - are allowed")
+#print("Example: '1,2-5,6-10'")
 print("NOTE: This will pull out protein residues ONLY")
 inputstr = raw_input("> ")
 
@@ -105,9 +106,15 @@ residues = set()
 resids = parseSelection(inputstr)
       
 for r in resids:
-    rs = set(atomsel("resname '%s' and resid %d" % (_acids, r)).get('residue'))
+    rs = set(atomsel("resname %s and resid %d" % (_acids, r)).get('residue'))
     if len(rs) != 1:
-        raise Exception("None or duplicate residue matching resid %d" % r) 
+        print("\n\nNone or duplicate residue matching resid %d" % r)
+        chains = set(atomsel("resid %d" % r).get("chain"))
+        if len(chains) > 1:
+            print("I found multiple chains for this resid: %s" % chains)
+        else:
+            print("Something is messed up with the residue definition")
+        quit(1)
     residues.add(int(rs.pop())+1)
 
 result = groupOutput(residues)
