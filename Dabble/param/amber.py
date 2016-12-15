@@ -86,7 +86,6 @@ class AmberWriter(object):
             self.topologies = [
                 "leaprc.protein.ff14SB",
                 "leaprc.lipid14",
-                "leaprc.lipid16",
                 "leaprc.water.tip3p",
                 "leaprc.gaff2",
             ]
