@@ -73,9 +73,9 @@ def get_net_charge(sel, molid):
     # Round to nearest integer nd check this is okay
     net_charge = sum(charge)
     rslt = round(net_charge)
-    if abs(rslt - net_charge) > 0.01:
+    if abs(rslt - net_charge) > 0.05:
         raise ValueError("Total charge of %f is not integral within a " \
-              "tolerance of 0.01. Check your input file." % net_charge)
+              "tolerance of 0.05. Check your input file." % net_charge)
 
     return int(rslt)
 
