@@ -77,9 +77,10 @@ class VmdSilencer:
         os.dup2(self.saved_fd, self.fd)
         sys.stdout = self.saved_stream
         # clean up
-        try: self.null_stream.close()
+        try:
+            self.null_stream.close()
+            os.close(self.saved_fd)
         except: pass
-        os.close(self.saved_fd)
         return False
 
     #==========================================================================
