@@ -92,6 +92,9 @@ class AmberWriter(object):
             for i, top in enumerate(self.topologies):
                 self.topologies[i] = os.path.join(os.environ["AMBERHOME"],
                                                   "dat", "leap", "cmd", top)
+                if not os.path.isfile(self.topologies[i]):
+                    raise ValueError("AMBER version too old! "
+                                     "Dabble requires >= AmberTools16!")
 
             self.parameters = []
             self.matcher = None
@@ -148,7 +151,7 @@ class AmberWriter(object):
             # Create temporary pdb files that will be leap inputs
             pdbs = []
             pdbs.append(self._write_lipids())
-            prot_pdbseq = self._write_protein()
+            prot_pdbseqs = self._write_protein()
             pdbs.extend(self._write_solvent())
             ligfiles = self._write_ligands()
 
@@ -156,7 +159,7 @@ class AmberWriter(object):
             #self._alter_leaprcs()
 
             # Now invoke leap to create the prmtop and inpcrd
-            outfile = self._run_leap(ligfiles, prot_pdbseq, pdbs,
+            outfile = self._run_leap(ligfiles, prot_pdbseqs, pdbs,
                                      conect)
 
             # Repartion hydrogen masses if requested
@@ -171,12 +174,15 @@ class AmberWriter(object):
                 write = parmout(action.parm, "%s.prmtop" % self.prmtop_name)
                                                                       #self.prmtop_name))
                 write.execute()
+                parm = write.parm
 
             # Check validity of output prmtop using parmed
             try:
+                parm = AmberParm(prm_name=self.prmtop_name+".prmtop",
+                                 xyz=self.prmtop_name+".inpcrd")
                 print("\nChecking for problems with the prmtop...")
                 print("        Verify all warnings!")
-                action = checkValidity(write.parm)
+                action = checkValidity(parm)
                 action.execute()
             except Exception as e:
                 print("   Had a problem: %s" % e)
@@ -414,6 +420,7 @@ class AmberWriter(object):
             atm = "ATOM"
         for i in ressel.get('index'):
             a = atomsel('index %d' % i) # pylint: disable=invalid-name
+            assert(len(a) == 1)
             entry = ('%-6s%5d %-5s%-4s%c%4d    %8.3f%8.3f%8.3f%6.2f%6.2f'
                      '     %-4s%2s\n' % (atm, idx, a.get('name')[0],
                                          a.get('resname')[0],
@@ -507,29 +514,29 @@ class AmberWriter(object):
 
     def _write_ligands(self):
         """
-        Writes any remaining user=1.0 residues each to a mol2 file. This
-        make the connectivity slightly more likely to be correct. Renumbers
-        the residues along the way.
+        Writes any remaining user=1.0 residues each to a pdb file. Renumbers
+        the residues along the way. Previously this was done with a mol2 file,
+        but tleap takes charges from there and we will use a topology library
+        file to get the connectivity correct.
 
         Returns:
-            (list of str): Mol2 filenames that were written
+            (list of str): pdb filenames that were written
         """
 
         idx = 1
-        mol2s = {}
+        pdbs = {}
 
         for residue in set(atomsel("user 1.0").get("residue")):
-            temp = tempfile.mkstemp(suffix='.mol2', prefix='amber_extra',
+            temp = tempfile.mkstemp(suffix='.pdb', prefix='amber_extra',
                                     dir=self.tmp_dir)[1]
             sel = atomsel("residue %d" % residue)
-            sel.set('type', '')
             sel.set('user', 0.0)
             sel.set('resid', idx)
-            sel.write('mol2', temp)
+            sel.write("pdb", temp)
             unit = self.matcher.get_unit(sel)
-            mol2s[unit] = temp
+            pdbs[unit] = temp
             idx += 1
-        return mol2s
+        return pdbs 
 
     #==========================================================================
 
@@ -542,15 +549,17 @@ class AmberWriter(object):
             (list of str): PDB filenames that were written
         """
 
+        written = []
         # First write all the ions using just vmd
         temp = tempfile.mkstemp(suffix='.pdb', prefix='amber_ion',
                                 dir=self.tmp_dir)[1]
         ionnames = [_ for _ in self.matcher.known_res.keys() if '+' in _ or '-' in _]
         ions = atomsel("resname NA CL %s and user 1.0" % ' '.join("'%s'" % _ for _ in ionnames))
-        ions.set('resid', range(1, len(ions)+1))
-        ions.write('pdb', temp)
-        ions.set('user', 0.0)
-        written = [temp]
+        if len(ions):
+            ions.set('resid', range(1, len(ions)+1))
+            ions.write('pdb', temp)
+            ions.set('user', 0.0)
+            written.append(temp)
 
         # Select all the unwritten waters, using the user field to track which
         # ones have been written.
@@ -650,37 +659,39 @@ class AmberWriter(object):
         numbering in leap.
 
         Returns:
-            (str, str) Name of pdb file written, and UNIT sequence
+            list of (str, str) Name of pdb files written, and UNIT sequence
                 inside
         """
-        # Renumber resids from 1, that info is lost in prmtop anyway
+        pdbinfos = []
         psel = atomsel("protein or resname ACE NMA NME and user 1.0")
-        startres = min(psel.get("residue"))
-        psel.set("resid", [r-startres for r in psel.get("residue")])
-        resseq = []
+            # Renumber resids from 1, that info is lost in prmtop anyway
+        #startres = min(psel.get("residue"))
+        #psel.set("resid", [r-startres for r in psel.get("residue")])
 
-        temp = tempfile.mkstemp(suffix='_prot.pdb', prefix='amber_prot_',
-                                dir=self.tmp_dir)[1]
-        with open(temp, 'w') as fileh:
-            for i, frag in enumerate(set(psel.get('fragment'))):
+        for i, frag in enumerate(set(psel.get('fragment'))):
+            resseq = []
+            temp = tempfile.mkstemp(suffix='_prot.pdb', prefix='amber_prot_',
+                                    dir=self.tmp_dir)[1]
+
+            with open(temp, 'w') as fileh:
                 idx = 1
-
-                for resid in sorted(set(atomsel("fragment %s"
-                                                % frag).get('resid'))):
+                for resid in sorted(set(atomsel("fragment '%s'" % frag).get('resid'))):
                     sel = atomsel("fragment '%s' and resid '%d' and "
                                   "user 1.0" % (frag, resid))
-                    sel.set('user', 0.0)
                     idx = self._write_residue(sel, fileh, idx, hetatm=False)
+                    sel.set('segname', str(i))
+                    sel.set('user', 0.0)
                     resseq.append(sel.get("resname")[0])
-                fileh.write("TER\n")
-            fileh.write("END\n")
-            fileh.close()
+                fileh.write("END\n")
+                fileh.close()
 
-        return (temp, " ".join(resseq))
+            pdbinfos.append((temp, " ".join(resseq)))
+
+        return pdbinfos
 
     #==========================================================================
 
-    def _run_leap(self, ligfiles, prot_pdbseq, pdbs, conect):
+    def _run_leap(self, ligfiles, prot_pdbseqs, pdbs, conect):
         """
         Runs leap, creating a prmtop and inpcrd from the given pdb and off
         library files.
@@ -745,7 +756,14 @@ class AmberWriter(object):
             for i in [_ for _ in self.topologies + self.parameters if ".off" in _]:
                 fileh.write("loadoff %s\n" %i)
 
-            fileh.write("pp = loadpdbusingseq %s { %s }\n" % prot_pdbseq)
+            for i, pp in enumerate(prot_pdbseqs):
+                fileh.write("pp%d = loadpdbusingseq %s { %s} \n" % (i, pp[0], pp[1]))
+            #fileh.write("pp = loadpdbusingseq %s { %s }\n" % prot_pdbseq)
+
+            # Need to combine before creating bond lines since can't create
+            # bonds between UNITs
+            fileh.write("p = combine { %s }\n"
+                         % ' '.join(["pp%d" % i for i in range(len(prot_pdbseqs))]))
 
             # Create bond lines
             while conect:
@@ -758,19 +776,20 @@ class AmberWriter(object):
                 other = other[0]
                 s2 = atomsel("index %d" % other)
                 conect.remove(other)
-                atomsel("same residue as index %d %d"
-                        % (other, idx)).write('mol2', '%d.mol2' % other)
 
-                fileh.write("bond pp.{0}.{1} pp.{2}.{3}\n".format(
-                    s1.get('resid')[0], s1.get('name')[0],
-                    s2.get('resid')[0], s2.get('name')[0]))
+                o1 = self._get_offset(s1)
+                o2 = self._get_offset(s2)
 
-            fileh.write("\np = combine { pp %s }\n"
+                fileh.write("bond p.{0}.{1} p.{2}.{3}\n".format(
+                    self._get_offset(s1),
+                    s1.get('name')[0],
+                    self._get_offset(s2),
+                    s2.get('name')[0]))
+
+            fileh.write("\np = combine { p %s }\n"
                         % ' '.join(["p%d"%i for i in range(len(pdbs))]))
             if ligfiles.keys():
                 fileh.write("p = combine { p %s }\n" % ' '.join(ligfiles.keys()))
-            #fileh.write("p = combine { p %s }\n"
-            #             % ' '.join(["pp%d" % i for i in range(len(prot_pdbseq))]))
             fileh.write("setbox p centers 0.0\n")
             fileh.write("saveamberparm p %s.prmtop %s.inpcrd\n"
                         % (self.prmtop_name, self.prmtop_name))
@@ -825,6 +844,26 @@ class AmberWriter(object):
             new_topos.append(temp)
 
         self.topologies = new_topos
+
+    #==========================================================================
+
+    def _get_offset(self, sel):
+        """
+        Returns the resid number in the combined protein unit.
+        
+        Args:
+            sel (atomsel): Atom selection to get offset for
+        Returns:
+            (int): Resid offset for bond command
+        """
+        pfrags = set(atomsel("protein or resname ACE NMA NME").get("fragment"))
+        ofrag = atomsel("fragment %d" % sel.get("fragment")[0])
+        # They use 0 based indexing
+        offset = int(sel.get("residue")[0]) - min(ofrag.get("residue"))
+        for frag in [x for x in range(sel.get("fragment")[0])
+                     if x in pfrags]:
+            offset += len(set(atomsel("fragment %d" % frag).get("residue")))
+        return offset-1 # 0 based vs 1 based indexing in leap
 
 #++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
 
