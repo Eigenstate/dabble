@@ -1,6 +1,8 @@
 # Tests multiple ligands
 import pytest
 import subprocess, os
+import vmd, molecule
+from atomsel import atomsel
 
 dir = os.path.dirname(__file__) + "/"
 #==============================================================================
@@ -9,8 +11,6 @@ def test_amber_params(tmpdir):
     """
     Tests writing a ligand with amber parameters
     """
-    import vmd, molecule
-    from atomsel import atomsel
     from Dabble.param import AmberWriter
 
     # Parameterize with amber parameters
@@ -18,7 +18,7 @@ def test_amber_params(tmpdir):
     molid = molecule.load("mae", os.path.join(dir, "07HT2B_WT.mae"))
     w = AmberWriter(molid, tmp_dir=p, forcefield="amber", hmr=False,
                     extra_topos=[os.path.join(dir,"lsd.lib")],
-                    extra_params=["lsd.frcmod"],
+                    extra_params=[os.path.join(dir, "lsd.frcmod")],
                     override_defaults=False)
     w.write(os.path.join(p, "test"))
 
