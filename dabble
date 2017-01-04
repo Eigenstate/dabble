@@ -29,7 +29,7 @@ import signal
 import tempfile
 from Dabble import VmdSilencer
 
-__version__ = '2.2.3'
+__version__ = '2.2.4'
 __author__ = 'Robin Betz'
     
 #++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
