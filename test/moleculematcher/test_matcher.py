@@ -103,7 +103,7 @@ def test_residue_renaming(tmpdir):
 
     molid = molecule.load("mae", os.path.join(dir, "lsd_prot.mae"))
     g = AmberMatcher([filename])
-    (resnaem, _, mdict) = g.get_names(atomsel())
+    resnaem, mdict = g.get_names(atomsel())
 
     # Check matching. Ignore hydrogens since those can vary
     assert set(resnaem.values()) == set(["LIG"])
