@@ -30,11 +30,16 @@ import tempfile
 from subprocess import check_output
 from pkg_resources import resource_filename
 
+try:
 # pylint: disable=import-error, unused-import
-import vmd
-import molecule
-from atomsel import atomsel
+    import vmd
+    import molecule
+    from atomsel import atomsel
 # pylint: enable=import-error, unused-import
+except ModuleNotFoundError:
+    from vmd import molecule, atomsel
+    atomsel = atomsel.atomsel
+
 import networkx as nx
 
 from parmed.tools import chamber, parmout, HMassRepartition, checkValidity

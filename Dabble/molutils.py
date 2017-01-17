@@ -25,11 +25,15 @@ import numpy as np
 import os
 import tempfile
 
+try:
 # pylint: disable=import-error, unused-import
-import vmd
-import molecule
-from atomsel import atomsel
+    import vmd
+    import molecule
+    from atomsel import atomsel
 # pylint: enable=import-error
+except ModuleNotFoundError:
+    from vmd import molecule, atomsel
+    atomsel = atomsel.atomsel
 
 from Dabble import fileutils
 

@@ -29,10 +29,14 @@ from itertools import product
 
 import networkx as nx
 from networkx.algorithms import isomorphism
+try:
 # pylint: disable=import-error, unused-import
-import vmd
-from atomsel import atomsel
+    import vmd
+    from atomsel import atomsel
 # pylint: enable=import-error, unused-import
+except ModuleNotFoundError:
+    from vmd import atomsel
+    atomsel = atomsel.atomsel
 
 logger = logging.getLogger(__name__) # pylint: disable=invalid-name
 
@@ -140,7 +144,7 @@ class MoleculeMatcher(object): # pylint: disable=too-few-public-methods
             matcher = isomorphism.GraphMatcher(rgraph, graph,
                                                node_match=self._check_atom_match)
             if matcher.is_isomorphic():
-                match = matcher.match().next()
+                match = next(matcher.match())
                 resmatch = dict((i, graph.node[match[i]].get("resname")) \
                                 for i in match.keys())
                 return (resmatch, match)
@@ -152,7 +156,7 @@ class MoleculeMatcher(object): # pylint: disable=too-few-public-methods
                                                node_match=self._check_atom_match)
 
             if matcher.is_isomorphic():
-                match = matcher.match().next()
+                match = next(matcher.match())
                 resmatch = dict((i, graph.node[match[i]].get("resname")) \
                                 for i in match.keys())
                 return (resmatch, match)

@@ -30,10 +30,14 @@ import networkx as nx
 from networkx.algorithms import isomorphism
 from pkg_resources import resource_filename
 
+try:
 # pylint: disable=import-error, unused-import
-import vmd
-from atomsel import atomsel
+    import vmd
+    from atomsel import atomsel
 # pylint: enable=import-error, unused-import
+except ModuleNotFoundError:
+    from vmd import atomsel
+    atomsel = atomsel.atomsel
 
 from . import MoleculeMatcher
 logger = logging.getLogger(__name__) # pylint: disable=invalid-name
@@ -127,7 +131,7 @@ class AmberMatcher(MoleculeMatcher):
                                                node_match=self._check_atom_match)
             if matcher.is_isomorphic():
                 matched = True
-                match = matcher.match().next()
+                match = next(matcher.match())
 
         # If that didn't work, loop through all known residues
         if not matched:
@@ -137,7 +141,7 @@ class AmberMatcher(MoleculeMatcher):
                                                    node_match=self._check_atom_match)
                 if matcher.is_isomorphic():
                     matched = True
-                    match = matcher.match().next()
+                    match = next(matcher.match())
                     break
 
         # Only return within-residue atom naming dictionary (no _join)
@@ -251,7 +255,7 @@ class AmberMatcher(MoleculeMatcher):
                         key=lambda x: len(self.known_res[x])-len(noext))
         # Invert mapping so it's idx-> name. It's backwards b/c of subgraph
 
-        mapping = matches[matchname].next()
+        mapping = next(matches[matchname])
         graph = self.known_res.get(matchname)
 
         # Generate naming dictionaries to return
@@ -309,7 +313,7 @@ class AmberMatcher(MoleculeMatcher):
         matcher = isomorphism.GraphMatcher(rgraph, graph, \
                                            node_match=self._check_atom_match)
         if matcher.subgraph_is_isomorphic():
-            match = matcher.match().next()
+            match = next(matcher.match())
         else:
             return (None, None, None)
 
@@ -368,7 +372,7 @@ class AmberMatcher(MoleculeMatcher):
             matcher = isomorphism.GraphMatcher(rgraph, truncated,
                                                node_match=self._check_atom_match)
             if matcher.subgraph_is_isomorphic():
-                matches[matchname] = matcher.match().next()
+                matches[matchname] = next(matcher.match())
 
         if not matches:
             return (None, None, None)
@@ -444,7 +448,7 @@ class AmberMatcher(MoleculeMatcher):
 
                 if matcher.is_isomorphic():
                     matched = True
-                    match = matcher.match().next()
+                    match = next(matcher.match())
                     nammatch = dict((i, graph.node[match[i]].get("atomname")) \
                                     for i in match.keys() if \
                                     graph.node[match[i]].get("residue") == "self")

@@ -27,12 +27,16 @@ import os
 import tempfile
 from pkg_resources import resource_filename
 
+try:
 # pylint: disable=import-error, unused-import
-import vmd
-import molecule
-from atomsel import atomsel
-from VMD import evaltcl
+    import vmd
+    import molecule
+    from atomsel import atomsel
+    from VMD import evaltcl
 # pylint: enable=import-error, unused-import
+except ModuleNotFoundError:
+    from vmd import atomsel, evaltcl, molecule
+    atomsel = atomsel.atomsel
 
 from Dabble.param import CharmmMatcher
 

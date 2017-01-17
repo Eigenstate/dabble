@@ -23,10 +23,15 @@ Boston, MA 02111-1307, USA.
 
 """
 from __future__ import print_function
-import vmd, molecule
+try:
+    import vmd, molecule
+    from atomsel import atomsel
+except ModuleNotFoundError:
+    from vmd import atomsel, molecule
+    atomsel = atomsel.atomsel
+
 import itertools
 import readline
-from atomsel import atomsel
 from glob import glob
 
 _acids = ('ACE ALA ARG ASN ASP CYS CYX GLN GLU GLY HIE HIS HSP HSE '

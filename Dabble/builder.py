@@ -1,18 +1,18 @@
 # System builder
-# 
+#
 # Author: Robin Betz
-# 
+#
 # Copyright (C) 2015 Robin Betz
-# 
+#
 # This program is free software; you can redistribute it and/or modify it under
 # the terms of the GNU Lesser General Public License as published by the Free
 # Software Foundation; either version 2 of the License, or (at your option) any
 # later version.
-# 
+#
 # This program is distributed in the hope that it will be useful, but WITHOUT ANY
 # WARRANTY; without even the implied warranty of MERCHANTABILITY or FITNESS FOR A
 # PARTICULAR PURPOSE.  See the GNU Lesser General Public License for more details.
-# 
+#
 # You should have received a copy of the GNU Lesser General Public License along
 # with this program; if not, write to the Free Software Foundation, Inc.,
 # 59 Temple Place - Suite 330
@@ -27,13 +27,17 @@ import random
 import os
 import tempfile
 
+try:
 # Pylint hates vmd
 # pylint: disable=import-error, unused-import
-import vmd
-import molecule
-import trans
-from atomsel import atomsel
+    import vmd
+    import molecule
+    import trans
+    from atomsel import atomsel
 # pylint: enable=import-error, unused-import
+except ModuleNotFoundError:
+    from vmd import atomsel, molecule, trans
+    atomsel = atomsel.atomsel
 
 from Dabble import fileutils
 from Dabble import molutils
@@ -185,7 +189,7 @@ class DabbleBuilder(object):
                                            tmp_dir=self.tmp_dir)
         self.remove_molecule('tiled_membrane')
         self.remove_molecule('solute')
-        
+
         # Add more waters if necessary
         self.molids['combined'] = self._add_water(self.molids['inserted'])
         self.remove_molecule('inserted')
@@ -205,7 +209,7 @@ class DabbleBuilder(object):
                                                     self.molids['combined'],
                                                     self.opts.get('lipid_friendly_sel'))
 
-        print("Removed %d extra atoms\n" 
+        print("Removed %d extra atoms\n"
               "\t%d out of the box\n"
               "\t%d too close to the solute" % ((box_wat+clashes), box_wat,
                                                 clashes))
@@ -614,7 +618,7 @@ class DabbleBuilder(object):
           molid (int): VMD molecule id to use
 
         Returns:
-          int Number of atoms deleted 
+          int Number of atoms deleted
 
         Raises:
           ValueError if water buffer is None
