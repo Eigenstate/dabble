@@ -1,4 +1,4 @@
-# Tests the MoleculeMatcher functionality by readin in the 
+# Tests the MoleculeMatcher functionality by readin in the
 # mae and str file, and matching up atoms
 
 import pytest
@@ -25,9 +25,14 @@ def test_read_str(capfd, tmpdir):
 #==============================================================================
 
 def test_read_mol(capfd, tmpdir):
-    import vmd, molecule
+    try:
+        import vmd, molecule
+        from atomsel import atomsel
+    except ModuleNotFoundError:
+        from vmd import atomsel, molecule
+        atomsel = atomsel.atomsel
+
     import networkx as nx
-    from atomsel import atomsel
     from Dabble.param import MoleculeMatcher
 
     molid = molecule.load("mae", dir+"lsd_prot.mae")
@@ -38,8 +43,13 @@ def test_read_mol(capfd, tmpdir):
 #==============================================================================
 
 def test_compare_mol():
-    import vmd, molecule
-    from atomsel import atomsel
+    try:
+        import vmd, molecule
+        from atomsel import atomsel
+    except ModuleNotFoundError:
+        from vmd import atomsel, molecule
+        atomsel = atomsel.atomsel
+
     from Dabble.param import CharmmMatcher
 
     molid = molecule.load("mae", dir+"lsd_prot.mae")
@@ -51,9 +61,14 @@ def test_compare_mol():
 #==============================================================================
 
 def test_patches():
-    import vmd, molecule
-    from atomsel import atomsel
-    from Dabble.param import CharmmMatcher 
+    try:
+        import vmd, molecule
+        from atomsel import atomsel
+    except ModuleNotFoundError:
+        from vmd import atomsel, molecule
+        atomsel = atomsel.atomsel
+
+    from Dabble.param import CharmmMatcher
     from pkg_resources import resource_filename
 
     molid = molecule.load("mae", dir+"phosphoserine.mae")
@@ -66,9 +81,13 @@ def test_patches():
 #==============================================================================
 
 def test_protein(tmpdir):
-    import vmd, molecule
+    try:
+        import vmd, molecule
+    except ModuleNotFoundError:
+        from vmd import molecule
+
     import networkx as nx
-    from Dabble.param import CharmmMatcher 
+    from Dabble.param import CharmmMatcher
     from pkg_resources import resource_filename
 
     g = CharmmMatcher([resource_filename("Dabble.param", "charmm_parameters/top_all36_prot.rtf")])
@@ -76,4 +95,4 @@ def test_protein(tmpdir):
     subprocess.check_call(["diff", "-q", dir+"correct_tyr.dot", str(tmpdir)+"/tyr.dot"])
 
 #==============================================================================
-    
+

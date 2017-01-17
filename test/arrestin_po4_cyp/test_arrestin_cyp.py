@@ -12,8 +12,13 @@ def test_covalent_ligand_patches(tmpdir):
     hydrogen atom should be renamed in the palmitoylcysteine.
     Also tests for detection of phosphorylations on amino acids.
     """
-    import vmd, molecule
-    from atomsel import atomsel
+    try:
+        import vmd, molecule
+        from atomsel import atomsel
+    except ModuleNotFoundError:
+        from vmd import atomsel, molecule
+        atomsel = atomsel.atomsel
+
     from Dabble.param import CharmmWriter
 
     # Parameterize with charmm parameters

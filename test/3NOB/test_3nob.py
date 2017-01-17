@@ -2,8 +2,12 @@
 # Special isopeptide bond between two residues
 import pytest
 import subprocess, os
-import vmd, molecule
-from atomsel import atomsel
+try:
+    import vmd, molecule
+    from atomsel import atomsel
+except ModuleNotFoundError:
+    from vmd import atomsel, molecule
+    atomsel = atomsel.atomsel
 
 dir = os.path.dirname(__file__)
 #==============================================================================

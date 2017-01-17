@@ -1,8 +1,13 @@
 # Tests covalently bonded ligand
-import vmd, molecule
 import pytest
 import subprocess, os
-from atomsel import atomsel
+try:
+    import vmd, molecule
+    from atomsel import atomsel
+except ModuleNotFoundError:
+    from vmd import atomsel, molecule
+    atomsel = atomsel.atomsel
+
 
 dir = os.path.dirname(__file__) + "/"
 
@@ -15,7 +20,7 @@ def test_water_box(tmpdir):
     from Dabble import DabbleBuilder
     from Dabble import molutils
 
-    # Build a system with well defined dimensions 
+    # Build a system with well defined dimensions
     p = str(tmpdir.mkdir("po4_hmr"))
     filename =  os.path.join(dir, "rho_test.mae")
     b = DabbleBuilder(solute_filename=filename,
@@ -39,8 +44,11 @@ def test_hmr_param(tmpdir):
     Tests phosphorylations on Ser
     Also checks HMR
     """
-    from Dabble.param import AmberWriter 
-    import vmd, molecule
+    from Dabble.param import AmberWriter
+    try:
+        import vmd, molecule
+    except ModuleNotFoundError:
+        from vmd import  molecule
 
     # Build the system with HMR
     p = str(tmpdir.mkdir("hmr_param"))

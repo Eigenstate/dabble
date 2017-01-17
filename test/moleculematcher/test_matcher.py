@@ -89,8 +89,13 @@ def test_residue_renaming(tmpdir):
     Then, loads a lib file for LSD with correct names, and gaff
     atom types. Should ideally match them up correctly.
     """
-    import vmd, molecule
-    from atomsel import atomsel
+    try:
+        import vmd, molecule
+        from atomsel import atomsel
+    except ModuleNotFoundError:
+        from vmd import atomsel, molecule
+        atomsel = atomsel.atomsel
+
     from Dabble.param import AmberMatcher, MoleculeMatcher
 
     # Generate a leaprc file with correct paths
