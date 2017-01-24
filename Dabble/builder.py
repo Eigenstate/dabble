@@ -35,7 +35,7 @@ try:
     import trans
     from atomsel import atomsel
 # pylint: enable=import-error, unused-import
-except ModuleNotFoundError:
+except ImportError:
     from vmd import atomsel, molecule, trans
     atomsel = atomsel.atomsel
 

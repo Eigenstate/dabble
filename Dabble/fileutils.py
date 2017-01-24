@@ -30,7 +30,7 @@ try:
     import molecule
     from atomsel import atomsel
 # pylint: enable=import-error, unused-import
-except ModuleNotFoundError:
+except ImportError:
     from vmd import molecule, atomsel
     atomsel = atomsel.atomsel
 

@@ -36,7 +36,7 @@ try:
     import molecule
     from atomsel import atomsel
 # pylint: enable=import-error, unused-import
-except ModuleNotFoundError:
+except ImportError:
     from vmd import molecule, atomsel
     atomsel = atomsel.atomsel
 
@@ -446,10 +446,12 @@ class AmberWriter(object):
         """
         Applies the names from a matcher.
         """
-        for idx, name in atomnames.iteritems():
+        for idx, name in atomnames.items():
             atom = atomsel('index %s' % idx)
             if atom.get('name')[0] != name:
                 atom.set('name', name)
+            print("IDX: %d, resname: %s" % (idx, resnames[idx]))
+            print("length is %d" % len(resnames[idx]))
             atom.set('resname', resnames[idx])
 
     #==========================================================================
@@ -748,7 +750,7 @@ class AmberWriter(object):
                     raise ValueError("Unknown coordinate type: %s"
                                      % pdb)
 
-            for unit, f in ligfiles.iteritems():
+            for unit, f in ligfiles.items():
                 if "pdb" in f:
                     fileh.write("%s = loadpdb %s\n" % (unit, f))
                 elif "mol2" in f:

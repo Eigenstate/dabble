@@ -35,7 +35,7 @@ try:
     import vmd
     from atomsel import atomsel
 # pylint: enable=import-error, unused-import
-except ModuleNotFoundError:
+except ImportError:
     from vmd import atomsel
     atomsel = atomsel.atomsel
 

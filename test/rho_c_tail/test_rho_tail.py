@@ -4,7 +4,7 @@ import subprocess, os
 try:
     import vmd, molecule
     from atomsel import atomsel
-except ModuleNotFoundError:
+except ImportError:
     from vmd import atomsel, molecule
     atomsel = atomsel.atomsel
 
@@ -47,7 +47,7 @@ def test_hmr_param(tmpdir):
     from Dabble.param import AmberWriter
     try:
         import vmd, molecule
-    except ModuleNotFoundError:
+    except ImportError:
         from vmd import  molecule
 
     # Build the system with HMR

@@ -92,7 +92,7 @@ def test_residue_renaming(tmpdir):
     try:
         import vmd, molecule
         from atomsel import atomsel
-    except ModuleNotFoundError:
+    except ImportError:
         from vmd import atomsel, molecule
         atomsel = atomsel.atomsel
 

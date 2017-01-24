@@ -13,7 +13,7 @@ def test_multiligand_building(tmpdir):
     try:
         import vmd, molecule
         from atomsel import atomsel
-    except ModuleNotFoundError:
+    except ImportError:
         from vmd import atomsel, molecule
         atomsel = atomsel.atomsel
 
@@ -51,7 +51,7 @@ def test_multiligand_parameterizing(tmpdir):
     try:
         import vmd, molecule
         from atomsel import atomsel
-    except ModuleNotFoundError:
+    except ImportError:
         from vmd import atomsel, molecule
         atomsel = atomsel.atomsel
 

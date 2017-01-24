@@ -28,7 +28,7 @@ def test_read_mol(capfd, tmpdir):
     try:
         import vmd, molecule
         from atomsel import atomsel
-    except ModuleNotFoundError:
+    except ImportError:
         from vmd import atomsel, molecule
         atomsel = atomsel.atomsel
 
@@ -46,7 +46,7 @@ def test_compare_mol():
     try:
         import vmd, molecule
         from atomsel import atomsel
-    except ModuleNotFoundError:
+    except ImportError:
         from vmd import atomsel, molecule
         atomsel = atomsel.atomsel
 
@@ -64,7 +64,7 @@ def test_patches():
     try:
         import vmd, molecule
         from atomsel import atomsel
-    except ModuleNotFoundError:
+    except ImportError:
         from vmd import atomsel, molecule
         atomsel = atomsel.atomsel
 
@@ -83,7 +83,7 @@ def test_patches():
 def test_protein(tmpdir):
     try:
         import vmd, molecule
-    except ModuleNotFoundError:
+    except ImportError:
         from vmd import molecule
 
     import networkx as nx

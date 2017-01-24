@@ -32,7 +32,7 @@ try:
     import vmd
     from atomsel import atomsel
 # pylint: enable=import-error, unused-import
-except ModuleNotFoundError:
+except ImportError:
     from vmd import atomsel
     atomsel = atomsel.atomsel
 
@@ -176,7 +176,7 @@ class CharmmMatcher(MoleculeMatcher):
 
         # Invert mapping so it's idx->name. It's currently backwards
         # because of the need to find a subgraph.
-        atomnames = dict((v, k) for (k, v) in next(matches[matchname]).iteritems())
+        atomnames = dict((v, k) for (k, v) in next(matches[matchname]).items())
 
         # Now we know it's a cysteine in a disulfide bond
         # Identify which resid and fragment corresponds to the other cysteine

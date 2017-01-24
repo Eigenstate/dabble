@@ -34,7 +34,7 @@ try:
     from atomsel import atomsel
     from VMD import evaltcl
 # pylint: enable=import-error, unused-import
-except ModuleNotFoundError:
+except ImportError:
     from vmd import atomsel, evaltcl, molecule
     atomsel = atomsel.atomsel
 
@@ -372,9 +372,9 @@ class CharmmWriter(object):
 #            # Get naming dictionary for one representative residue
 #            repsel = atomsel('residue %s' % ressel.get('residue')[0])
 #            (newname, atomnames) = self.matcher.get_names(sel)
-#            
+#
 #            # Apply naming dictionary to all of these residues
-#            for idx, name in atomnames.iteritems():
+#            for idx, name in atomnames.items():
 #                oldname = atomsel('index %s' % idx).get('name')
 #                if oldname != name:
 
@@ -390,7 +390,7 @@ class CharmmWriter(object):
 #            (newname, atomnames) = self.matcher.get_names(sel,
 #                                                          print_warning=False)
 #
-#            for idx, name in atomnames.iteritems():
+#            for idx, name in atomnames.items():
 #                atom = atomsel('index %s' % idx)
 #                if atom.get('name')[0] != name:
 #                    print("Renaming %s:%s: %s -> %s" % (sel.get('resname')[0],
@@ -468,7 +468,7 @@ class CharmmWriter(object):
         string = '''
        set ionfile %s
        segment I {
-          pdb $ionfile 
+          pdb $ionfile
           first none
           last none
        }
@@ -530,7 +530,7 @@ class CharmmWriter(object):
                 print("\tApplying patch %s to ligand %s" % (patch, newname))
 
             # Do the renaming
-            for idx, name in atomnames.iteritems():
+            for idx, name in atomnames.items():
                 atom = atomsel('index %s' % idx)
                 if atom.get('name')[0] != name and "+" not in name and \
                    "-" not in name:
@@ -644,7 +644,7 @@ class CharmmWriter(object):
                                  % (sel.get('resname')[0], resid))
 
             # Do the renaming
-            for idx, name in atomnames.iteritems():
+            for idx, name in atomnames.items():
                 atom = atomsel('index %s' % idx)
                 if atom.get('name')[0] != name and "+" not in name and \
                    "-" not in name:
@@ -664,7 +664,7 @@ class CharmmWriter(object):
           first none
           last none
           pdb $protnam
-        } 
+        }
         ''' % (filename, seg)
         self.file.write(string)
         self.file.write(''.join(patches))
