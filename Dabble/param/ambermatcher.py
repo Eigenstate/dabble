@@ -222,13 +222,11 @@ class AmberMatcher(MoleculeMatcher):
             raise ValueError("Multiple resids in selection: %s" % resids)
 
         # Get externally bonded atoms
-        rgraph, _ = self.parse_vmd_graph(selection)
-        externs = [n for n in rgraph.nodes() if \
-                   rgraph.node[n]["residue"] != "self"]
+        externs = self.get_extraresidue_atoms(selection)
 
         # Create a subgraph with no externally bonded atoms for matching
         # Otherwise, extra bonded atom will prevent matches from happening
-        noext = rgraph.copy()
+        noext,_ = self.parse_vmd_graph(selection)
         noext.remove_nodes_from([i for i in noext.nodes()
                                  if noext.node[i].get("residue") != "self"])
 
@@ -248,7 +246,7 @@ class AmberMatcher(MoleculeMatcher):
 
         if not matches:
             nx.write_dot(noext, "noext.dot")
-            return (None, None, None, None)
+            return (None, None, None)
 
         # Want minimumally different thing, ie fewest _join atoms different
         matchname = min(matches.keys(),
@@ -269,12 +267,16 @@ class AmberMatcher(MoleculeMatcher):
         # Find resid and fragment for other molecule
         partners = []
         resid = selection.get("resid")[0]
+        chain = selection.get("chain")[0]
         for num in externs:
             rid = atomsel("index %d" % num, molid=molid).get("resid")[0]
-            if rid != resid+1 and rid != resid-1:
+            ch = atomsel("index %d" % num, molid=molid).get("chain")[0]
+            if ch != chain:
+                partners.append(num)
+            elif rid != resid+1 and rid != resid-1:
                 partners.append(num)
         if len(partners) != 1:
-            return (None, None, None, None)
+            return (None, None, None)
 
         return (resmatch, nammatch, partners[0])
 
@@ -302,8 +304,7 @@ class AmberMatcher(MoleculeMatcher):
             raise ValueError("CYX undefined. Check forcefields!")
 
         # Check for the 3 join atoms corresponding to the disulfide bonds
-        externs = [n for n in rgraph.nodes() if \
-                   rgraph.node[n]["residue"] != "self"]
+        externs = self.get_extraresidue_atoms(selection)
         if len(externs) != 3:
             return (None, None, None)
 
