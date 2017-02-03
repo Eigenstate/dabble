@@ -185,19 +185,20 @@ class CharmmWriter(object):
         if not len(atomsel("resname %s" % _acids, molid=self.molid)):
             print("\tDidn't find any protein.\n")
 
+        # Now handle the protein
         # Save and reload the protein so residue looping is correct
         prot_molid = self._renumber_protein_chains(molid=self.molid)
-
-        # Pull out the protein, one fragment at a time
-        patches = set()
-        for frag in set(atomsel("resname %s" % _acids,
-                                molid=prot_molid).get('fragment')):
-            patches.update(self._write_protein_blocks(prot_molid, frag))
+        extpatches = set()
+        for frag in sorted(set(atomsel("resname %s" % _acids,
+                                molid=prot_molid).get('fragment'))):
+            extpatches.update(self._write_protein_blocks(prot_molid, frag))
+        atomsel("same fragment as resname %s" % _acids,
+                molid=self.molid).set("user", 0.0)
 
         # List all patches applied to the protein
         print("Applying the following patches:\n")
-        print("\t%s" % "\t".join(patches))
-        self.file.write(''.join(patches))
+        print("\t%s" % "\t".join(extpatches))
+        self.file.write(''.join(extpatches))
         self.file.write("\n")
 
         # Regenerate angles and dihedrals after applying patches
@@ -624,9 +625,10 @@ class CharmmWriter(object):
         old_top = molecule.get_top()
         molecule.set_top(molid)
         patches = set()
+        extpatches = set()
         seg = "P%s" % frag
 
-        residues = list(set(atomsel('all').get('residue')))
+        residues = list(set(atomsel("fragment '%s'" % frag).get('residue')))
         for residue in residues:
             sel = atomsel('residue %s' % residue)
             chain = sel.get('chain')[0]
@@ -637,16 +639,12 @@ class CharmmWriter(object):
                                                               print_warning=False)
 
             # See if it's a disulfide bond participant
-            # Need to do this selection by resid, not residue since it is
-            # done in whole molecule and protein fragment, across which
-            # residue number is not preserved
             else:
                 (newname, patchline, atomnames) = \
-                        self.matcher.get_disulfide("resid %s and chain %s"
-                                                   % (resid, chain),
+                        self.matcher.get_disulfide("residue %d" % residue,
                                                    frag, molid)
                 if newname:
-                    patches.add(patchline)
+                    extpatches.add(patchline)
 
             # Couldn't find a match. See if it's a patched residue
             if not newname:
@@ -669,7 +667,7 @@ class CharmmWriter(object):
 
         # Save protein chain in the correct order
         filename = self.tmp_dir + '/psf_protein_%s.pdb' % seg
-        _write_ordered_pdb(filename, "fragment %s" % frag, molid)
+        _write_ordered_pdb(filename, "fragment '%s'" % frag, molid)
         print("\tWrote %d atoms to the protein segment %s"
               % (len(atomsel("fragment %s" % frag)), seg))
 
@@ -683,13 +681,18 @@ class CharmmWriter(object):
         }
         ''' % (filename, seg)
         self.file.write(string)
+
+        print("Applying the following single-residue patches to P%s:\n" % frag)
+        print("\t%s" % "\t".join(patches))
+        self.file.write(''.join(patches))
+        self.file.write("\n")
+
         self.file.write("coordpdb $protnam %s\n" % seg)
 
         if old_top != -1:
             molecule.set_top(old_top)
 
-        atomsel("fragment %s" % frag, molid=self.molid).set('user', 0.0)
-        return patches
+        return extpatches
 
     #==========================================================================
 
