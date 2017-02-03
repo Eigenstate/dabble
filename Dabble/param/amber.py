@@ -27,6 +27,7 @@ from __future__ import print_function
 import os
 import sys
 import tempfile
+import warnings
 from subprocess import check_output
 from pkg_resources import resource_filename
 
@@ -44,7 +45,9 @@ import networkx as nx
 
 from parmed.tools import chamber, parmout, HMassRepartition, checkValidity
 from parmed.amber import AmberParm
+from parmed.exceptions import ParameterWarning
 from Dabble.param import CharmmWriter, AmberMatcher
+from Dabble import molutils
 
 #++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
 
@@ -116,6 +119,7 @@ class AmberWriter(object):
             self.parameters.extend(extra_params)
 
         self.prompt_params = False
+        molutils.check_sanity(self.molid)
 
     #==========================================================================
 
@@ -182,15 +186,12 @@ class AmberWriter(object):
                 parm = write.parm
 
             # Check validity of output prmtop using parmed
-            try:
-                parm = AmberParm(prm_name=self.prmtop_name+".prmtop",
-                                 xyz=self.prmtop_name+".inpcrd")
-                print("\nChecking for problems with the prmtop...")
-                print("        Verify all warnings!")
-                action = checkValidity(parm)
-                action.execute()
-            except Exception as e:
-                print("   Had a problem: %s" % e)
+            parm = AmberParm(prm_name=self.prmtop_name+".prmtop",
+                             xyz=self.prmtop_name+".inpcrd")
+            print("\nChecking for problems with the prmtop...")
+            print("        Verify all warnings!")
+            action = checkValidity(parm)
+            action.execute()
 
     #========================================================================#
     #                           Private methods                              #
@@ -226,8 +227,6 @@ class AmberWriter(object):
 
             # Check if it's a linkage to another amino acid
             if not resnames:
-                print("\tCan't find simple match for: %s:%d" % (sel.get("resname")[0],
-                                                                sel.get("resid")[0]))
                 resnames, atomnames, other = self.matcher.get_linkage(sel, self.molid)
                 if not resnames:
                     rgraph = self.matcher.parse_vmd_graph(sel)[0]
@@ -292,8 +291,10 @@ class AmberWriter(object):
         print("Running chamber. This may take a while...")
         sys.stdout.flush()
         parm = AmberParm()
-        action = chamber(parm, args)
-        action.execute()
+        with warnings.catch_warnings(record=True) as w:
+            action = chamber(parm, args)
+            action.execute()
+            w = filter(lambda i: issubclass(i.category, ParameterWarning), w)
 
         # Do hydrogen mass repartitioning if requested
         if self.hmr:
@@ -450,8 +451,6 @@ class AmberWriter(object):
             atom = atomsel('index %s' % idx)
             if atom.get('name')[0] != name:
                 atom.set('name', name)
-            print("IDX: %d, resname: %s" % (idx, resnames[idx]))
-            print("length is %d" % len(resnames[idx]))
             atom.set('resname', resnames[idx])
 
     #==========================================================================
@@ -582,11 +581,11 @@ class AmberWriter(object):
 
         allw.update()
         num_written = len(allw)/(9999*3)+1
-        print("Going to write %d files for %d water atoms"
-              % (num_written, len(allw)))
 
         # Pull out and write 10k waters at a time if we have normal waters
         if allw:
+            print("Going to write %d files for %d water atoms"
+                  % (num_written, len(allw)))
             for i in range(num_written):
                 temp = tempfile.mkstemp(suffix='_%d.pdb' % i, prefix='amber_wat_',
                                         dir=self.tmp_dir)[1]
@@ -675,14 +674,25 @@ class AmberWriter(object):
         #startres = min(psel.get("residue"))
         #psel.set("resid", [r-startres for r in psel.get("residue")])
 
-        for i, frag in enumerate(set(psel.get('fragment'))):
+        for i, frag in enumerate(sorted(set(psel.get('fragment')))):
             resseq = []
             temp = tempfile.mkstemp(suffix='_prot.pdb', prefix='amber_prot_',
                                     dir=self.tmp_dir)[1]
 
+            # Check the numbering starts from 1, if not, renumber.
+            # This is because leap hates bonding things that don't start with 1
+            # Do from the top down to avoid double counting
+            resids = set(atomsel("fragment '%s'" % frag).get("resid"))
+            if min(resids) <= 0:
+                offset = min(resids)-1
+                for r in range(max(resids),min(resids)-1,-1):
+                    atomsel("fragment '%s' and resid '%d'"
+                            % (frag, r)).set("resid", r-offset)
+
             with open(temp, 'w') as fileh:
                 idx = 1
-                for resid in sorted(set(atomsel("fragment '%s'" % frag).get('resid'))):
+                # Grab resids again since they may have updated
+                for resid in sorted(set(atomsel("fragment '%s'" % frag).get("resid"))):
                     sel = atomsel("fragment '%s' and resid '%d' and "
                                   "user 1.0" % (frag, resid))
                     idx = self._write_residue(sel, fileh, idx, hetatm=False)
@@ -784,17 +794,15 @@ class AmberWriter(object):
                 s2 = atomsel("index %d" % other)
                 conect.remove(other)
 
-                o1 = self._get_offset(s1)
-                o2 = self._get_offset(s2)
-
                 fileh.write("bond p.{0}.{1} p.{2}.{3}\n".format(
                     self._get_offset(s1),
                     s1.get('name')[0],
                     self._get_offset(s2),
                     s2.get('name')[0]))
 
-            fileh.write("\np = combine { p %s }\n"
-                        % ' '.join(["p%d"%i for i in range(len(pdbs))]))
+            if len(pdbs):
+                fileh.write("\np = combine { p %s }\n"
+                            % ' '.join(["p%d"%i for i in range(len(pdbs))]))
             if ligfiles.keys():
                 fileh.write("p = combine { p %s }\n" % ' '.join(ligfiles.keys()))
             fileh.write("setbox p centers 0.0\n")
@@ -857,20 +865,22 @@ class AmberWriter(object):
     def _get_offset(self, sel):
         """
         Returns the resid number in the combined protein unit.
-        
+
         Args:
             sel (atomsel): Atom selection to get offset for
         Returns:
             (int): Resid offset for bond command
         """
-        pfrags = set(atomsel("protein or resname ACE NMA NME").get("fragment"))
+        psel = atomsel("protein or resname ACE NMA NME")
+        pfrags = set(psel.get("fragment"))
         ofrag = atomsel("fragment %d" % sel.get("fragment")[0])
+
         # They use 0 based indexing
         offset = int(sel.get("residue")[0]) - min(ofrag.get("residue"))
         for frag in [x for x in range(sel.get("fragment")[0])
                      if x in pfrags]:
             offset += len(set(atomsel("fragment %d" % frag).get("residue")))
-        return offset-1 # 0 based vs 1 based indexing in leap
+        return offset+1 # 0 based vs 1 based indexing in leap
 
 #++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
 

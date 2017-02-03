@@ -1,4 +1,4 @@
-include dabble.py
+include dabble
 include get_restraint_mask.py
 include molecule_to_psf.py
 
