@@ -595,5 +595,30 @@ def num_lipids_remaining(molid, lipid_sel):
 
     return np.unique(atomsel_remaining(molid, lipid_sel).get('fragment')).size
 
+#==========================================================================
+
+def check_sanity(molid):
+    """
+    Checks the sanity of an input system. Currently, this means:
+        - Check the number of resids is the same as the number of residues
+
+    Args:
+        molid (int): VMD molecule ID to check
+
+    Raises:
+        ValueError: Molecule is not sane in some way
+    """
+    # Check number of residues is the same as number of residues
+    for ch in set(atomsel("all", molid=molid).get("chain")):
+        resids = set(atomsel("chain '%s'" % ch, molid=molid).get("resid"))
+        residues = set(atomsel("chain '%s'" % ch, molid=molid).get("residue"))
+
+        if len(resids) != len(residues):
+            raise ValueError("\nMolecule is not sane!\n Number of resids does "
+                             "not match the number of residues parsed in by VMD."
+                             "There are probably %d duplicated resids in chain %s"
+                             "\nCheck the resids are set correctly in preparation"
+                             % (len(residues)-len(resids), ch))
+
 #++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
 

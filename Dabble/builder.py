@@ -134,6 +134,9 @@ class DabbleBuilder(object):
         self.add_molecule(self.opts.get('solute_filename'), 'solute')
         self._set_solute_sel(self.molids['solute'])
 
+        # Sanity check the solute
+        molutils.check_sanity(self.molids['solute'])
+
         # Orient the solute in the X,Y, and optionally Z directions
         self.molids['solute'] = self._orient_solute(self.molids['solute'])
 
