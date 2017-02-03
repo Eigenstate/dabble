@@ -181,11 +181,25 @@ class CharmmWriter(object):
         if not len(atomsel("resname %s" % _acids, molid=self.molid)):
             print("\tDidn't find any protein.\n")
 
+        # Save and reload the protein so residue looping is correct
+        prot_molid = self._renumber_protein_chains(molid=self.molid)
+
         # Pull out the protein, one fragment at a time
-        for frag in set(atomsel("resname %s" % _acids).get('fragment')):
-            self._write_protein_blocks(frag=frag)
-        # TODO: does patches care about order?
-        # End protein
+        patches = set()
+        for frag in set(atomsel("resname %s" % _acids,
+                                molid=prot_molid).get('fragment')):
+            patches.update(self._write_protein_blocks(prot_molid, frag))
+
+        # List all patches applied to the protein
+        print("Applying the following patches:\n")
+        print("\t%s" % "\t".join(patches))
+        self.file.write(''.join(patches))
+        self.file.write("\n")
+
+        # Regenerate angles and dihedrals after applying patches
+        # Angles must be regenerated FIRST!
+        # See http://www.ks.uiuc.edu/Research/namd/mailing_list/namd-l.2009-2010/4137.html
+        self.file.write("regenerate angles\nregenerate dihedrals\n")
 
         # Check if there is anything else and let the user know about it
         leftovers = atomsel('user 1.0', molid=self.molid)
@@ -586,49 +600,47 @@ class CharmmWriter(object):
 
     #==========================================================================
 
-    def _write_protein_blocks(self, frag):
+    def _write_protein_blocks(self, molid, frag):
         """
         Writes a protein fragment to a pdb file for input to psfgen
         Automatically assigns amino acid names
 
         Args:
+            molid (int): VMD molecule ID of renumbered protein
             frag (str): Fragment to write
 
         Returns:
-#TODO
-          (int) The number of atoms renamed, or -1 if unsuccessful
+            (list of str): Patches to add to the psfgen input file
+                after all proteins have been loaded
        """
 
         print("Setting protein atom names")
 
         # Put our molecule on top to simplify atom selection language
         old_top = molecule.get_top()
-        molecule.set_top(self.molid)
+        molecule.set_top(molid)
         patches = set()
         seg = "P%s" % frag
 
-        ## Save and reload so residue looping is correct
-        prot_molid = self._number_protein_fragment(frag=frag, molid=self.molid)
-        molecule.set_top(prot_molid)
-
-        # Sanity check that there is no discrepancy between defined resids and
-        # residues as interpreted by VMD.
         residues = list(set(atomsel('all').get('residue')))
-
         for residue in residues:
             sel = atomsel('residue %s' % residue)
+            chain = sel.get('chain')[0]
             resid = sel.get('resid')[0]
-            (newname, atomnames) = self.matcher.get_names(sel,
-                                                          print_warning=False)
+            # Only try to match single amino acid if there are 1 or 2 bonds
+            if len(self.matcher.get_extraresidue_atoms(sel)) < 3:
+                (newname, atomnames) = self.matcher.get_names(sel,
+                                                              print_warning=False)
 
-            # Couldn't find a match. See if it's a disulfide bond participant
+            # See if it's a disulfide bond participant
             # Need to do this selection by resid, not residue since it is
             # done in whole molecule and protein fragment, across which
             # residue number is not preserved
-            if not newname:
+            else:
                 (newname, patchline, atomnames) = \
-                        self.matcher.get_disulfide("resid %s" % resid, frag,
-                                                   self.molid, prot_molid)
+                        self.matcher.get_disulfide("resid %s and chain %s"
+                                                   % (resid, chain),
+                                                   frag, molid)
                 if newname:
                     patches.add(patchline)
 
@@ -653,9 +665,9 @@ class CharmmWriter(object):
 
         # Save protein chain in the correct order
         filename = self.tmp_dir + '/psf_protein_%s.pdb' % seg
-        _write_ordered_pdb(filename, 'all', prot_molid)
+        _write_ordered_pdb(filename, "fragment %s" % frag, molid)
         print("\tWrote %d atoms to the protein segment %s"
-              % (len(atomsel('all')), seg))
+              % (len(atomsel("fragment %s" % frag)), seg))
 
         # Now write to psfgen input file
         string = '''
@@ -667,34 +679,24 @@ class CharmmWriter(object):
         }
         ''' % (filename, seg)
         self.file.write(string)
-        self.file.write(''.join(patches))
-
-        print("Applying the following patches:\n")
-        print("\t%s" % "\t".join(patches))
-
-        # Angles must be regenerated FIRST!
-        # See http://www.ks.uiuc.edu/Research/namd/mailing_list/namd-l.2009-2010/4137.html
-        self.file.write("regenerate angles\nregenerate dihedrals\n")
         self.file.write("coordpdb $protnam %s\n" % seg)
 
         if old_top != -1:
             molecule.set_top(old_top)
-        molecule.delete(prot_molid)
-        atomsel("fragment %s" % frag, molid=self.molid).set('user', 0.0)
 
-        return filename
+        atomsel("fragment %s" % frag, molid=self.molid).set('user', 0.0)
+        return patches
 
     #==========================================================================
 
-    def _number_protein_fragment(self, frag, molid):
+    def _renumber_protein_chains(self, molid):
         """
-        Pulls out the indicated protein fragment and renumbers the residues
+        Pulls all protein fragments and renumbers the residues
         so that ACE and NMA caps appear to be different residues to VMD.
         This is necessary so that they don't appear as patches. Proteins with
         non standard capping groups will have the patches applied.
 
         Args:
-            fragment (int): Fragment to consider
             molid (int): VMD molecule ID of entire system
         Returns:
             (int): Molid of loaded fragment
@@ -702,49 +704,51 @@ class CharmmWriter(object):
         # Put our molecule on top and grab selection
         old_top = molecule.get_top()
         molecule.set_top(molid)
-        fragment = atomsel('fragment %s' % frag, molid=molid)
 
-        print("Checking capping groups resids on protein fragment %d" % frag)
-        for resid in sorted(set(fragment.get("resid"))):
-            # Handle bug where capping groups in same residue as the
-            # neighboring amino acid Maestro writes it this way for some
-            # reason but it causes problems down the line when psfgen doesn't
-            # understand the weird combined residue
-            rid = atomsel("fragment '%s' and resid '%d'"
-                          % (frag, resid)).get('residue')[0]
-            names = set(atomsel('residue %d'% rid).get('resname'))
-            assert len(names) < 3, ("More than 2 residues with same number... "
-                                    "currently unhandled. Report a bug")
+        for frag in set(atomsel("protein or resname ACE NMA").get("fragment")):
+            fragment = atomsel('fragment %s' % frag, molid=molid)
 
-            if len(names) > 1:
-                if 'ACE' in names and 'NMA' in names:
-                    print("ERROR: Both ACE and NMA were given the same resid"
-                          "Check your input structure")
-                    quit(1)
+            print("Checking capping groups resids on protein fragment %d" % frag)
+            for resid in sorted(set(fragment.get("resid"))):
+                # Handle bug where capping groups in same residue as the
+                # neighboring amino acid Maestro writes it this way for some
+                # reason but it causes problems down the line when psfgen doesn't
+                # understand the weird combined residue
+                rid = atomsel("fragment '%s' and resid '%d'"
+                              % (frag, resid)).get('residue')[0]
+                names = set(atomsel('residue %d'% rid).get('resname'))
+                assert len(names) < 3, ("More than 2 residues with same number... "
+                                        "currently unhandled. Report a bug")
 
-                if 'ACE' in names:
-                    # Set ACE residue number as one less
-                    resid = atomsel('residue %d and not resname ACE' % rid).get('resid')[0]
-                    if len(atomsel("fragment '%s' and resid '%d'" % (frag, resid-1))):
-                        raise ValueError('ACE resid collision number %d' % resid-1)
-                    atomsel('residue %d and resname ACE'
-                            % rid).set('resid', resid-1)
-                    print("\tACE %d -> %d" % (resid, resid-1))
+                if len(names) > 1:
+                    if 'ACE' in names and 'NMA' in names:
+                        print("ERROR: Both ACE and NMA were given the same resid"
+                              "Check your input structure")
+                        quit(1)
 
-                elif 'NMA' in names:
-                    # Set NMA residue number as one more
-                    resid = atomsel('residue %d and not resname NMA' % rid).get('resid')[0]
-                    if len(atomsel("fragment '%s' and resid '%d'" % (frag, resid+1))):
-                        raise ValueError('NMA resid collision number %d' % resid+1)
+                    if 'ACE' in names:
+                        # Set ACE residue number as one less
+                        resid = atomsel('residue %d and not resname ACE' % rid).get('resid')[0]
+                        if len(atomsel("fragment '%s' and resid '%d'" % (frag, resid-1))):
+                            raise ValueError('ACE resid collision number %d' % resid-1)
+                        atomsel('residue %d and resname ACE'
+                                % rid).set('resid', resid-1)
+                        print("\tACE %d -> %d" % (resid, resid-1))
 
-                    atomsel('residue %d and resname NMA'
-                            % rid).set('resid', resid+1)
-                    print("\tNMA %d -> %d" % (resid, resid+1))
+                    elif 'NMA' in names:
+                        # Set NMA residue number as one more
+                        resid = atomsel('residue %d and not resname NMA' % rid).get('resid')[0]
+                        if len(atomsel("fragment '%s' and resid '%d'" % (frag, resid+1))):
+                            raise ValueError('NMA resid collision number %d' % resid+1)
+
+                        atomsel('residue %d and resname NMA'
+                                % rid).set('resid', resid+1)
+                        print("\tNMA %d -> %d" % (resid, resid+1))
 
         # Have to save and reload so residues are parsed correctly by VMD
-        temp = tempfile.mkstemp(suffix='_P%s.mae' % frag,
+        temp = tempfile.mkstemp(suffix='_renum.mae',
                                 prefix='psf_prot_', dir=self.tmp_dir)[1]
-        fragment.write('mae', temp)
+        atomsel("same fragment as protein or resname ACE NMA").write('mae', temp)
         prot_molid = molecule.load('mae', temp)
 
         # Put things back the way they were

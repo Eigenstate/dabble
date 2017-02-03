@@ -123,7 +123,7 @@ class CharmmMatcher(MoleculeMatcher):
 
     #=========================================================================
 
-    def get_disulfide(self, selstring, fragment, molid, frag_molid): #pylint: disable=too-many-locals
+    def get_disulfide(self, selstring, fragment, molid): #pylint: disable=too-many-locals
         """
         Checks if the selection corresponds to a cysteine in a disulfide bond.
         Sets the patch line appropriately and matches atom names using
@@ -133,22 +133,16 @@ class CharmmMatcher(MoleculeMatcher):
             selstring (str): Selection to check
             fragment (str): Fragment ID (to narrow down selection)
             molid (int): VMD molecule of entire system (needed for disu partner)
-            frag_molid (int): VMD molecule ID to which names will be applied
 
         Returns:
             (str, str, dict) resname matched, patch line to put directly
               into psfgen, name translation dictionary
        """
-        selection = atomsel(selstring, molid=frag_molid)
-        whole_sel = atomsel("%s and fragment %s" % (selstring, fragment),
-                            molid=molid)
-
-        rgraph, _ = self.parse_vmd_graph(selection)
-        whole, _ = self.parse_vmd_graph(whole_sel)
+        selection = atomsel(selstring, molid=molid)
 
         # Check for the 3 join atoms corresponding to the disulfide bonds
-        externs = [n for n in whole.nodes() \
-                   if whole.node[n]["residue"] != "self"]
+        rgraph, _ = self.parse_vmd_graph(selection)
+        externs = self.get_extraresidue_atoms(selection)
         if len(externs) != 3:
             return (None, None, None)
 
@@ -188,20 +182,21 @@ class CharmmMatcher(MoleculeMatcher):
                              % selection.get('resid')[0])
         osel = atomsel("index %d" % partners[0], molid=molid)
 
+        # Order so same DISU isn't listed twice
         fr1 = osel.get("fragment")[0]
-
-        if fr1 < fragment:
+        fr2 = selection.get("fragment")[0]
+        if fr1 < fr2:
             first = osel
-            second = whole_sel
-        elif fr1 > fragment:
-            first = whole_sel
+            second = selection
+        elif fr1 > fr2:
+            first = selection
             second = osel
         else:
             if osel.get("resid")[0] < selection.get("resid")[0]:
                 first = osel
-                second = whole_sel
+                second = selection
             else:
-                first = whole_sel
+                first = selection
                 second = osel
 
         patchline = "patch DISU P%d:%d P%d:%d\n" % (first.get("fragment")[0],

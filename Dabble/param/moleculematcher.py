@@ -136,7 +136,7 @@ class MoleculeMatcher(object): # pylint: disable=too-few-public-methods
             KeyError: if no matching possible
         """
         resname = selection.get('resname')[0]
-        rgraph = self.parse_vmd_graph(selection)[0]
+        rgraph, _ = self.parse_vmd_graph(selection)
 
         # First check against matching residue names
         if resname in self.known_res.keys():
@@ -176,6 +176,26 @@ class MoleculeMatcher(object): # pylint: disable=too-few-public-methods
                       "forget to provide a topology file?")
 
         return (None, None)
+
+    #=========================================================================
+
+    def get_extraresidue_atoms(self, selection):
+        """
+        Determines if this selection contains bonds to other things. We
+
+        Args:
+            selection (atomsel): Selection to check
+        Returns:
+            (list of int): List of indices of atoms belonging to other
+                residues, or an empty list
+        """
+
+        rgraph, _ = self.parse_vmd_graph(selection)
+
+        externs = [n for n in rgraph.nodes() if \
+                   rgraph.node[n]["residue"] != "self"]
+
+        return externs
 
     #=========================================================================
     #                           Private methods                              #
