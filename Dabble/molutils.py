@@ -608,7 +608,7 @@ def check_sanity(molid):
         ValueError: Molecule is not sane in some way
     """
     # Check number of residues is the same as number of residues
-    for ch in set(atomsel("all", molid=molid).get("chain")):
+    for ch in set(atomsel("protein or resname ACE NMA", molid=molid).get("chain")):
         resids = set(atomsel("chain '%s'" % ch, molid=molid).get("resid"))
         residues = set(atomsel("chain '%s'" % ch, molid=molid).get("residue"))
 
