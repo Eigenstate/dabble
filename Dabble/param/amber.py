@@ -47,7 +47,6 @@ from parmed.tools import chamber, parmout, HMassRepartition, checkValidity
 from parmed.amber import AmberParm
 from parmed.exceptions import ParameterWarning
 from Dabble.param import CharmmWriter, AmberMatcher
-from Dabble import molutils
 
 #++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
 
@@ -119,7 +118,6 @@ class AmberWriter(object):
             self.parameters.extend(extra_params)
 
         self.prompt_params = False
-        molutils.check_sanity(self.molid)
 
     #==========================================================================
 

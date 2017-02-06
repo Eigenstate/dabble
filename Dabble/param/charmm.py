@@ -39,7 +39,6 @@ except ImportError:
     atomsel = atomsel.atomsel
 
 from Dabble.param import CharmmMatcher
-from Dabble import molutils
 
 #++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
 #                                CONSTANTS                                    #
@@ -115,9 +114,6 @@ class CharmmWriter(object):
 
         if extra_topos:
             self.topologies.extend(extra_topos)
-
-        # Check molecule numbering is okay
-        molutils.check_sanity(self.molid)
 
         # Initialize graph matcher with topologies we know about
         self.matcher = CharmmMatcher(self.topologies)
