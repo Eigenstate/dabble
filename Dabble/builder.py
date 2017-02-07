@@ -135,7 +135,7 @@ class DabbleBuilder(object):
         self._set_solute_sel(self.molids['solute'])
 
         # Sanity check the solute
-        molutils.check_sanity(self.molids['solute'])
+        molutils.check_sanity(self.molids['solute'], self.opts.get('exclude_sel'))
 
         # Orient the solute in the X,Y, and optionally Z directions
         self.molids['solute'] = self._orient_solute(self.molids['solute'])
@@ -498,6 +498,7 @@ class DabbleBuilder(object):
                    ")"
             if len(chains):
                 sel += " or "
+
         self.solute_sel = sel
         return sel
 

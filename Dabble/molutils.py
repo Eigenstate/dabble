@@ -596,21 +596,32 @@ def num_lipids_remaining(molid, lipid_sel):
 
 #==========================================================================
 
-def check_sanity(molid):
+def check_sanity(molid, exclude_sel=None):
     """
     Checks the sanity of an input system. Currently, this means:
         - Check the number of resids is the same as the number of residues
 
     Args:
         molid (int): VMD molecule ID to check
+        exclude_sel (str): Selection to ignore sanity checking for, for example
+            in systems with protein ligands
 
     Raises:
         ValueError: Molecule is not sane in some way
     """
+    # Handle exclude selection
+    if exclude_sel is not None:
+        app = "and not (%s)" % exclude_sel
+    else:
+        app = ""
+
     # Check number of residues is the same as number of residues
-    for ch in set(atomsel("protein or resname ACE NMA", molid=molid).get("chain")):
-        resids = set(atomsel("chain '%s'" % ch, molid=molid).get("resid"))
-        residues = set(atomsel("chain '%s'" % ch, molid=molid).get("residue"))
+    for ch in set(atomsel("(protein or resname ACE NMA) %s" % app,
+                          molid=molid).get("chain")):
+        resids = set(atomsel("chain '%s' %s" % (ch, app),
+                             molid=molid).get("resid"))
+        residues = set(atomsel("chain '%s' %s" % (ch, app),
+                               molid=molid).get("residue"))
 
         if len(resids) != len(residues):
             raise ValueError("\nMolecule is not sane!\n Number of resids does "
