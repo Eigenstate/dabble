@@ -379,6 +379,10 @@ class CharmmMatcher(MoleculeMatcher):
             # CMAP terms add edges. This makes amino acids work since the
             # next and previous amino acids aren't defined as bonds usually
             elif tokens[0] == "CMAP":
+
+                if len(tokens) == 1: # CMAP parameter section follows, ignore
+                    continue
+
                 if firstcmap:
                     # Remove all +- join nodes on patching
                     joins = [n for n in graph.nodes() if graph.node[n]["residue"] != "self"]
