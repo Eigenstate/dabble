@@ -24,7 +24,7 @@ Boston, MA 02111-1307, USA.
 
 from __future__ import print_function
 import argparse
-import os, sys
+import os, sys, shutil
 import signal
 import tempfile
 from Dabble import VmdSilencer
@@ -203,4 +203,5 @@ with VmdSilencer(output=soutput):
     builder = DabbleBuilder(**vars(opts)) # pylint: disable=star-args
     builder.write()
     print("\nSuccess!")
+    shutil.rmtree(builder.tmp_dir) # Clean up builder temporary directory
 
