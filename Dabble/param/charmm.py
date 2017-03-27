@@ -740,8 +740,8 @@ class CharmmWriter(object):
 
                     elif 'NMA' in names:
                         # Set NMA residue number as one more
-                        resid = atomsel('residue %d and not resname NMA' % rid).get('resid')[0]
-                        if len(atomsel("fragment '%s' and resid '%d'" % (frag, resid+1))):
+                        resid = int(atomsel('residue %d and not resname NMA' % rid).get('resid')[0])
+                        if len(atomsel("fragment '%s' and resid %d" % (frag, resid+1))):
                             raise ValueError('NMA resid collision number %d' % resid+1)
 
                         atomsel('residue %d and resname NMA'
