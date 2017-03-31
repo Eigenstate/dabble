@@ -1,6 +1,6 @@
 """ Builds membrane protein systems """
 
-__version__ = '2.3.5'
+__version__ = '2.4.0'
 __author__ = 'Robin Betz'
 
 from Dabble.vmdsilencer import VmdSilencer

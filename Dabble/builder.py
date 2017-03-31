@@ -85,7 +85,7 @@ class DabbleBuilder(object):
 
         # Check for default lipid membrane
         # Set some default options
-        if not 'forcefield' in self.opts: self.opts['forcefield'] = "charmm"
+        if not 'forcefield' in self.opts: self.opts['forcefield'] = "charmm36m"
         if not 'lipid_sel' in self.opts: self.opts['lipid_sel'] = "lipid or resname POPS POPG"
         if not 'cation' in self.opts: self.opts['cation'] = 'Na'
         if not 'salt_conc' in self.opts:  self.opts['salt_conc'] = 0.150

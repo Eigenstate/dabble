@@ -144,7 +144,7 @@ class CharmmWriter(object):
         #  Finds the psfgen package and sets the output file name
         string = '''
         set dir [file join $env(VMDDIR) plugins [vmdinfo arch] tcl psfgen1.6]
-        package ifneeded psfgen 1.6.2 [list load [file join $dir libpsfgen.so]]
+        package ifneeded psfgen 1.6 [list load [file join $dir libpsfgen.so]]
         package require psfgen
         set output "%s"
         resetpsf
@@ -732,8 +732,8 @@ class CharmmWriter(object):
                     if 'ACE' in names:
                         # Set ACE residue number as one less
                         resid = atomsel('residue %d and not resname ACE' % rid).get('resid')[0]
-                        if len(atomsel("fragment '%s' and resid '%d'" % (frag, resid-1))):
-                            raise ValueError('ACE resid collision number %d' % resid-1)
+                        if len(atomsel("fragment '%s' and resid %d" % (frag, resid-1))):
+                            raise ValueError('ACE resid collision number %d' % (resid-1))
                         atomsel('residue %d and resname ACE'
                                 % rid).set('resid', resid-1)
                         print("\tACE %d -> %d" % (resid, resid-1))
@@ -742,7 +742,7 @@ class CharmmWriter(object):
                         # Set NMA residue number as one more
                         resid = int(atomsel('residue %d and not resname NMA' % rid).get('resid')[0])
                         if len(atomsel("fragment '%s' and resid %d" % (frag, resid+1))):
-                            raise ValueError('NMA resid collision number %d' % resid+1)
+                            raise ValueError("NMA resid collision number %d" % (resid+1))
 
                         atomsel('residue %d and resname NMA'
                                 % rid).set('resid', resid+1)

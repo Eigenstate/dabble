@@ -63,7 +63,7 @@ class AmberWriter(object):
     #==========================================================================
 
     def __init__(self, molid, tmp_dir,
-                 forcefield='charmm', lipid_sel="lipid",
+                 forcefield="charmm36m", lipid_sel="lipid",
                  hmr=False, extra_topos=None, extra_params=None,
                  override_defaults=False):
         self.lipid_sel = lipid_sel
@@ -72,10 +72,21 @@ class AmberWriter(object):
         self.hmr = hmr
         self.extra_topos = extra_topos
         self.prmtop_name = ""
-        if forcefield not in ['amber', 'charmm']:
+        if forcefield not in ["amber", "charmm36m", "charmm", "charmm36"]:
             raise ValueError("Unsupported forcefield: %s" % forcefield)
         self.forcefield = forcefield
-        if self.forcefield == 'charmm':
+        if self.forcefield == "charmm36m":
+            self.parameters = [
+                resource_filename(__name__, "charmm_parameters/toppar_water_ions.str"),
+                resource_filename(__name__, "charmm_parameters/par_all36_cgenff.prm"),
+                resource_filename(__name__, "charmm_parameters/par_all36m_prot.prm"),
+                resource_filename(__name__, "charmm_parameters/par_all36_lipid.prm"),
+                resource_filename(__name__, "charmm_parameters/par_all36_carb.prm"),
+                resource_filename(__name__, "charmm_parameters/par_all36_na.prm"),
+                resource_filename(__name__, "charmm_parameters/toppar_all36_prot_na_combined.str")
+                ]
+            self.topologies = []
+        elif self.forcefield in ["charmm36", "charmm"]:
             self.parameters = [
                 resource_filename(__name__, "charmm_parameters/toppar_water_ions.str"),
                 resource_filename(__name__, "charmm_parameters/par_all36_cgenff.prm"),
@@ -128,7 +139,7 @@ class AmberWriter(object):
         self.prmtop_name = prmtop_name
 
         # Charmm forcefield
-        if self.forcefield == 'charmm':
+        if "charmm" in self.forcefield:
             psfgen = CharmmWriter(molid=self.molid,
                                   tmp_dir=self.tmp_dir,
                                   lipid_sel=self.lipid_sel,
@@ -138,7 +149,7 @@ class AmberWriter(object):
             self._psf_to_charmm_amber()
 
         # Amber forcefield
-        elif self.forcefield == 'amber':
+        elif "amber" in self.forcefield:
 
             # Initialize the matcher
             self.matcher = AmberMatcher(self.topologies)
@@ -190,6 +201,9 @@ class AmberWriter(object):
             print("        Verify all warnings!")
             action = checkValidity(parm)
             action.execute()
+
+        else:
+            raise ValueError("Unhandled forcefield: %s" % self.forcefield)
 
     #========================================================================#
     #                           Private methods                              #

@@ -187,7 +187,7 @@ def write_final_system(out_fmt, out_name, molid, **kwargs):
     if not kwargs.get('lipid_sel'):
         kwargs['lipid_sel'] = "lipid or resname POPS POPG"
     if not kwargs.get('forcefield'):
-        kwargs['forcefield'] = "charmm"
+        kwargs['forcefield'] = "charmm36m"
 
     # Write a mae file always, removing the prefix from the output file
     mae_name = '.'.join(out_name.rsplit('.')[:-1]) + '.mae'
@@ -228,13 +228,14 @@ def write_final_system(out_fmt, out_name, molid, **kwargs):
         write_psf_name = mae_name.replace('.mae', '')
         writer = CharmmWriter(molid=temp_mol,
                               tmp_dir=kwargs['tmp_dir'],
+                              forcefield=kwargs['forcefield'],
                               lipid_sel=kwargs.get('lipid_sel'),
                               extra_topos=tops)
         writer.write(write_psf_name)
 
     # For amber format files, invoke the parmed chamber routine
     if out_fmt == 'amber':
-        if kwargs.get('forcefield') == "charmm":
+        if "charmm" in kwargs.get('forcefield'):
             print("Writing AMBER format files with CHARMM parameters. "
                   "This may take a moment...\n")
         else:
@@ -332,9 +333,9 @@ def check_out_type(value, forcefield, hmr=False):
         out_fmt = 'pdb'
     elif ext == 'dms':
         out_fmt = 'dms'
-    elif ext == 'psf' and forcefield=="charmm":
+    elif ext == 'psf' and "charmm" in forcefield:
         out_fmt = 'charmm'
-    elif ext == 'prmtop' and forcefield in ["amber","charmm"]:
+    elif ext == 'prmtop' and forcefield in ["amber","charmm","charmm36","charmm36m"]:
         out_fmt = 'amber'
     else:
         raise ValueError("%s is an unsupported format with %s forcefield"
