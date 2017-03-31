@@ -8,8 +8,7 @@ dir = os.path.dirname(__file__) + "/"
 
 def test_multiligand_building(tmpdir):
     """
-    Solvates and membranes a system with multiple ligands
-    """
+    Solvates and membranes a system with multiple ligands """
     try:
         import vmd, molecule
         from atomsel import atomsel
@@ -79,63 +78,17 @@ def test_multiligand_parameterizing(tmpdir):
     assert(set(atomsel("resname ALP").get("resid")) == set(range(1,11)))
 
 #==============================================================================
-# Commented out because really slow and chamber has its own tests
-#def test_multiligand_chamber(tmpdir):
-#    from Dabble.param import AmberWriter
-#    import vmd, molecule
-#
-#    p = str(tmpdir.mkdir("multiligand_chamber"))
-#    molid = molecule.load("mae", dir + "test_multiligand_correct.mae")
-#    w = AmberWriter(molid=molid, tmp_dir=p, extra_topos=[dir + "alprenolol.rtf"],
-#                    extra_params=[dir + "alprenolol.prm"])
-#    w.write(p+"/test")
-#    subprocess.check_call(["diff", "-q", dir + "test_multiligand_correct.prmtop",
-#                           p+"/test.prmtop"])
-#    subprocess.check_call(["diff", "-q", dir + "test_multiligand_correct.inpcrd",
-#                           p+"/test.inpcrd"])
 
-#==============================================================================
+def test_multiligand_charmm36m(tmpdir):
+    from Dabble.param import AmberWriter
+    import vmd, molecule
 
-#def test_multiligand_renaming(tmpdir):
-#    from Dabble.param import CharmmWriter
-#    import vmd, molecule
-#
-#    p = str(tmpdir.mkdir("multiligand_rename"))
-#    molid = molecule.load("mae", dir + "B2AR_10ALPs_renamed.mae")
-#    w = CharmmWriter(tmp_dir=p, molid=molid, lipid_sel="lipid",
-#                     extra_topos=[dir + "alprenolol.rtf"])
-#    w.write(p+"/test")
-#    subprocess.check_call(["diff", "-q", "--ignore-matching-lines=REMARKS",
-#                           dir + "test_renamed_correct.psf",
-#                           "--ignore-matching-lines=NTITLE",
-#                           p+"/test.psf"])
-#
-#==============================================================================
+    p = str(tmpdir.mkdir("charmm36m"))
+    molid = molecule.load("mae", os.path.join(dir, "B2AR_10ALPs.mae"))
+    w = AmberWriter(molid, tmp_dir=p, forcefield="charmm36m", hmr=True,
+                    extra_topos=[os.path.join(dir, "alprenolol.rtf")],
+                    extra_params=[os.path.join(dir, "alprenolol.prm")])
+    w.write("test_charmm36m")
 
-#def test_amber_writing(tmpdir):
-#    """
-#    Tests saving a system with no ligand to a file
-#    """
-#    from Dabble.param import AmberWriter
-#    import vmd, molecule
-#
-#    p = str(tmpdir.mkdir("multiligand_rename"))
-#    molid = molecule.load("mae", dir + "B2AR_noalps.mae")
-#    w = AmberWriter(molid, tmp_dir=p, forcefield="amber")
-#    w.write(os.path.join(p,"test"))
-
-#==============================================================================
-
-#def test_multiligand_chamber(tmpdir):
-#    from Dabble.param import AmberWriter
-#    import vmd, molecule
-#
-##    p = str(tmpdir.mkdir("multiligand_rename"))
-#    p = tmpdir
-#    dir = "./"
-#    molid = molecule.load("mae", dir + "test_multiligand_noalps.mae")
-#    w = AmberWriter(molid, tmp_dir=p, forcefield="charmm", hmr=True)
-#    w.write("test_chamber")
-#
 #==============================================================================
 

@@ -8,6 +8,8 @@
 *
 32 1
 
+!updated 2016/8. see toppar_all.history.
+
 ! please reference the following:
 
 ! pyranose monosaccharides
@@ -65,76 +67,79 @@
 ! pram:  E. Prabhu Raman
 ! sai:   Sairam S. Mallajosyula
 ! my:    Mingjun Yang
+! xxwy:  Wenbo Yu
 
 ! tip3p water
-!MASS     1 HCTIP3   1.00800  H ! TIP3P water hydrogen
-!MASS     2 OCTIP3  15.99940  O ! TIP3P water oxygen
+!MASS  -1   HCTIP3    1.00800 H ! TIP3P water hydrogen
+!MASS  -1   OCTIP3   15.99940 O ! TIP3P water oxygen
 ! C6H12O6 pyranose monosaccharide atom types
-MASS   171 CC301   12.01100  C ! aliphatic C, no H's
-MASS   172 CC311   12.01100  C ! generic acyclic CH carbon
-MASS   173 CC312   12.01100  C ! CH carbon in linear polyols
-MASS   174 CC3161  12.01100  C ! C2, C3, C4 CH bound to OH
-MASS   175 CC3162  12.01100  C ! C1 (anomeric) CH bound to OH
-MASS   176 CC3163  12.01100  C ! C5 CH bound to exocylic CH2OH
-MASS   177 CC321   12.01100  C ! generic acyclic CH2 carbon (hexopyranose C6)
-MASS   178 CC322   12.01100  C ! CH2 carbon in linear polyols erh
-MASS   179 CC3263  12.01100  C ! C5 in xylose
-MASS   180 CC331   12.01100  C ! generic acyclic CH3 carbon (xyl C6, glcna/galna CT)
-MASS   181 CC2O1   12.01100  C ! sp2 carbon in amides, aldoses
-MASS   182 CC2O2   12.01100  C ! sp2 carbon in carboxylates
-MASS   183 CC2O3   12.01100  C ! sp2 carbon in acetone, ketoses
-MASS   184 CC2O4   12.01100  C ! c22 CD
-MASS   185 HCA1     1.00800  H ! aliphatic proton, CH
-MASS   186 HCA2     1.00800  H ! aliphatic proton, CH2
-MASS   187 HCA3     1.00800  H ! aliphatic proton, CH3
-MASS   188 HCP1     1.00800  H ! polar H
-MASS   189 HCR1     1.00800  H ! c22 HR1
-MASS   191 OC311   15.99940  O ! hydroxyl oxygen
-MASS   192 OC3C61  15.99940  O ! ether in six membered ring
-MASS   193 OC301   15.99940  O ! generic linear ether
-MASS   194 OC302   15.99940  O ! linear ether in 1-1 glycosidic linkage
-MASS   195 OC2D1   15.99940  O ! sp2 oxygen in amides, aldoses
-MASS   196 OC2D2   15.99940  O ! sp2 oxygen in carboxylates
-MASS   197 OC2D3   15.99940  O ! sp2 oxygen in acetone, ketoses
-MASS   198 OC2D4   15.99940  O ! par22 O
-MASS   200 NC2D1   14.00700  N ! peptide, NMA, IPAA nitrogen (C=NHR)
+MASS  -1  CC301     12.01100 C ! aliphatic C, no H's
+MASS  -1  CC311     12.01100 C ! generic acyclic CH carbon
+MASS  -1  CC312     12.01100 C ! CH carbon in linear polyols
+MASS  -1  CC3161    12.01100 C ! C2, C3, C4 CH bound to OH
+MASS  -1  CC3162    12.01100 C ! C1 (anomeric) CH bound to OH
+MASS  -1  CC3163    12.01100 C ! C5 CH bound to exocylic CH2OH
+MASS  -1  CC321     12.01100 C ! generic acyclic CH2 carbon (hexopyranose C6)
+MASS  -1  CC322     12.01100 C ! CH2 carbon in linear polyols erh
+MASS  -1  CC3263    12.01100 C ! C5 in xylose
+MASS  -1  CC331     12.01100 C ! generic acyclic CH3 carbon (xyl C6, glcna/galna CT)
+MASS  -1  CC2O1     12.01100 C ! sp2 carbon in amides, aldoses
+MASS  -1  CC2O2     12.01100 C ! sp2 carbon in carboxylates
+MASS  -1  CC2O3     12.01100 C ! sp2 carbon in acetone, ketoses
+MASS  -1  CC2O4     12.01100 C ! c22 CD
+MASS  -1  HCA1       1.00800 H ! aliphatic proton, CH
+MASS  -1  HCA2       1.00800 H ! aliphatic proton, CH2
+MASS  -1  HCA3       1.00800 H ! aliphatic proton, CH3
+MASS  -1  HCP1       1.00800 H ! polar H
+MASS  -1  HCR1       1.00800 H ! c22 HR1
+MASS  -1  OC311     15.99940 O ! hydroxyl oxygen
+MASS  -1  OC3C61    15.99940 O ! ether in six membered ring
+MASS  -1  OC301     15.99940 O ! generic linear ether
+MASS  -1  OC302     15.99940 O ! linear ether in 1-1 glycosidic linkage
+MASS  -1  OC2D1     15.99940 O ! sp2 oxygen in amides, aldoses
+MASS  -1  OC2D2     15.99940 O ! sp2 oxygen in carboxylates
+MASS  -1  OC2D3     15.99940 O ! sp2 oxygen in acetone, ketoses
+MASS  -1  OC2D4     15.99940 O ! par22 O
+MASS  -1  NC2D1     14.00700 N ! peptide, NMA, IPAA nitrogen (C=NHR)
 ! model compound atom types
-MASS   201 CC321C  12.01100  C ! cyclohexane, thp CH2
-MASS   202 HCA3M    1.00800  H ! alcohol aliphatic proton, CH3
-MASS   203 HCP1M    1.00800  H ! EGLY hydroxyl H
-MASS   204 OC311M  15.99940  O ! MEOH, ETOH, PRO2, EGLY hydroxyl O
-MASS   205 CC321D  12.01100  C ! cyclohexane, thp CH2 model for 1-1 linkage
-MASS   206 CC311C  12.01100  C ! patch C1 in model compound
-MASS   207 CC311D  12.01100  C ! patch C1 in model compound
+MASS  -1  CC321C    12.01100 C ! cyclohexane, thp CH2
+MASS  -1  HCA3M      1.00800 H ! alcohol aliphatic proton, CH3
+MASS  -1  HCP1M      1.00800 H ! EGLY hydroxyl H
+MASS  -1  OC311M    15.99940 O ! MEOH, ETOH, PRO2, EGLY hydroxyl O
+MASS  -1  CC321D    12.01100 C ! cyclohexane, thp CH2 model for 1-1 linkage
+MASS  -1  CC311C    12.01100 C ! patch C1 in model compound
+MASS  -1  CC311D    12.01100 C ! patch C1 in model compound
 ! THF atom types
-MASS   208 OC3C5M  15.99940  O ! thf ring oxygen
-MASS   209 CC322C  12.01100  C ! cyclopentane, thf CH2
-MASS   210 HCA2C2   1.00800  H ! cyclopentane, thp aliphatic proton, CH2
-MASS   211 CC312C  12.01100  C ! tf2m CH1
-MASS   212 HCA1C2   1.00800  H ! tf2m aliphatic proton, CH1
+MASS  -1  OC3C5M    15.99940 O ! thf ring oxygen
+MASS  -1  CC322C    12.01100 C ! cyclopentane, thf CH2
+MASS  -1  HCA2C2     1.00800 H ! cyclopentane, thp aliphatic proton, CH2
+MASS  -1  CC312C    12.01100 C ! tf2m CH1
+MASS  -1  HCA1C2     1.00800 H ! tf2m aliphatic proton, CH1
 ! Furanose atom types; erh 10/24/07
-MASS   213 OC3C51  15.99940  O ! furan ring oxygen
-MASS   214 CC3152  12.01100  C ! furan ring carbon
-MASS   215 CC3153  12.01100  C ! furan ring carbon
-MASS   216 CC3251  12.01100  C ! furan ring carbon; C2 deoxy
-MASS   217 CC3151  12.01100  C ! furan ring carbon
-MASS   218 CC3051  12.01100  C ! furan ring carbon; C2 fructose
+MASS  -1  OC3C51    15.99940 O ! furan ring oxygen
+MASS  -1  CC3152    12.01100 C ! furan ring carbon
+MASS  -1  CC3153    12.01100 C ! furan ring carbon
+MASS  -1  CC3251    12.01100 C ! furan ring carbon; C2 deoxy
+MASS  -1  CC3151    12.01100 C ! furan ring carbon
+MASS  -1  CC3051    12.01100 C ! furan ring carbon; C2 fructose
 ! pyranose derivatives
-MASS   219 CC3062  12.01100  C ! C2 on NE5AC
-MASS   220 CC3261  12.01100  C ! C3 on NE5AC
+MASS  -1  CC3062    12.01100 C ! C2 on NE5AC
+MASS  -1  CC3261    12.01100 C ! C3 on NE5AC
 !Added by sai for modelling phosphate
-MASS   221 OC312   15.99940  O ! OH in PO3H (phosphate) || OHL in top_all27_lipid.rtf
-MASS   222 OC30P   15.99940  O ! ester O in PO3H (phosphate) || OSL in top_all27_lipid.rtf
-MASS   223 OC2DP   15.99940  O ! =0 in P03H (phosphate) || O2L in top_all27_lipid.rtf
-MASS   224 PC      30.974000 P ! phosphorus || PL in top_all27_lipid.rtf
-MASS   225 SC      32.060000 S ! Sulfate sulfur
+MASS  -1  OC312     15.99940 O ! OH in PO3H (phosphate) || OHL in top_all27_lipid.rtf
+MASS  -1  OC30P     15.99940 O ! ester O in PO3H (phosphate) || OSL in top_all27_lipid.rtf
+MASS  -1  OC2DP     15.99940 O ! =0 in P03H (phosphate) || O2L in top_all27_lipid.rtf
+MASS  -1  PC        30.97400 P ! phosphorus || PL in top_all27_lipid.rtf
+MASS  -1  SC        32.06000 S ! Sulfate sulfur
 !pram, furanosyl linkages
-MASS   226 CC312D  12.01100  C ! from CC322C; THF anomeric carbon
-MASS   227 OC303   15.99940  O ! from OC301; linear ether in P1->F3 pyranose-furanose glycosidic linkage
+MASS  -1  CC312D    12.01100 C ! from CC322C; THF anomeric carbon
+MASS  -1  OC303     15.99940 O ! from OC301; linear ether in P1->F3 pyranose-furanose glycosidic linkage
 !o-acetyl on ABEQ and ARHM, Mingjun
-MASS   228 CC2O5   12.01100  C ! carbonyl C on acetyl
+MASS  -1  CC2O5     12.01100 C ! carbonyl C on acetyl
+!Sulfamate nitrogen, Wenbo
+MASS  -1  NC311     14.00700 !N ! Sulfamate nitrogen
 
-AUTOGENERATE angles dihedrals
+AUTOGENERATE angles dihedrals patch
 ! DEFAults for patching FIRSt and LAST residues
 DEFA FIRS NONE LAST NONE
 
@@ -5544,6 +5549,10 @@ IC   2O6  1O3 *2C2  2C1    1.4630  109.52 -116.62  107.54   1.1057
 !! PATCHES for phosphorylated inositols (the PIPs) !!!!!!!!!!!!
 !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 
+! The following patches are maintained for back compatibility and should not
+! be used to create Phosphatidylinositol residues.  Those are now included in
+! stream/lipid/toppar_all36_lipid_inositol.str
+!
 ! patches to make PIP2 and PIP3 charge variants; PO4 or PO4H at inositol C3,C4,C5
 ! charges and chemical types based on patches from sairam in toppar_allxx_sugar_model.str
 
@@ -6023,6 +6032,58 @@ IC   O2   CA2  CB2  HB2    1.4300  107.44 -164.22  109.47   1.0700
 IC   O2   CA2  CB2  HB3    1.4300  107.44  -44.22  109.47   1.0700
 PATC  FIRS NONE LAST NONE
 
+
+!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+!! Patches for Sulfamate by Wenbo !!!
+!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+
+PRES SUFMA         -1.00 ! Sulfamate patch to C2 Axial (GLC), xxwy
+dele atom HO2
+dele atom O2
+GROUP                               
+ATOM C2   CC3161    0.10 !
+ATOM H2   HCA1      0.09 !       H2-C2---
+ATOM S2   SC        1.11 !          |
+ATOM OS22 OC2DP    -0.64 !          N-HN
+ATOM OS23 OC2DP    -0.64 !          | 
+ATOM OS24 OC2DP    -0.64 !    OS23--S2--OS24
+ATOM N    NC311    -0.73 !          |
+ATOM HN   HCP1      0.35 !          OS22    
+!
+BOND  C2 N   S2  OS22  S2  OS23  S2  OS24  S2 N  N  HN
+!
+!    I    J    K    L      R(IK)  T(IKJ)    PHI   T(JKL)   R(KL)
+IC   O5   C1   C2   N     1.4410  114.05  -60.00  114.93   1.5109
+IC   C1   N   *C2   H2    2.6009   33.28  116.74  115.52   1.1112
+IC   C1   C2   N    S2    1.5738  114.93  240.00  120.35   1.5793
+IC   C2   S2  *N    HN    2.6812   29.10 -125.97  104.18   1.0300
+IC   C2   N    S2   OS22  1.5109  120.35  -58.37  106.61   1.4455
+IC   N   OS22 *S2   OS23  2.4267   38.58  108.63  109.00   1.4111
+IC   N   OS22 *S2   OS24  2.4267   38.58 -115.20  116.51   1.4439
+
+PRES SUFMB         -1.00 ! Sulfamate patch to C2 Equatorial (GLC), xxwy
+dele atom HO2
+dele atom O2
+GROUP                               
+ATOM C2   CC3161    0.10 !
+ATOM H2   HCA1      0.09 !       H2-C2---
+ATOM S2   SC        1.11 !          |
+ATOM OS22 OC2DP    -0.64 !          N-HN
+ATOM OS23 OC2DP    -0.64 !          | 
+ATOM OS24 OC2DP    -0.64 !    OS23--S2--OS24
+ATOM N    NC311    -0.73 !          |
+ATOM HN   HCP1      0.35 !          OS22    
+!
+BOND  C2 N   S2  OS22  S2  OS23  S2  OS24  S2 N  N  HN
+!
+!    I    J    K    L      R(IK)  T(IKJ)    PHI   T(JKL)   R(KL)
+IC   O5   C1   C2   N     1.4410  114.05  175.98  114.93   1.5109
+IC   C1   N   *C2   H2    2.6009   33.28 -116.74  115.52   1.1112
+IC   C1   C2   N    S2    1.5738  114.93  105.94  120.35   1.5793
+IC   C2   S2  *N    HN    2.6812   29.10 -125.97  104.18   1.0300
+IC   C2   N    S2   OS22  1.5109  120.35  -58.37  106.61   1.4455
+IC   N   OS22 *S2   OS23  2.4267   38.58  108.63  109.00   1.4111
+IC   N   OS22 *S2   OS24  2.4267   38.58 -115.20  116.51   1.4439
 
 END
 
