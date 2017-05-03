@@ -25,6 +25,7 @@
 from __future__ import print_function
 import logging
 import networkx as nx
+from networkx.drawing.nx_pydot import write_dot
 from networkx.algorithms import isomorphism
 
 try:
@@ -118,7 +119,7 @@ class CharmmMatcher(MoleculeMatcher):
                 return (names[0], names[1], next(matcher.match()))
 
         logger.error("Couldn't find a patch for resname '%s'. Dumping as 'rgraph.dot'", resname)
-        nx.write_dot(rgraph, "rgraph.dot")
+        write_dot(rgraph, "rgraph.dot")
         return (None, None, None)
 
     #=========================================================================
@@ -394,7 +395,7 @@ class CharmmMatcher(MoleculeMatcher):
                                      "Line was:\n%s" % line)
                 tokens = tokens[1:]
                 nodes = [(tokens[3*j+i], tokens[3*j+i+1]) \
-                         for j in range(len(tokens)/4) \
+                         for j in range(int(len(tokens)/4)) \
                          for i in range(j, j+3)]  # oo i love one liners
                 for (node1, node2) in nodes:
                     if not _define_bond(graph, node1, node2, bool(patch)):

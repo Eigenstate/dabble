@@ -112,7 +112,7 @@ def concatenate_mae_files(output_filename,
         outfile.write(line)
     for input_filename in input_filenames[1:]:
         infile = open(input_filename)
-        for i in xrange(5):
+        for i in range(5):
             infile.readline()
         for line in infile:
             outfile.write(line)

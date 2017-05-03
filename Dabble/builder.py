@@ -352,9 +352,9 @@ class DabbleBuilder(object):
                pos_ions_needed, cation, neg_ions_needed))
 
         # Add the ions
-        for _ in xrange(pos_ions_needed):
+        for _ in range(pos_ions_needed):
             add_salt_ion(cation, molid)
-        for _ in xrange(neg_ions_needed):
+        for _ in range(neg_ions_needed):
             add_salt_ion('Cl', molid)
 
         return pos_ions_needed + neg_ions_needed

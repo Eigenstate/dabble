@@ -112,7 +112,7 @@ def test_residue_renaming(tmpdir):
 
     # Check matching. Ignore hydrogens since those can vary
     assert set(resnaem.values()) == set(["LIG"])
-    nohdict = dict((k,v) for k,v in mdict.iteritems() if v[0] != "H")
+    nohdict = dict((k,v) for k,v in mdict.items() if v[0] != "H")
     assert nohdict == {0: 'C13', 1: 'N2', 2: 'C12', 3: 'C11', 4: 'C15', 5: 'C7',
                        6: 'C3', 7: 'C8', 8: 'N1', 9: 'C1', 10: 'C4', 11: 'C5',
                        12: 'C2', 13: 'C6', 14: 'C9', 15: 'C10', 16: 'C14',

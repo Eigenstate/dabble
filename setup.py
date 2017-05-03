@@ -1,19 +1,20 @@
 
-from setuptools import setup, Command
-import os
+from setuptools import setup
+from setuptools.command.test import test as TestCommand
+
 import sys
 
 # Testing
-class PyTest(Command):
-    user_options = []
+class PyTest(TestCommand):
+
     def initialize_options(self):
-        pass
-    def finalize_options(self):
-        pass
+        TestCommand.initialize_options(self)
+        self.pytest_args = []
+
     def run(self):
-        import sys, subprocess, os
-        errno = subprocess.call([sys.executable, os.path.abspath('test/runtests.py')])
-        raise SystemExit(errno)
+        import pytest
+        errno = pytest.main()
+        sys.exit(errno)
 
 packages = ['Dabble', 'Dabble.param']
 scripts = ['dabble', 'get_restraint_mask.py', 'convert_step5_to_dabble.py',
@@ -24,7 +25,7 @@ package_data = {
         }
 
 setup(name='dabble',
-      version='2.4.1',
+      version='2.5.0',
       description='Membrane protein system builder',
       author='Robin Betz',
       author_email='robin@robinbetz.com',
@@ -33,6 +34,8 @@ setup(name='dabble',
       package_data=package_data,
       packages=packages,
       scripts=scripts,
+      install_requires=["networkx>=1.11","pydotplus","vmd-python"],
+      tests_require=["pytest"],
       cmdclass = {'test': PyTest}
      )
 
