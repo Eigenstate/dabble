@@ -35,7 +35,7 @@ except ImportError:
     from vmd import molecule, atomsel
     atomsel = atomsel.atomsel
 
-import fileutils
+from Dabble import fileutils
 # pylint: disable=no-member
 
 #++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
