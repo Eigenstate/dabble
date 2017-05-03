@@ -260,7 +260,7 @@ class CharmmWriter(object):
                 atomsel('residue %s' % r).set("user", 0.0) # get it out of allw
 
         allw.update()
-        num_written = len(allw)/(9999*3)+1
+        num_written = int(len(allw)/(9999*3))+1
         print("Going to write %d files for %d water atoms"
               % (num_written, len(allw)))
 
@@ -273,7 +273,7 @@ class CharmmWriter(object):
 
                 batch = atomsel('residue %s' % ' '.join([str(x) for x in residues]))
                 try:
-                    batch.set('resid', [k for k in range(1, len(batch)/3+1)
+                    batch.set('resid', [k for k in range(1, int(len(batch)/3)+1)
                                         for _ in range(3)])
                 except ValueError:
                     print("\nERROR! You have some waters missing hydrogens!\n"
@@ -627,7 +627,6 @@ class CharmmWriter(object):
         residues = list(set(atomsel("fragment '%s'" % frag).get('residue')))
         for residue in residues:
             sel = atomsel('residue %s' % residue)
-            chain = sel.get('chain')[0]
             resid = sel.get('resid')[0]
             # Only try to match single amino acid if there are 1 or 2 bonds
             if len(self.matcher.get_extraresidue_atoms(sel)) < 3:

@@ -80,8 +80,15 @@ def test_multiligand_parameterizing(tmpdir):
 #==============================================================================
 
 def test_multiligand_charmm36m(tmpdir):
+    """
+    Checks parameterization with charmm36m forcefield
+    """
+    try:
+        import vmd, molecule
+    except ImportError:
+        from vmd import molecule
+
     from Dabble.param import AmberWriter
-    import vmd, molecule
 
     p = str(tmpdir.mkdir("charmm36m"))
     molid = molecule.load("mae", os.path.join(dir, "B2AR_10ALPs.mae"))

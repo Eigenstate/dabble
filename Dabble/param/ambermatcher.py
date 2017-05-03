@@ -28,6 +28,7 @@ import logging
 import networkx as nx
 
 from networkx.algorithms import isomorphism
+from networkx.drawing.nx_pydot import write_dot
 from pkg_resources import resource_filename
 
 try:
@@ -245,7 +246,7 @@ class AmberMatcher(MoleculeMatcher):
                 matches[names] = matcher.match()
 
         if not matches:
-            nx.write_dot(noext, "noext.dot")
+            write_dot(noext, "noext.dot")
             return (None, None, None)
 
         # Want minimumally different thing, ie fewest _join atoms different

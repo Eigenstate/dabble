@@ -41,8 +41,7 @@ except ImportError:
     from vmd import molecule, atomsel
     atomsel = atomsel.atomsel
 
-import networkx as nx
-
+from networkx.drawing.nx_pydot import write_dot
 from parmed.tools import chamber, parmout, HMassRepartition, checkValidity
 from parmed.amber import AmberParm
 from parmed.exceptions import ParameterWarning
@@ -249,7 +248,7 @@ class AmberWriter(object):
 
                 print("\tBonded residue: %s:%d -> %s" % (sel.get("resname")[0],
                                                          sel.get("resid")[0],
-                                                         resnames.values()[0]))
+                                                         list(resnames.values())[0]))
                 conect.add(other)
 
             # Do the renaming
@@ -306,7 +305,7 @@ class AmberWriter(object):
         with warnings.catch_warnings(record=True) as w:
             action = chamber(parm, args)
             action.execute()
-            w = filter(lambda i: issubclass(i.category, ParameterWarning), w)
+            w = [i for i in w if issubclass(i.category, ParameterWarning)]
 
         # Do hydrogen mass repartitioning if requested
         if self.hmr:
@@ -438,7 +437,7 @@ class AmberWriter(object):
             atm = "ATOM"
         for i in ressel.get('index'):
             a = atomsel('index %d' % i) # pylint: disable=invalid-name
-            assert(len(a) == 1)
+            assert len(a) == 1
             entry = ('%-6s%5d %-5s%-4s%c%4d    %8.3f%8.3f%8.3f%6.2f%6.2f'
                      '     %-4s%2s\n' % (atm, idx, a.get('name')[0],
                                          a.get('resname')[0],
@@ -554,7 +553,7 @@ class AmberWriter(object):
             unit = self.matcher.get_unit(sel)
             pdbs[unit] = temp
             idx += 1
-        return pdbs 
+        return pdbs
 
     #==========================================================================
 
@@ -592,7 +591,7 @@ class AmberWriter(object):
                 atomsel('residue %s' % r).set("user", 0.0) # get it out of allw
 
         allw.update()
-        num_written = len(allw)/(9999*3)+1
+        num_written = int(len(allw)/(9999*3))+1
 
         # Pull out and write 10k waters at a time if we have normal waters
         if allw:
@@ -606,7 +605,7 @@ class AmberWriter(object):
 
                 batch = atomsel('residue %s' % ' '.join([str(x) for x in residues]))
                 try:
-                    batch.set('resid', [k for k in range(1, len(batch)/3+1)
+                    batch.set('resid', [k for k in range(1, int(len(batch)/3)+1)
                                         for _ in range(3)])
                 except ValueError:
                     print("\nERROR! You have some waters missing hydrogens!\n"
@@ -697,7 +696,7 @@ class AmberWriter(object):
             resids = set(atomsel("fragment '%s'" % frag).get("resid"))
             if min(resids) <= 0:
                 offset = min(resids)-1
-                for r in range(max(resids),min(resids)-1,-1):
+                for r in range(max(resids), min(resids)-1, -1):
                     atomsel("fragment '%s' and resid '%d'"
                             % (frag, r)).set("resid", r-offset)
 
@@ -827,7 +826,7 @@ class AmberWriter(object):
         out = ""
         try:
             out = check_output(["%s/bin/tleap" % os.environ.get("AMBERHOME"),
-                                "-f", leapin])
+                                "-f", leapin]).decode("utf-8")
             if "not saved" in out:
                 raise ValueError("Tleap call failed")
         except:
@@ -835,7 +834,7 @@ class AmberWriter(object):
             print("\n\nCall to tleap failed! See above output for errors")
             quit(1)
 
-        return self.prmtop_name 
+        return self.prmtop_name
 
     #==========================================================================
 
