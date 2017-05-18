@@ -80,8 +80,8 @@ class MoleculeMatcher(object): # pylint: disable=too-few-public-methods
 
     # For checking which residues can have patchs
     # pylint: disable=invalid-name
-    _acids = "ALA ARG ASN ASP CYS GLN GLU GLY HSD HSE HSP ILE LEU LYS MET " \
-             "PHE PRO SER THR TRP TYR VAL".split()
+    _acids = "ALA ARG ASN ASP CYS CYX GLN GLU GLY HSD HSE HSP ILE LEU LYS " \
+             "MET PHE PRO SER THR TRP TYR VAL".split()
     # pylint: enable=invalid-name
 
     #==========================================================================

@@ -250,10 +250,22 @@ class AmberMatcher(MoleculeMatcher):
             return (None, None, None)
 
         # Want minimumally different thing, ie fewest _join atoms different
-        matchname = min(matches.keys(),
-                        key=lambda x: len(self.known_res[x])-len(noext))
-        # Invert mapping so it's idx-> name. It's backwards b/c of subgraph
+        def difference(res): return len(self.known_res[res]) - len(noext)
+        minscore = min(difference(_) for _ in matches)
+        possible_matches = [_ for _ in matches if difference(_) == minscore]
 
+        # Prefer canonical amino acids here over weird other types
+        if len(possible_matches) > 1:
+            canonicals = [_ for _ in possible_matches if _ in self._acids]
+            if len(canonicals) == 1:
+                print("\tPreferring canonical acid %s" % canonicals[0])
+                matchname = canonicals.pop()
+            else:
+                raise ValueError("Ambiguous bonded residue %s" % selection.get("resname")[0])
+        else:
+            matchname = possible_matches.pop()
+
+        # Invert mapping so it's idx-> name. It's backwards b/c of subgraph
         mapping = next(matches[matchname])
         graph = self.known_res.get(matchname)
 
