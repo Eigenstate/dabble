@@ -26,7 +26,7 @@ from __future__ import print_function
 try:
     import vmd, molecule
     from atomsel import atomsel
-except ModuleNotFoundError:
+except ImportError:
     from vmd import atomsel, molecule
     atomsel = atomsel.atomsel
 
@@ -47,7 +47,6 @@ def parseSelection(inputstr):
     Returns a set
     """
     selection = []
-    invalid = set()
     tokens = [x.strip() for x in inputstr.split(',')]
     for t in tokens:
         if "-" in t:
@@ -70,7 +69,7 @@ def groupOutput(inputset):
     # Find ranges using itertools
     def ranges(i):
         for a,b in itertools.groupby(enumerate(i),
-                                     lambda (x,y): y-x):
+                                     lambda x: x[1]-x[0]):
             b = list(b)
             yield b[0][1], b[-1][1]
     l = list(ranges(inputset))
@@ -96,7 +95,7 @@ readline.set_completer(complete)
 
 print("\n-----------------------------------------------------------------------")
 print("What is your psf file?")
-psf = raw_input("> ")
+psf = input("> ")
 molid = molecule.load('psf', psf)
 
 print("\n-----------------------------------------------------------------------")
@@ -105,11 +104,11 @@ print("Enter a valid VMD atom selection string here")
 #print("Comma separated entries and ranges with - are allowed")
 #print("Example: '1,2-5,6-10'")
 print("NOTE: This will pull out protein residues ONLY")
-inputstr = raw_input("> ")
+inputstr = input("> ")
 
 residues = set()
 resids = parseSelection(inputstr)
-      
+
 for r in resids:
     rs = set(atomsel("resname %s and resid %d" % (_acids, r)).get('residue'))
     if len(rs) != 1:
