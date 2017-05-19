@@ -1,8 +1,6 @@
 # Tests molecule matcher
 # Im attempting test driven developmetn
 
-import pytest
-import subprocess
 import os
 
 import logging
@@ -89,14 +87,8 @@ def test_residue_renaming(tmpdir):
     Then, loads a lib file for LSD with correct names, and gaff
     atom types. Should ideally match them up correctly.
     """
-    try:
-        import vmd, molecule
-        from atomsel import atomsel
-    except ImportError:
-        from vmd import atomsel, molecule
-        atomsel = atomsel.atomsel
-
-    from Dabble.param import AmberMatcher, MoleculeMatcher
+    from vmd import atomsel, molecule
+    from Dabble.param import AmberMatcher
 
     # Generate a leaprc file with correct paths
     tmpdir = str(tmpdir)
@@ -106,7 +98,7 @@ def test_residue_renaming(tmpdir):
     fh.write("loadOff %s\n" % os.path.join(dir, "lsd.lib"))
     fh.close()
 
-    molid = molecule.load("mae", os.path.join(dir, "lsd_prot.mae"))
+    molecule.load("mae", os.path.join(dir, "lsd_prot.mae"))
     g = AmberMatcher([filename])
     resnaem, mdict = g.get_names(atomsel())
 

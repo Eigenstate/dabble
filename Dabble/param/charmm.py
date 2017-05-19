@@ -26,17 +26,7 @@ from __future__ import print_function
 import os
 import tempfile
 from pkg_resources import resource_filename
-
-try:
-# pylint: disable=import-error, unused-import
-    import vmd
-    import molecule
-    from atomsel import atomsel
-    from VMD import evaltcl
-# pylint: enable=import-error, unused-import
-except ImportError:
-    from vmd import atomsel, evaltcl, molecule
-    atomsel = atomsel.atomsel
+from vmd import atomsel, evaltcl, molecule
 
 from Dabble.param import CharmmMatcher
 
@@ -81,8 +71,7 @@ class CharmmWriter(object):
 
     #==========================================================================
 
-    def __init__(self, tmp_dir, molid, lipid_sel="lipid", extra_topos=None,
-                 override_defaults=False):
+    def __init__(self, tmp_dir, molid, lipid_sel="lipid", **kwargs):
 
         # Create TCL temp file and directory
         self.tmp_dir = tmp_dir
@@ -93,7 +82,7 @@ class CharmmWriter(object):
         self.molid = molid
         self.psf_name = ""
         # Default parameter sets
-        if override_defaults:
+        if kwargs.get("override_defaults", False):
             self.topologies = []
         else:
             self.topologies = [
@@ -112,8 +101,8 @@ class CharmmWriter(object):
                                                        os.path.join("charmm_parameters",
                                                                     top))
 
-        if extra_topos:
-            self.topologies.extend(extra_topos)
+        if kwargs.get("extra_topos"):
+            self.topologies.extend(kwargs.get("extra_topos"))
 
         # Initialize graph matcher with topologies we know about
         self.matcher = CharmmMatcher(self.topologies)

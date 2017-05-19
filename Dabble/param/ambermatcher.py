@@ -30,15 +30,7 @@ import networkx as nx
 from networkx.algorithms import isomorphism
 from networkx.drawing.nx_pydot import write_dot
 from pkg_resources import resource_filename
-
-try:
-# pylint: disable=import-error, unused-import
-    import vmd
-    from atomsel import atomsel
-# pylint: enable=import-error, unused-import
-except ImportError:
-    from vmd import atomsel
-    atomsel = atomsel.atomsel
+from vmd import atomsel
 
 from . import MoleculeMatcher
 logger = logging.getLogger(__name__) # pylint: disable=invalid-name

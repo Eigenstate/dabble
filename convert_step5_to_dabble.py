@@ -6,15 +6,9 @@ for membrane input to dabble
 
 from __future__ import print_function
 import os
-try:
-    import vmd
-    import molecule
-    from atomsel import atomsel
-except ModuleNotFoundError:
-    from vmd import atomsel, molecule
-    atomsel = atomsel.atomsel
+from vmd import atomsel, molecule
 
-thedir = os.path.abspath(raw_input("Which directory contains step5_assembly.{psf,crd}? > "))
+thedir = os.path.abspath(input("Which directory contains step5_assembly.{psf,crd}? > "))
 if not os.path.isdir(thedir):
     raise ValueError("%s not a valid directory" % thedir)
 

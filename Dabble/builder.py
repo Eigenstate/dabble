@@ -27,17 +27,7 @@ import random
 import os
 import tempfile
 
-try:
-# Pylint hates vmd
-# pylint: disable=import-error, unused-import
-    import vmd
-    import molecule
-    import trans
-    from atomsel import atomsel
-# pylint: enable=import-error, unused-import
-except ImportError:
-    from vmd import atomsel, molecule, trans
-    atomsel = atomsel.atomsel
+from vmd import atomsel, molecule, trans
 
 from Dabble import fileutils
 from Dabble import molutils

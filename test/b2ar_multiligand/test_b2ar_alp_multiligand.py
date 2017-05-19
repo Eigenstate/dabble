@@ -1,6 +1,5 @@
 # Tests multiple ligands
-import pytest
-import subprocess, os
+import os
 
 dir = os.path.dirname(__file__) + "/"
 
@@ -9,13 +8,7 @@ dir = os.path.dirname(__file__) + "/"
 def test_multiligand_building(tmpdir):
     """
     Solvates and membranes a system with multiple ligands """
-    try:
-        import vmd, molecule
-        from atomsel import atomsel
-    except ImportError:
-        from vmd import atomsel, molecule
-        atomsel = atomsel.atomsel
-
+    from vmd import atomsel, molecule
     from Dabble import DabbleBuilder
 
     # Build the system
@@ -47,13 +40,7 @@ def test_multiligand_parameterizing(tmpdir):
     """
     Checks the parameterization of a system with multiple ligands
     """
-    try:
-        import vmd, molecule
-        from atomsel import atomsel
-    except ImportError:
-        from vmd import atomsel, molecule
-        atomsel = atomsel.atomsel
-
+    from vmd import atomsel, molecule
     from Dabble.param import CharmmWriter
 
     # Parameterize the multiple ligand system with charmm parameters
@@ -83,11 +70,7 @@ def test_multiligand_charmm36m(tmpdir):
     """
     Checks parameterization with charmm36m forcefield
     """
-    try:
-        import vmd, molecule
-    except ImportError:
-        from vmd import molecule
-
+    from vmd import molecule
     from Dabble.param import AmberWriter
 
     p = str(tmpdir.mkdir("charmm36m"))

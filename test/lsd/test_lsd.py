@@ -1,13 +1,6 @@
 # Tests multiple ligands
-import pytest
-import subprocess, os
-try:
-    import vmd, molecule
-    from atomsel import atomsel
-except ImportError:
-    from vmd import atomsel, molecule
-    atomsel = atomsel.atomsel
-
+import os
+from vmd import atomsel, molecule
 
 dir = os.path.dirname(__file__) + "/"
 #==============================================================================

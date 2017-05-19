@@ -30,16 +30,7 @@ import tempfile
 import warnings
 from subprocess import check_output
 from pkg_resources import resource_filename
-
-try:
-# pylint: disable=import-error, unused-import
-    import vmd
-    import molecule
-    from atomsel import atomsel
-# pylint: enable=import-error, unused-import
-except ImportError:
-    from vmd import molecule, atomsel
-    atomsel = atomsel.atomsel
+from vmd import molecule, atomsel
 
 from networkx.drawing.nx_pydot import write_dot
 from parmed.tools import chamber, parmout, HMassRepartition, checkValidity

@@ -29,14 +29,7 @@ from itertools import product
 
 import networkx as nx
 from networkx.algorithms import isomorphism
-try:
-# pylint: disable=import-error, unused-import
-    import vmd
-    from atomsel import atomsel
-# pylint: enable=import-error, unused-import
-except ImportError:
-    from vmd import atomsel
-    atomsel = atomsel.atomsel
+from vmd import atomsel
 
 logger = logging.getLogger(__name__) # pylint: disable=invalid-name
 

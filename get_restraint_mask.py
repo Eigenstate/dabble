@@ -23,12 +23,7 @@ Boston, MA 02111-1307, USA.
 
 """
 from __future__ import print_function
-try:
-    import vmd, molecule
-    from atomsel import atomsel
-except ImportError:
-    from vmd import atomsel, molecule
-    atomsel = atomsel.atomsel
+from vmd import atomsel, molecule
 
 import itertools
 import readline
