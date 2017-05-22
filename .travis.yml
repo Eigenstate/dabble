@@ -15,8 +15,8 @@ install:
     - source activate test-environment
     - pip install -i https://pypi.anaconda.org/rbetz/simple vmd-python
     - cd $HOME && wget https://raw.githubusercontent.com/Eigenstate/dabble/master/test/tleap_minimal.tar.gz
-    - tar --directory=/opt -xzf tleap_minimal.tar.gz
-    - export AMBERHOME="/opt/amber/"
+    - tar --directory=$HOME -xzf tleap_minimal.tar.gz
+    - export AMBERHOME="$HOME/amber"
     - cd $AMBERHOME && make -C AmberTools/src/leap/ t
     - python setup.py install
 script:
