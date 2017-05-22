@@ -14,8 +14,8 @@ install:
     - conda create -q -n test-environment python=$TRAVIS_PYTHON_VERSION pytest libnetcdf numpy
     - source activate test-environment
     - pip install -i https://pypi.anaconda.org/rbetz/simple vmd-python
-    - wget <TODO>
-    - tar xf <TODO>
+    - cd $HOME && wget https://raw.githubusercontent.com/Eigenstate/dabble/master/test/tleap_minimal.tar.gz
+    - tar --directory=/opt -xzf tleap_minimal.tar.gz
     - export AMBERHOME="/opt/amber/"
     - cd $AMBERHOME && make -C AmberTools/src/leap/ t
     - python setup.py install
