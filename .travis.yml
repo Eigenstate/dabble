@@ -8,18 +8,16 @@ install:
     - export PATH="$HOME/miniconda/bin:$PATH"
     - hash -r
     - conda config --set always_yes yes --set changeps1 no
-    - conda config --add channels rbetz
+    - conda config --add channels rbetz omnia
     - conda update -q conda
     - conda info -a
-    - conda create -q -n test-environment python=$TRAVIS_PYTHON_VERSION pytest libnetcdf numpy
+    - conda create -q -n test-environment python=$TRAVIS_PYTHON_VERSION pytest libnetcdf numpy amberlite
     - source activate test-environment
     - pip install -i https://pypi.anaconda.org/rbetz/simple vmd-python
-    - cd $HOME && wget https://raw.githubusercontent.com/Eigenstate/dabble/master/test/tleap_minimal.tar.gz
-    - tar --directory=$HOME -xzf tleap_minimal.tar.gz
+    - cd $HOME && wget https://raw.githubusercontent.com/Eigenstate/dabble/master/test/mber_params.tar.gz
     - export AMBERHOME="$HOME/amber" && mkdir -p $AMBERHOME/bin
-    - export LD_LIBRARY_PATH="$HOME/miniconda/lib:$LD_LIBRARY_PATH"
-    - make -C $AMBERHOME/AmberTools/src/leap/src/leap t
-    - cp $AMBERHOME/AmberTools/src/leap/src/leap/teLeap $AMBERHOME/bin
+    - tar --directory=$AMBERHOME -xzf amber_params.tar.gz
+    - ln -s $HOME/miniconda/bin/tleap $AMBERHOME/bin/tleap
     - python setup.py install
 script:
     - python setup.py test
