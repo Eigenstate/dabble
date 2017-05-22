@@ -39,3 +39,4 @@ setup(name='dabble',
       cmdclass = {'test': PyTest}
      )
 
+todo: install amber or something for continuous integration...
