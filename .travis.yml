@@ -12,7 +12,7 @@ install:
     - conda config --add channels omnia
     - conda update -q conda
     - conda info -a
-    - conda create -q -n test-environment python=$TRAVIS_PYTHON_VERSION pytest libnetcdf numpy amberlite
+    - conda create -q -n test-environment python=$TRAVIS_PYTHON_VERSION pytest libnetcdf numpy ambermini
     - source activate test-environment
     - pip install -i https://pypi.anaconda.org/rbetz/simple vmd-python
     - cd $HOME && wget https://raw.githubusercontent.com/Eigenstate/dabble/master/test/mber_params.tar.gz
