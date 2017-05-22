@@ -15,7 +15,7 @@ install:
     - conda create -q -n test-environment python=$TRAVIS_PYTHON_VERSION pytest libnetcdf numpy ambermini
     - source activate test-environment
     - pip install -i https://pypi.anaconda.org/rbetz/simple vmd-python
-    - cd $HOME && wget https://raw.githubusercontent.com/Eigenstate/dabble/master/test/mber_params.tar.gz
+    - cd $HOME && wget https://raw.githubusercontent.com/Eigenstate/dabble/master/test/amber_params.tar.gz
     - export AMBERHOME="$HOME/amber" && mkdir -p $AMBERHOME/bin
     - tar --directory=$AMBERHOME -xzf amber_params.tar.gz
     - ln -s $HOME/miniconda/bin/tleap $AMBERHOME/bin/tleap
