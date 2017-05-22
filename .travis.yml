@@ -16,8 +16,10 @@ install:
     - pip install -i https://pypi.anaconda.org/rbetz/simple vmd-python
     - cd $HOME && wget https://raw.githubusercontent.com/Eigenstate/dabble/master/test/tleap_minimal.tar.gz
     - tar --directory=$HOME -xzf tleap_minimal.tar.gz
-    - export AMBERHOME="$HOME/amber"
-    - cd $AMBERHOME && make -C AmberTools/src/leap/src/leap t
+    - export AMBERHOME="$HOME/amber" && mkdir -p $AMBERHOME/bin
+    - export LD_LIBRARY_PATH="$HOME/miniconda/lib:$LD_LIBRARY_PATH"
+    - make -C $AMBERHOME/AmberTools/src/leap/src/leap t
+    - cp $AMBERHOME/AmberTools/src/leap/src/leap/teLeap $AMBERHOME/bin
     - python setup.py install
 script:
     - python setup.py test
