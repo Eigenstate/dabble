@@ -15,9 +15,8 @@ install:
     - conda create -q -n test-environment python=$TRAVIS_PYTHON_VERSION pytest libnetcdf numpy ambermini
     - source activate test-environment
     - pip install -i https://pypi.anaconda.org/rbetz/simple vmd-python
-    - wget https://raw.githubusercontent.com/Eigenstate/dabble/master/test/amber_params.tar.gz
     - export AMBERHOME="$HOME/miniconda"
-    - tar --directory=$AMBERHOME -xzf amber_params.tar.gz
+    - ls $AMBERHOME/bin
     - python setup.py install
 script:
     - python setup.py test
