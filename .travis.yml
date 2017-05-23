@@ -15,8 +15,7 @@ install:
     - conda create -q -n test-environment python=$TRAVIS_PYTHON_VERSION pytest libnetcdf numpy ambermini
     - source activate test-environment
     - pip install -i https://pypi.anaconda.org/rbetz/simple vmd-python
-    - export AMBERHOME="$HOME/miniconda"
-    - ls $AMBERHOME/bin
+    - export AMBERHOME="$HOME/miniconda/envs/test-environment"
     - python setup.py install
 script:
     - python setup.py test
