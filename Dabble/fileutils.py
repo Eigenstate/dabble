@@ -24,16 +24,7 @@ from __future__ import print_function
 import os
 import tempfile
 
-try:
-# pylint: disable=import-error, unused-import
-    import vmd
-    import molecule
-    from atomsel import atomsel
-# pylint: enable=import-error, unused-import
-except ImportError:
-    from vmd import molecule, atomsel
-    atomsel = atomsel.atomsel
-
+from vmd import molecule, atomsel
 from Dabble.param import AmberWriter, CharmmWriter
 
 #++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
@@ -244,14 +235,14 @@ def write_final_system(out_fmt, out_name, molid, **kwargs):
 
         temp_mol = molecule.load('mae', mae_name)
         write_psf_name = mae_name.replace('.mae', '')
-        writer = AmberWriter(molid=temp_mol,
-                             tmp_dir=kwargs['tmp_dir'],
-                             forcefield=kwargs['forcefield'],
-                             lipid_sel=kwargs.get('lipid_sel'),
-                             hmr=kwargs.get('hmassrepartition'),
-                             extra_topos=tops,
-                             extra_params=pars)
-        writer.write(write_psf_name)
+        writeit = AmberWriter(molid=temp_mol,
+                              tmp_dir=kwargs['tmp_dir'],
+                              forcefield=kwargs['forcefield'],
+                              lipid_sel=kwargs.get('lipid_sel'),
+                              hmr=kwargs.get('hmassrepartition'),
+                              extra_topos=tops,
+                              extra_params=pars)
+        writeit.write(write_psf_name)
 
     return out_name
 
@@ -335,7 +326,8 @@ def check_out_type(value, forcefield, hmr=False):
         out_fmt = 'dms'
     elif ext == 'psf' and "charmm" in forcefield:
         out_fmt = 'charmm'
-    elif ext == 'prmtop' and forcefield in ["amber","charmm","charmm36","charmm36m"]:
+    elif ext == 'prmtop' and forcefield in ["amber", "charmm",
+                                            "charmm36", "charmm36m"]:
         out_fmt = 'amber'
     else:
         raise ValueError("%s is an unsupported format with %s forcefield"

@@ -30,16 +30,7 @@ import tempfile
 import warnings
 from subprocess import check_output
 from pkg_resources import resource_filename
-
-try:
-# pylint: disable=import-error, unused-import
-    import vmd
-    import molecule
-    from atomsel import atomsel
-# pylint: enable=import-error, unused-import
-except ImportError:
-    from vmd import molecule, atomsel
-    atomsel = atomsel.atomsel
+from vmd import molecule, atomsel
 
 from networkx.drawing.nx_pydot import write_dot
 from parmed.tools import chamber, parmout, HMassRepartition, checkValidity
@@ -99,6 +90,9 @@ class AmberWriter(object):
         elif self.forcefield == 'amber':
             if not os.environ.get("AMBERHOME"):
                 raise ValueError("AMBERHOME must be set to use AMBER forcefield!")
+            if not os.path.isfile(os.path.join(os.environ.get("AMBERHOME"),
+                                               "bin", "tleap")):
+                raise ValueError("tleap is not present in $AMBERHOME/bin!")
 
             self.topologies = [
                 "leaprc.protein.ff14SB",
@@ -241,7 +235,7 @@ class AmberWriter(object):
                 resnames, atomnames, other = self.matcher.get_linkage(sel, self.molid)
                 if not resnames:
                     rgraph = self.matcher.parse_vmd_graph(sel)[0]
-                    nx.write_dot(rgraph, "rgraph.dot")
+                    write_dot(rgraph, "rgraph.dot")
                     raise ValueError("ERROR: Could not find a residue definition "
                                      "for %s:%s" % (sel.get("resname")[0],
                                                     sel.get("resid")[0]))
@@ -825,7 +819,8 @@ class AmberWriter(object):
         # Now invoke leap. If it fails, print output
         out = ""
         try:
-            out = check_output(["%s/bin/tleap" % os.environ.get("AMBERHOME"),
+            out = check_output([os.path.join(os.environ.get("AMBERHOME"),
+                                             "bin", "tleap"),
                                 "-f", leapin]).decode("utf-8")
             if "not saved" in out:
                 raise ValueError("Tleap call failed")

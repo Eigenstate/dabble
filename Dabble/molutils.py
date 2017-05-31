@@ -21,19 +21,10 @@ the VMD python API.
 """
 
 from __future__ import print_function
-import numpy as np
 import os
 import tempfile
-
-try:
-# pylint: disable=import-error, unused-import
-    import vmd
-    import molecule
-    from atomsel import atomsel
-# pylint: enable=import-error
-except ImportError:
-    from vmd import molecule, atomsel
-    atomsel = atomsel.atomsel
+import numpy as np
+from vmd import molecule, atomsel
 
 from Dabble import fileutils
 # pylint: disable=no-member
@@ -595,4 +586,3 @@ def num_lipids_remaining(molid, lipid_sel):
     return np.unique(atomsel_remaining(molid, lipid_sel).get('fragment')).size
 
 #++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
-

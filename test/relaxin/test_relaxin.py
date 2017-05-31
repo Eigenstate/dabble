@@ -6,14 +6,8 @@ unrelated disulfides on different chains.
 Also tests how chains are handled when Maestro puts a capping group
 with resid -1 on them
 """
-import pytest
-import subprocess, os
-try:
-    import vmd, molecule
-    from atomsel import atomsel
-except ImportError:
-    from vmd import molecule, atomsel
-    atomsel = atomsel.atomsel
+import  os
+from vmd import molecule, atomsel
 
 dir = os.path.dirname(__file__) + "/"
 
@@ -45,10 +39,7 @@ def test_relaxin_disulfides_charmm(tmpdir):
     Tests these disulfides with charmm
     """
     from Dabble.param import CharmmWriter
-    try:
-        import vmd, molecule
-    except ImportError:
-        from vmd import  molecule
+    from vmd import  molecule
 
     # Build the system
     p = str(tmpdir.mkdir("charmm_disu"))
@@ -67,12 +58,7 @@ def test_relaxin_disulfides_amber(tmpdir):
     Tests these disulfides with amber
     """
     from Dabble.param import AmberWriter
-    try:
-        import vmd, molecule
-        from atomsel import atomsel
-    except ImportError:
-        from vmd import molecule, atomsel
-        atomsel = atomsel.atomsel
+    from vmd import molecule
 
     # Build the system
     p = str(tmpdir.mkdir("amber_disu"))

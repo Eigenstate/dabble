@@ -25,7 +25,7 @@ package_data = {
         }
 
 setup(name='dabble',
-      version='2.5.0',
+      version='2.5.2',
       description='Membrane protein system builder',
       author='Robin Betz',
       author_email='robin@robinbetz.com',
@@ -34,7 +34,7 @@ setup(name='dabble',
       package_data=package_data,
       packages=packages,
       scripts=scripts,
-      install_requires=["networkx>=1.11","pydotplus","vmd-python"],
+      install_requires=["networkx>=1.11","pydotplus","vmd-python>=2.0.0","parmed"],
       tests_require=["pytest"],
       cmdclass = {'test': PyTest}
      )

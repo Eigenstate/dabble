@@ -1,6 +1,5 @@
 # Tests covalently bonded ligand
-import pytest
-import subprocess, os
+import os
 
 dir = os.path.dirname(__file__) + "/"
 
@@ -12,13 +11,7 @@ def test_covalent_ligand_patches(tmpdir):
     hydrogen atom should be renamed in the palmitoylcysteine.
     Also tests for detection of phosphorylations on amino acids.
     """
-    try:
-        import vmd, molecule
-        from atomsel import atomsel
-    except ImportError:
-        from vmd import atomsel, molecule
-        atomsel = atomsel.atomsel
-
+    from vmd import atomsel, molecule
     from Dabble.param import CharmmWriter
 
     # Parameterize with charmm parameters

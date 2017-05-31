@@ -1,10 +1,6 @@
 # Tests the MoleculeMatcher functionality by readin in the
 # mae and str file, and matching up atoms
-
-import pytest
-import subprocess
 import os
-
 import logging
 logging.basicConfig()
 
@@ -25,12 +21,7 @@ dir = os.path.dirname(__file__) + "/"
 #==============================================================================
 
 #def test_read_mol(capfd, tmpdir):
-#    try:
-#        import vmd, molecule
-#        from atomsel import atomsel
-#    except ImportError:
-#        from vmd import atomsel, molecule
-#        atomsel = atomsel.atomsel
+#    from vmd import atomsel, molecule
 #
 #    from Dabble.param import MoleculeMatcher
 #    from networkx.drawing.nx_pydot import write_dot
@@ -43,37 +34,24 @@ dir = os.path.dirname(__file__) + "/"
 #==============================================================================
 
 def test_compare_mol():
-    try:
-        import vmd, molecule
-        from atomsel import atomsel
-    except ImportError:
-        from vmd import atomsel, molecule
-        atomsel = atomsel.atomsel
-
+    from vmd import atomsel, molecule
     from Dabble.param import CharmmMatcher
 
     molid = molecule.load("mae", dir+"lsd_prot.mae")
     g = CharmmMatcher([dir+"lsd_prot_trunc.str", dir+"masses.rtf"])
-    (resdict, mdict) = g.get_names(atomsel())
+    (resdict, mdict) = g.get_names(atomsel("all", molid=molid))
     assert(mdict=={0: 'C13', 1: 'N20', 2: 'C12', 3: 'C11', 4: 'C15', 5: 'C7', 6: 'C3', 7: 'C8', 8: 'N1', 9: 'C1', 10: 'C4', 11: 'C5', 12: 'C2', 13: 'C6', 14: 'C9', 15: 'C10', 16: 'C14', 17: 'C16', 18: 'O1', 19: 'N3', 20: 'C17', 21: 'C18', 22: 'C19', 23: 'C20', 24: 'H131', 25: 'H132', 26: 'H121', 27: 'H122', 28: 'H123', 29: 'H11', 30: 'H151', 31: 'H8', 32: 'H4', 33: 'H5', 34: 'H2', 35: 'H10', 36: 'H14', 37: 'H171', 38: 'H172', 39: 'H181', 40: 'H182', 41: 'H183', 42: 'H191', 43: 'H192', 44: 'H201', 45: 'H202', 46: 'H203', 47: 'H152', 48: 'HN1', 49: 'HN2'})
     assert("LSD"==resdict)
 
 #==============================================================================
 
 def test_patches():
-    try:
-        import vmd, molecule
-        from atomsel import atomsel
-    except ImportError:
-        from vmd import atomsel, molecule
-        atomsel = atomsel.atomsel
-
+    from vmd import atomsel, molecule
     from Dabble.param import CharmmMatcher
-    from pkg_resources import resource_filename
 
     molid = molecule.load("mae", dir+"phosphoserine.mae")
     g = CharmmMatcher([dir+"phosphoserine.str"])
-    (name, patch, mdict) = g.get_patches(atomsel("resname SEP"))
+    (name, patch, mdict) = g.get_patches(atomsel("resname SEP", molid=molid))
     assert(name == "SER")
     assert(patch == "PSEP")
     assert(mdict=={5: '-C', 16: 'N', 17: 'CA', 18: 'CB', 19: 'OG', 20: 'C', 21: 'O', 22: 'P', 23: 'O1P', 24: 'O2P', 25: 'OT', 26: 'HN', 27: 'HA', 28: 'HB1', 29: 'HB2', 30: '+N'})
@@ -81,10 +59,7 @@ def test_patches():
 #==============================================================================
 
 #def test_protein(tmpdir):
-#    try:
-#        import vmd, molecule
-#    except ImportError:
-#        from vmd import molecule
+#    from vmd import molecule
 #
 #    from Dabble.param import CharmmMatcher
 #    from networkx.drawing.nx_pydot import write_dot

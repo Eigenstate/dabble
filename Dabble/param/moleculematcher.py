@@ -29,14 +29,7 @@ from itertools import product
 
 import networkx as nx
 from networkx.algorithms import isomorphism
-try:
-# pylint: disable=import-error, unused-import
-    import vmd
-    from atomsel import atomsel
-# pylint: enable=import-error, unused-import
-except ImportError:
-    from vmd import atomsel
-    atomsel = atomsel.atomsel
+from vmd import atomsel
 
 logger = logging.getLogger(__name__) # pylint: disable=invalid-name
 
@@ -80,8 +73,8 @@ class MoleculeMatcher(object): # pylint: disable=too-few-public-methods
 
     # For checking which residues can have patchs
     # pylint: disable=invalid-name
-    _acids = "ALA ARG ASN ASP CYS GLN GLU GLY HSD HSE HSP ILE LEU LYS MET " \
-             "PHE PRO SER THR TRP TYR VAL".split()
+    _acids = "ALA ARG ASN ASP CYS CYX GLN GLU GLY HSD HSE HSP ILE LEU LYS " \
+             "MET PHE PRO SER THR TRP TYR VAL".split()
     # pylint: enable=invalid-name
 
     #==========================================================================
