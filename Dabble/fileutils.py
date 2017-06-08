@@ -46,11 +46,13 @@ def load_solute(filename, tmp_dir):
     if len(filename) < 3:
         raise ValueError("Cannot determine filetype of input file '%s'"
                          % filename)
-    ext = filename[-3:]
+    ext = filename.split(".")[-1]
     if ext == 'mae':
         molid = molecule.load('mae', filename)
     elif ext == 'dms':
         molid = molecule.load('dms', filename)
+    elif ext == 'mol2':
+        molid = molecule.load('mol2', filename)
     elif ext == 'pdb':
         # Need to convert to MAE so concatenation will work later
         temp_mae = tempfile.mkstemp(suffix='.mae', prefix='dabble_input',
