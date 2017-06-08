@@ -8,11 +8,12 @@ install:
     - export PATH="$HOME/miniconda/bin:$PATH"
     - hash -r
     - conda config --set always_yes yes --set changeps1 no
-    - conda config --add channels rbetz
     - conda config --add channels omnia
     - conda update -q conda
     - conda info -a
-    - conda create -q -n test-environment python=$TRAVIS_PYTHON_VERSION pytest libnetcdf numpy ambermini vmd-python
+    - conda create -q -n test-environment python=$TRAVIS_PYTHON_VERSION pytest libnetcdf numpy
+    - conda install ambertools=17 -n test-environment -c http://ambermd.org/downloads/ambertools/conda/
+    - conda install vmd-python -n test-environment -c rbetz
     - source activate test-environment
     - export AMBERHOME="$HOME/miniconda/envs/test-environment"
     - python setup.py install
