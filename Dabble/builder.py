@@ -953,11 +953,11 @@ def _find_convertible_water_molecule(molid, # pylint: disable=invalid-name
     inclusion_sel = 'beta 1 and noh and (%s)' % water_sel
     exclusion_sel = 'beta 1 and not (%s)' % water_sel
     sel = atomsel('(%s) and not pbwithin %f of (%s)' \
-                  % (inclusion_sel, min_ion_dist, exclusion_sel), molid)
-    if len(sel) == 0:
+                  % (inclusion_sel, min_ion_dist, exclusion_sel), molid).get("index")
+    if not len(sel):
         raise ValueError("No convertible water molecules found in %s" % sel)
 
-    return sel.get('index')[random.randint(0, len(sel))]
+    return sel[random.randint(0, len(sel))]
 
 #==========================================================================
 
