@@ -12,8 +12,15 @@ build:
 requirements:
     build:
         - python
+        - numpy
+        - networkx
+        - pydotplus
+        - parmed
+        - vmd-python
     run:
         - numpy
+        - networkx
+        - pydotplus
         - parmed
         - vmd-python
 
