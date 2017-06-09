@@ -25,6 +25,7 @@ import os
 import tempfile
 
 from vmd import molecule, atomsel
+from Dabble.molutils import DabbleError
 from Dabble.param import AmberWriter, CharmmWriter
 
 #++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
@@ -44,7 +45,7 @@ def load_solute(filename, tmp_dir):
       ValueError if filetype is currently unsupported
     """
     if len(filename) < 3:
-        raise ValueError("Cannot determine filetype of input file '%s'"
+        raise DabbleError("Cannot determine filetype of input file '%s'"
                          % filename)
     ext = filename.split(".")[-1]
     if ext == 'mae':
@@ -62,8 +63,8 @@ def load_solute(filename, tmp_dir):
         molecule.delete(molid)
         molid = molecule.load('mae', temp_mae)
     else:
-        raise ValueError("Filetype '%s' currently unsupported "
-                         "for input protein" % ext)
+        raise DabbleError("Filetype '%s' currently unsupported "
+                          "for input protein" % ext)
     return molid
 
 #==========================================================================
@@ -169,6 +170,7 @@ def write_final_system(out_fmt, out_name, molid, **kwargs):
       lipid_sel (str): Lipid selection
       hmassrepartition (bool): Whether or not to repartition hydrogen
         masses
+      debug_verbose (bool): Extra debug output from tleap
 
     Returns:
       (str) main final filename written
@@ -223,7 +225,8 @@ def write_final_system(out_fmt, out_name, molid, **kwargs):
                               tmp_dir=kwargs['tmp_dir'],
                               forcefield=kwargs['forcefield'],
                               lipid_sel=kwargs.get('lipid_sel'),
-                              extra_topos=tops)
+                              extra_topos=tops,
+                              debug_verbose=kwargs.get('debug_verbose'))
         writer.write(write_psf_name)
 
     # For amber format files, invoke the parmed chamber routine
@@ -243,7 +246,8 @@ def write_final_system(out_fmt, out_name, molid, **kwargs):
                               lipid_sel=kwargs.get('lipid_sel'),
                               hmr=kwargs.get('hmassrepartition'),
                               extra_topos=tops,
-                              extra_params=pars)
+                              extra_params=pars,
+                              debug_verbose=kwargs.get('debug_verbose'))
         writeit.write(write_psf_name)
 
     return out_name
@@ -317,8 +321,6 @@ def check_out_type(value, forcefield, hmr=False):
                            for amber files
     """
 
-    if len(value) < 3:
-        raise ValueError("%s is too short to determine output filetype" % value)
     ext = value.rsplit('.')[-1]
     if ext == 'mae':
         out_fmt = 'mae'
@@ -332,15 +334,15 @@ def check_out_type(value, forcefield, hmr=False):
                                             "charmm36", "charmm36m"]:
         out_fmt = 'amber'
     else:
-        raise ValueError("%s is an unsupported format with %s forcefield"
+        raise DabbleError("%s is an unsupported format with %s forcefield"
                          % (value, forcefield))
 
     if hmr and (out_fmt != 'amber'):
-        raise NotImplementedError("HMR only supported with AMBER outputs!")
+        raise DabbleError("HMR only supported with AMBER outputs!")
 
     # Check if amber forcefield can be used
     if forcefield == "amber" and not os.environ.get("AMBERHOME"):
-        raise ValueError("AMBERHOME must be set to use AMBER forcefields!")
+        raise DabbleError("AMBERHOME must be set to use AMBER forcefields!")
 
     return out_fmt
 

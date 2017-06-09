@@ -27,11 +27,11 @@ import argparse
 import os, sys, shutil
 import signal
 import tempfile
-from Dabble import VmdSilencer
+from Dabble import VmdSilencer, DabbleBuilder
 
 __version__ = '2.5.3'
 __author__ = 'Robin Betz'
-    
+
 #++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
 #                                   CLASSES                                   #
 #++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
@@ -48,14 +48,14 @@ WELCOME_SCREEN = '''
  ===============================================
 |               _      _      _                 |
 |             >(.)__ <(.)__ =(.)__              |
-|              (___/  (___/  (___/              | 
+|              (___/  (___/  (___/              |
 |                                               |
 |                    DABBLE            ______   |
 |                 _      _      _     /       \\ |
 |              __(.)< __(.)> __(.)=  <  beta! | |
-|              \\___)  \\___)  \\___)    \\_______/ | 
+|              \\___)  \\___)  \\___)    \\_______/ |
 |                                               |
-|                 Robin Betz, 2016              |
+|                 Robin Betz, 2017              |
 |               Stanford University             |
 | %s |
  ===============================================
@@ -197,11 +197,10 @@ if opts.debug_verbose: soutput = sys.stdout
 else:                  soutput = os.path.join(opts.tmp_dir, "vmd_output.txt")
 
 with VmdSilencer(output=soutput):
-
     signal.signal(signal.SIGINT, signal_handler)
-    from Dabble import DabbleBuilder
     builder = DabbleBuilder(**vars(opts)) # pylint: disable=star-args
     builder.write()
+    sys.stdout.flush()
     print("\nSuccess!")
     shutil.rmtree(builder.tmp_dir, ignore_errors=True) # Clean up builder temporary directory
 

@@ -36,6 +36,7 @@ from networkx.drawing.nx_pydot import write_dot
 from parmed.tools import chamber, parmout, HMassRepartition, checkValidity
 from parmed.amber import AmberParm
 from parmed.exceptions import ParameterWarning
+from Dabble.molutils import DabbleError
 from Dabble.param import CharmmWriter, AmberMatcher
 
 #++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
@@ -52,18 +53,38 @@ class AmberWriter(object):
 
     #==========================================================================
 
-    def __init__(self, molid, tmp_dir,
-                 forcefield="charmm36m", lipid_sel="lipid",
-                 hmr=False, extra_topos=None, extra_params=None,
-                 override_defaults=False):
-        self.lipid_sel = lipid_sel
+    def __init__(self, molid, **kwargs):
+        """
+        Creates an AMBER Writer.
+
+        Args:
+            molid (int): VMD molecule ID of system to write
+            tmp_dir (str): Directory for temporary files. Defaults to "."
+            forcefield (str): charmm36mm, charmm36, or amber
+            lipid_sel (str): Lipid selection string. Defaults to "lipid"
+            hmr (bool): If hydrogen masses should be repartitioned. Defaults
+                to False.
+            extra_topos (list of str): Additional topology (.str, .off, .lib) to
+                include.
+            extra_params (list of str): Additional parameter sets (.str, .frcmod)
+            override_defaults (bool): If set, omits default amber ff14 parameters.
+            debug_verbose (bool): Prints additional output, like from tleap.
+
+        """
+
         self.molid = molid
-        self.tmp_dir = tmp_dir
-        self.hmr = hmr
-        self.extra_topos = extra_topos
         self.prmtop_name = ""
+
+        self.tmp_dir = kwargs.get("tmp_dir", ".")
+        self.lipid_sel = kwargs.get("lipid_sel", "lipid")
+        self.hmr = kwargs.get("hmr", False)
+        self.extra_topos = kwargs.get("extra_topos", None)
+        self.override = kwargs.get("override_defaults", False)
+        self.debug_verbose = kwargs.get("debug_verbose", False)
+
+        forcefield = kwargs.get("forcefield", "charmm36m")
         if forcefield not in ["amber", "charmm36m", "charmm", "charmm36"]:
-            raise ValueError("Unsupported forcefield: %s" % forcefield)
+            raise DabbleError("Unsupported forcefield: %s" % forcefield)
         self.forcefield = forcefield
         if self.forcefield == "charmm36m":
             self.parameters = [
@@ -89,10 +110,10 @@ class AmberWriter(object):
             self.topologies = []
         elif self.forcefield == 'amber':
             if not os.environ.get("AMBERHOME"):
-                raise ValueError("AMBERHOME must be set to use AMBER forcefield!")
+                raise DabbleError("AMBERHOME must be set to use AMBER forcefield!")
             if not os.path.isfile(os.path.join(os.environ.get("AMBERHOME"),
                                                "bin", "tleap")):
-                raise ValueError("tleap is not present in $AMBERHOME/bin!")
+                raise DabbleError("tleap is not present in $AMBERHOME/bin!")
 
             self.topologies = [
                 "leaprc.protein.ff14SB",
@@ -104,22 +125,21 @@ class AmberWriter(object):
                 self.topologies[i] = os.path.join(os.environ["AMBERHOME"],
                                                   "dat", "leap", "cmd", top)
                 if not os.path.isfile(self.topologies[i]):
-                    raise ValueError("AMBER version too old! "
-                                     "Dabble requires >= AmberTools16!")
+                    raise DabbleError("AMBER version too old! "
+                                      "Dabble requires >= AmberTools16!")
 
             self.parameters = []
             self.matcher = None
 
-        self.override = override_defaults
-        if override_defaults:
+        if self.override:
             self.topologies = []
             self.parameters = []
 
-        if extra_topos is not None:
-            self.topologies.extend(extra_topos)
+        if kwargs.get("extra_topos") is not None:
+            self.topologies.extend(kwargs.get("extra_topos"))
 
-        if extra_params is not None:
-            self.parameters.extend(extra_params)
+        if kwargs.get("extra_params") is not None:
+            self.parameters.extend(kwargs.get("extra_params"))
 
         self.prompt_params = False
 
@@ -176,8 +196,6 @@ class AmberWriter(object):
             # Repartion hydrogen masses if requested
             if self.hmr:
                 print("\nRepartitioning hydrogen masses...")
-                #print("WARNING: Prmtop will not be vmd compatible! Visualize:\n"
-                #      "    %s.prmtop" % outfile)
                 parm = AmberParm(prm_name=outfile+".prmtop",
                                  xyz=outfile+".inpcrd")
                 action = HMassRepartition(parm, "dowater")
@@ -196,7 +214,7 @@ class AmberWriter(object):
             action.execute()
 
         else:
-            raise ValueError("Unhandled forcefield: %s" % self.forcefield)
+            raise DabbleError("Unhandled forcefield: %s" % self.forcefield)
 
     #========================================================================#
     #                           Private methods                              #
@@ -236,9 +254,9 @@ class AmberWriter(object):
                 if not resnames:
                     rgraph = self.matcher.parse_vmd_graph(sel)[0]
                     write_dot(rgraph, "rgraph.dot")
-                    raise ValueError("ERROR: Could not find a residue definition "
-                                     "for %s:%s" % (sel.get("resname")[0],
-                                                    sel.get("resid")[0]))
+                    raise DabbleError("ERROR: Could not find a residue definition "
+                                      "for %s:%s" % (sel.get("resname")[0],
+                                                     sel.get("resid")[0]))
 
                 print("\tBonded residue: %s:%d -> %s" % (sel.get("resname")[0],
                                                          sel.get("resid")[0],
@@ -272,7 +290,9 @@ class AmberWriter(object):
                   "directory, separated by a comma, of any additional prm or str files "
                   "you wish to use.\n")
             sys.stdout.flush()
-            inp = raw_input('> ')
+            try: input = raw_input
+            except NameError: pass
+            inp = input('> ')
             if inp:
                 self.parameters.extend(inp.split(','))
         else:
@@ -359,8 +379,8 @@ class AmberWriter(object):
             if not headres:
                 resnames, atomnames = self.matcher.get_names(sel, print_warning=False)
                 if not resnames:
-                    raise ValueError("Residue %s:%s not a valid lipid" %
-                                     (sel.get('resname')[0], sel.get('resid')[0]))
+                    raise DabbleError("Residue %s:%s not a valid lipid" %
+                                      (sel.get('resname')[0], sel.get('resid')[0]))
                 self._apply_naming_dictionary(resnames, atomnames)
                 sel.set('resid', resid)
                 resid += 1
@@ -381,7 +401,7 @@ class AmberWriter(object):
                 # First tail
                 firstdict = [_ for _ in taildicts if minusidx in _[0].keys()]
                 if len(firstdict) != 1:
-                    raise ValueError("Error finding tails for lipid %s:%s" %
+                    raise DabbleError("Error finding tails for lipid %s:%s" %
                                      (sel.get('resname')[0], sel.get('resid')[0]))
                 firstdict = firstdict[0]
 
@@ -736,7 +756,7 @@ class AmberWriter(object):
         """
         # Ensure leap is actually available
         if not os.environ.get("AMBERHOME"):
-            raise ValueError("AMBERHOME must be set to use leap!")
+            raise DabbleError("AMBERHOME must be set to use leap!")
 
         # Create the leap input file
         leapin = tempfile.mkstemp(suffix='.in', prefix='dabble_leap_',
@@ -752,7 +772,7 @@ class AmberWriter(object):
                 elif ".off" in i:
                     continue
                 else:
-                    raise ValueError("Unknown topology type: %s" % i)
+                    raise DabbleError("Unknown topology type: %s" % i)
             fileh.write('\n')
 
             pdbs = [_ for _ in pdbs if _ is not None]
@@ -762,7 +782,7 @@ class AmberWriter(object):
                 elif "mol2" in pdb:
                     fileh.write("p%s = loadmol2 %s\n" % (i, pdb))
                 else:
-                    raise ValueError("Unknown coordinate type: %s"
+                    raise DabbleError("Unknown coordinate type: %s"
                                      % pdb)
 
             for unit, f in ligfiles.items():
@@ -771,7 +791,7 @@ class AmberWriter(object):
                 elif "mol2" in f:
                     fileh.write("%s = loadmol2 %s\n" % (unit, f))
                 else:
-                    raise ValueError("Unknown ligand file type: %s" % f)
+                    raise DabbleError("Unknown ligand file type: %s" % f)
 
             # Add off files here since they need to be stated after
             # ligands are read in
@@ -822,12 +842,30 @@ class AmberWriter(object):
             out = check_output([os.path.join(os.environ.get("AMBERHOME"),
                                              "bin", "tleap"),
                                 "-f", leapin]).decode("utf-8")
+            out = "%s%s%s" % (
+                "\n================BEGIN TLEAP OUTPUT================\n",
+                out,
+                "\n=================END TLEAP OUTPUT=================\n")
+
+            if self.debug_verbose:
+                print(out)
             if "not saved" in out:
-                raise ValueError("Tleap call failed")
+                raise DabbleError("Tleap call failed")
         except:
             print(out)
-            print("\n\nCall to tleap failed! See above output for errors")
+            raise DabbleError("Call to tleap failed! See above output for errors")
             quit(1)
+
+        # Do a quick sanity check that all the protein is present.
+        mademol = molecule.load("parm7", "%s.prmtop" % self.prmtop_name,
+                                "rst7", "%s.inpcrd" % self.prmtop_name)
+        if len(atomsel("protein and backbone", mademol)) \
+                != len(atomsel("protein and backbone", self.molid)):
+           print(out)
+           raise DabbleError("Not all protein was present in the output prmtop."
+                             " This indicates a problem with tleap. Check the "
+                             "above output, especially for covalent ligands. "
+                             "Is naming consistent in all .off files?")
 
         return self.prmtop_name
 
