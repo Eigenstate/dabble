@@ -32,6 +32,7 @@ from networkx.drawing.nx_pydot import write_dot
 from pkg_resources import resource_filename
 from vmd import atomsel
 
+from Dabble.molutils import DabbleError
 from . import MoleculeMatcher
 logger = logging.getLogger(__name__) # pylint: disable=invalid-name
 
@@ -253,7 +254,8 @@ class AmberMatcher(MoleculeMatcher):
                 print("\tPreferring canonical acid %s" % canonicals[0])
                 matchname = canonicals.pop()
             else:
-                raise ValueError("Ambiguous bonded residue %s" % selection.get("resname")[0])
+                raise DabbleError("Ambiguous bonded residue %s"
+                                  % selection.get("resname")[0])
         else:
             matchname = possible_matches.pop()
 
@@ -306,7 +308,7 @@ class AmberMatcher(MoleculeMatcher):
 
         # Sanity check
         if not self.known_res.get("CYX"):
-            raise ValueError("CYX undefined. Check forcefields!")
+            raise DabbleError("CYX undefined. Check forcefields!")
 
         # Check for the 3 join atoms corresponding to the disulfide bonds
         externs = self.get_extraresidue_atoms(selection)
@@ -337,7 +339,7 @@ class AmberMatcher(MoleculeMatcher):
                     atomsel("index %d" % n,
                             molid=molid).get("element")[0] == "S"]
         if not partners:
-            raise ValueError("3 bonded Cys %d isn't a valid disulfide!"
+            raise DabbleError("3 bonded Cys %d isn't a valid disulfide!"
                              % selection.get('resid')[0])
         osel = atomsel("index %d" % partners[0], molid=molid)
         conect = osel.get("residue")[0]
@@ -400,13 +402,13 @@ class AmberMatcher(MoleculeMatcher):
         minusbnded = [_ for _ in match.keys() if match[_] in \
                       [e[1] for e in nx.edges_iter(graph, nbunch=["-"])]]
         if len(minusbnded) != 1:
-            raise ValueError("Could not identify tail attached to lipid %s:%s!"
-                             % (resname, selection.get('resid')[0]))
+            raise DabbleError("Could not identify tail attached to lipid %s:%s!"
+                              % (resname, selection.get('resid')[0]))
         minusidx = [_ for _ in atomsel("index %s" % minusbnded[0]).bonds[0] \
                     if _ not in match.keys()]
         if len(minusidx) != 1:
-            raise ValueError("Could not identify tail attached to lipid %s:%s!"
-                             % (resname, selection.get('resid')[0]))
+            raise DabbleError("Could not identify tail attached to lipid %s:%s!"
+                              % (resname, selection.get('resid')[0]))
 
         return (resmatch, nammatch, minusidx[0])
 
@@ -437,8 +439,8 @@ class AmberMatcher(MoleculeMatcher):
         rgraph.remove_nodes_from(head)
 
         if nx.number_connected_components(rgraph) != 2:
-            raise ValueError("Incorrect number of tails attached to %s:%s!" %
-                             (resname, selection.get('resid')[0]))
+            raise DabbleError("Incorrect number of tails attached to %s:%s!" %
+                              (resname, selection.get('resid')[0]))
 
         taildicts = []
         for tgraph in nx.connected_component_subgraphs(rgraph, copy=True):
@@ -464,8 +466,8 @@ class AmberMatcher(MoleculeMatcher):
                     taildicts.append((resmatch, nammatch))
                     break
             if not matched:
-                raise ValueError("Couldn't find a match for tail %s:%s" %
-                                 (resname, selection.get('resid')[0]))
+                raise DabbleError("Couldn't find a match for tail %s:%s" %
+                                  (resname, selection.get('resid')[0]))
         return taildicts
 
     #=========================================================================
@@ -493,11 +495,12 @@ class AmberMatcher(MoleculeMatcher):
         elif "frcmod" in filename:
             return self._load_params(filename)
         elif "leaprc" not in filename:
-            raise ValueError("AmberMatcher only parses leaprc or frcmod topologies!")
+            raise DabbleError("AmberMatcher only parses leaprc or frcmod topologies!"
+                              "Can't read topology '%s'" % filename)
 
         # Set AMBER search path for lib files
         if not os.environ.get("AMBERHOME"):
-            raise ValueError("AMBERHOME is unset!")
+            raise DabbleError("AMBERHOME is unset!")
         leapdir = os.path.join(os.environ["AMBERHOME"], "dat", "leap")
 
         incmd = ""
@@ -521,24 +524,24 @@ class AmberMatcher(MoleculeMatcher):
                         incmd = ""
                         continue
                     if tokens[0] != "{" or tokens[-1] != "}":
-                        raise ValueError("Malformed line in %s: %s"
-                                         % (filename, line))
+                        raise DabbleError("Malformed line in %s: %s"
+                                          % (filename, line))
                     if not tokens[2]:
                         logger.warning("Ignoring pseudoatom %s", tokens[1])
                         continue
 
                     if tokens[2] not in self.MASS_LOOKUP.values() and \
                        tokens[2] not in self.LEAP_ELEMENTS.values():
-                        raise ValueError("Unknown element in %s\n: %s"
-                                         % (filename, tokens[2]))
+                        raise DabbleError("Unknown element in %s\n: %s"
+                                          % (filename, tokens[2]))
                     self.nodenames[tokens[1]] = tokens[2]
 
                 # loadOff loads a topology library
                 # search in current directory first, then libdir
                 elif not incmd and tokens[0].lower() == "loadoff":
                     if len(tokens) < 2:
-                        raise ValueError("Malformed line in %s: %s"
-                                         % (filename, line))
+                        raise DabbleError("Malformed line in %s: %s"
+                                          % (filename, line))
                     if os.path.isfile(tokens[1]):
                         self._load_off(tokens[1])
                     else:
@@ -549,8 +552,8 @@ class AmberMatcher(MoleculeMatcher):
                 # may define ions
                 elif not incmd and tokens[0].lower() == "loadamberparams":
                     if len(tokens) < 2:
-                        raise ValueError("Malformed line in %s: %s"
-                                         % (filename, line))
+                        raise DabbleError("Malformed line in %s: %s"
+                                          % (filename, line))
                     if os.path.isfile(tokens[1]):
                         self._load_params(tokens[1])
                     else:
@@ -566,7 +569,7 @@ class AmberMatcher(MoleculeMatcher):
                         self._parse_topology(os.path.join(leapdir, "cmd",
                                                           tokens[1]))
                 elif incmd:
-                    raise ValueError("Unclosed command in %s" % filename)
+                    raise DabbleError("Unclosed command in %s" % filename)
 
         return True
 
@@ -685,8 +688,8 @@ class AmberMatcher(MoleculeMatcher):
                     if not node1 or not node2:
                         print(node1, node2)
                         print(graph.node.keys())
-                        raise ValueError("Can't parse bond for unit %s, file %s\n"
-                                         "Line was: %s" % (unit, filename, line))
+                        raise DabbleError("Can't parse bond for unit %s, file %s\n"
+                                          "Line was: %s" % (unit, filename, line))
                     graph.add_edge(tokens[0], tokens[1])
 
                 # Add externally bonded atoms command if there are actually
@@ -700,14 +703,22 @@ class AmberMatcher(MoleculeMatcher):
                     graph.add_node(node1, atomname=node1, type="", residue=node1,
                                    element="_join")
                     if not graph.node.get(tokens[0]):
-                        raise ValueError("Can't parse extra residue bond for "
-                                         "unit %s, file %s\nLine was: %s"
-                                         % (unit, filename, line))
+                        raise DabbleError("Can't parse extra residue bond for "
+                                          "unit %s, file %s\nLine was: %s"
+                                          % (unit, filename, line))
                     graph.add_edge(node1, tokens[0])
 
                 elif incmd == "name":
                     for nod in (n for n in graph.nodes() if \
                               graph.node[n].get("residue") == tokens[1]):
+
+                        # Sanity check residue name here
+                        if "*" in tokens[0]:
+                            raise DabbleError("You have a common error in your "
+                                              ".off file '%s'.\n The residue name "
+                                              "is invalid. Please check the first "
+                                              "field in the unit.residue section."
+                                              % filename)
                         graph.node[nod]["resname"] = tokens[0]
                         graph.node[nod]["residue"] = "self"
 

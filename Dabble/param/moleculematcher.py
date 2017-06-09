@@ -327,4 +327,4 @@ class MoleculeMatcher(object): # pylint: disable=too-few-public-methods
 
         return (rgraph, is_covalent)
 
-    #=========================================================================
+#++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++

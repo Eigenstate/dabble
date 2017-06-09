@@ -29,6 +29,7 @@ from networkx.drawing.nx_pydot import write_dot
 from networkx.algorithms import isomorphism
 from vmd import atomsel
 
+from Dabble.molutils import DabbleError
 from . import MoleculeMatcher
 logger = logging.getLogger(__name__) # pylint: disable=invalid-name
 
@@ -171,8 +172,8 @@ class CharmmMatcher(MoleculeMatcher):
                     atomsel("index %d" % n,
                             molid=molid).get("element")[0] == "S"]
         if not partners:
-            raise ValueError("3 bonded Cys %d isn't a valid disulfide!"
-                             % selection.get('resid')[0])
+            raise DabbleError("3 bonded Cys %d isn't a valid disulfide!"
+                              % selection.get('resid')[0])
         osel = atomsel("index %d" % partners[0], molid=molid)
 
         # Order so same DISU isn't listed twice
@@ -228,12 +229,12 @@ class CharmmMatcher(MoleculeMatcher):
         # matched since this is charmm
         resname = set(resnames.values())
         if len(resname) > 1:
-            raise ValueError("More than one residue name was returned as "
-                             "belonging to a single residue in CHARMM matching."
-                             " Not sure how this happened; something is really "
-                             "really wrong. Residue was: %s:%d" %
-                             (selection.get("resname")[0],
-                              selection.get("resid")[0]))
+            raise DabbleError("More than one residue name was returned as "
+                              "belonging to a single residue in CHARMM matching."
+                              " Not sure how this happened; something is really "
+                              "really wrong. Residue was: %s:%d" %
+                              (selection.get("resname")[0],
+                               selection.get("resid")[0]))
 
         return (resname.pop(), atomnames)
 
@@ -361,7 +362,7 @@ class CharmmMatcher(MoleculeMatcher):
             # Bond or double means add edge to residue graph
             elif tokens[0] == "BOND" or tokens[0] == "DOUBLE":
                 if len(tokens) % 2 == 0:
-                    raise ValueError("Unequal number of atoms in bond terms\n"
+                    raise DabbleError("Unequal number of atoms in bond terms\n"
                                      "Line was:\n%s" % line)
                 for txn in range(1, len(tokens), 2):
                     node1 = tokens[txn]
@@ -383,7 +384,7 @@ class CharmmMatcher(MoleculeMatcher):
                     firstcmap = False
 
                 if len(tokens) != 9: # CMAP requires 2 dihedrals
-                    raise ValueError("Incorrect CMAP line\n"
+                    raise DabbleError("Incorrect CMAP line\n"
                                      "Line was:\n%s" % line)
                 tokens = tokens[1:]
                 nodes = [(tokens[3*j+i], tokens[3*j+i+1]) \
@@ -481,8 +482,8 @@ class CharmmMatcher(MoleculeMatcher):
 
             element = self.nodenames.get(typestr)
             if not element:
-                raise ValueError("Unknown atom type %s, name '%s'"
-                                 % (typestr, node))
+                raise DabbleError("Unknown atom type %s, name '%s'"
+                                  % (typestr, node))
             data['element'] = element
 
 #++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++

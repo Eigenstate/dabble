@@ -21,7 +21,9 @@ the VMD python API.
 """
 
 from __future__ import print_function
+import inspect
 import os
+import sys
 import tempfile
 import numpy as np
 from vmd import molecule, atomsel
@@ -68,8 +70,9 @@ def get_net_charge(sel, molid):
     net_charge = sum(charge)
     rslt = round(net_charge)
     if abs(rslt - net_charge) > 0.05:
-        raise ValueError("Total charge of %f is not integral within a " \
-              "tolerance of 0.05. Check your input file." % net_charge)
+        raise DabbleError("Total charge of %f is not integral within a "
+                          "tolerance of 0.05. Check your input file."
+                          % net_charge)
 
     return int(rslt)
 
@@ -397,8 +400,8 @@ def set_cations(molid, element, filter_sel='none'):
     """
 
     if element not in ['Na', 'K']:
-        raise ValueError("Invalid cation '%s'. "
-                         "Supported cations are Na, K" % element)
+        raise DabbleError("Invalid cation '%s'. "
+                          "Supported cations are Na, K" % element)
 
     for gid in tuple(atomsel('element K Na and not (%s)' % filter_sel)):
         set_ion(molid, gid, element)
@@ -586,3 +589,19 @@ def num_lipids_remaining(molid, lipid_sel):
     return np.unique(atomsel_remaining(molid, lipid_sel).get('fragment')).size
 
 #++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+
+class DabbleError(Exception):
+    """
+    An error message aimed at users, without a really long traceback.
+    """
+
+    def __init__(self, msg):
+        try:
+            ln = sys.exc_info()[-1].tb_lineno
+        except AttributeError:
+            ln = inspect.currentframe().f_back.f_lineno
+        self.args = "\n\n\n{0.__name__} (line {1}): {2}\n".format(type(self),
+                                                                  ln, msg),
+        sys.exit(self)
+
+    #=========================================================================

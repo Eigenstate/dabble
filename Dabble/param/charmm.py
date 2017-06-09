@@ -28,6 +28,7 @@ import tempfile
 from pkg_resources import resource_filename
 from vmd import atomsel, evaltcl, molecule
 
+from Dabble.molutils import DabbleError
 from Dabble.param import CharmmMatcher
 
 #++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
@@ -517,9 +518,10 @@ class CharmmWriter(object):
             resids = list(set(atomsel("user 1.0 and resname '%s' and chain %s"
                                       % (resname, chain)).get('resid')))
             if len(residues) != len(resids):
-                raise ValueError("VMD found %d residues for resname '%s', but there "
-                                 "are %d resids! Check input." % (len(residues), resname,
-                                                                  len(resids)))
+                raise DabbleError("VMD found %d residues for resname '%s', "
+                                  "but there are %d resids! Check input."
+                                  % (len(residues), resname,
+                                     len(resids)))
 
         for residue in residues:
             sel = atomsel("residue %s and resname '%s' and user 1.0" % (residue, resname))
@@ -638,8 +640,8 @@ class CharmmWriter(object):
 
             # Fall through to error condition
             if not newname:
-                raise ValueError("Couldn't find a patch for %s:%s"
-                                 % (sel.get('resname')[0], resid))
+                raise DabbleError("Couldn't find a patch for %s:%s"
+                                  % (sel.get('resname')[0], resid))
 
             # Do the renaming
             for idx, name in atomnames.items():

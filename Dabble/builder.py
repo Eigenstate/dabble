@@ -256,7 +256,9 @@ class DabbleBuilder(object):
                                      extra_topos=self.opts.get('extra_topos'),
                                      extra_params=self.opts.get('extra_params'),
                                      extra_streams=self.opts.get('extra_streams'),
-                                     hmassrepartition=self.opts.get('hmassrepartition'))
+                                     hmassrepartition=self.opts.get('hmassrepartition'),
+                                     verbose=self.opts.get('debug_verbose')
+                                    )
         molecule.delete(final_id)
 
     #==========================================================================
@@ -322,7 +324,7 @@ class DabbleBuilder(object):
         """
         # Check cation
         if self.opts.get('cation') not in ['Na', 'K']:
-            raise ValueError("Invalid cation")
+            raise DabbleError("Invalid cation '%s'" % self.opts.get('cation'))
 
         # Give existing cations correct nomenclature
         molutils.set_cations(molid, cation)
@@ -432,9 +434,9 @@ class DabbleBuilder(object):
             self._zmax = max(solute_z) + buf
             self._zmin = min(solute_z) - buf
             if zh_mem_full > self._zmax or -zh_mem_full < self._zmin:
-                raise ValueError("Specified user z of %f is too small to "
-                                 "accomodate protein and membrane!"
-                                 % self.opts['user_z'])
+                raise DabbleError("Specified user z of %f is too small to "
+                                  "accomodate protein and membrane!"
+                                  % self.opts['user_z'])
         else:
             if self.water_only:
                 self._zmax = max(solute_z) + wat_buf
@@ -690,8 +692,8 @@ class DabbleBuilder(object):
                                    molid=molid).center()
             # Sanity check
             if not len(lipid_center):
-                raise ValueError("No heavy atoms found in suspicious residue %s"
-                                 "Check your input file." % str(i))
+                raise DabbleError("No heavy atoms found in suspicious residue %s"
+                                  "Check your input file." % str(i))
 
             if abs(lipid_center[0]) > half_x_size or \
                abs(lipid_center[1]) > half_y_size:
@@ -881,7 +883,8 @@ class DabbleBuilder(object):
         # Check that OPM and alignment aren't both specified
         if self.opts.get('opm_pdb') and \
                 (self.opts.get('z_move') != 0 or self.opts.get('z_rotation') != 0):
-            raise ValueError("ERROR: Cannot specify an OPM pdb and manual orientation information")
+            raise DabbleError("ERROR: Cannot specify an OPM pdb and "
+                              "manual orientation information")
 
         if self.opts.get('opm_pdb'):
             opm = molecule.load('pdb', self.opts['opm_pdb'])
@@ -953,11 +956,11 @@ def _find_convertible_water_molecule(molid, # pylint: disable=invalid-name
     inclusion_sel = 'beta 1 and noh and (%s)' % water_sel
     exclusion_sel = 'beta 1 and not (%s)' % water_sel
     sel = atomsel('(%s) and not pbwithin %f of (%s)' \
-                  % (inclusion_sel, min_ion_dist, exclusion_sel), molid)
-    if len(sel) == 0:
-        raise ValueError("No convertible water molecules found in %s" % sel)
+                  % (inclusion_sel, min_ion_dist, exclusion_sel), molid).get("index")
+    if not len(sel):
+        raise DabbleError("No convertible water molecules found in %s" % sel)
 
-    return sel.get('index')[random.randint(0, len(sel))]
+    return sel[random.randint(0, len(sel))]
 
 #==========================================================================
 
