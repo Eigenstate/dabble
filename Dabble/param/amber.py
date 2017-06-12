@@ -119,7 +119,7 @@ class AmberWriter(object):
                 "leaprc.protein.ff14SB",
                 "leaprc.lipid14",
                 "leaprc.water.tip3p",
-                "leaprc.gaff2",
+                "leaprc.gaff",
             ]
             for i, top in enumerate(self.topologies):
                 self.topologies[i] = os.path.join(os.environ["AMBERHOME"],
@@ -727,7 +727,13 @@ class AmberWriter(object):
                 fileh.write("END\n")
                 fileh.close()
 
-            pdbinfos.append((temp, " ".join(resseq)))
+            # Insert line breaks every 100 AA to avoid buffer overflow in tleap
+            seqstring = ""
+            for i, res in enumerate(resseq):
+                seqstring += " %s" % res
+                if i % 100 == 0:
+                    seqstring += "\n"
+            pdbinfos.append((temp, seqstring))
 
         return pdbinfos
 
@@ -800,7 +806,6 @@ class AmberWriter(object):
 
             for i, pp in enumerate(prot_pdbseqs):
                 fileh.write("pp%d = loadpdbusingseq %s { %s} \n" % (i, pp[0], pp[1]))
-            #fileh.write("pp = loadpdbusingseq %s { %s }\n" % prot_pdbseq)
 
             # Need to combine before creating bond lines since can't create
             # bonds between UNITs
@@ -859,8 +864,8 @@ class AmberWriter(object):
         # Do a quick sanity check that all the protein is present.
         mademol = molecule.load("parm7", "%s.prmtop" % self.prmtop_name,
                                 "rst7", "%s.inpcrd" % self.prmtop_name)
-        if len(atomsel("protein and backbone", mademol)) \
-                != len(atomsel("protein and backbone", self.molid)):
+        if len(atomsel("resname %s" % " ".join(self.matcher._acids), mademol)) \
+                != len(atomsel("resname %s" % " ".join(self.matcher._acids), self.molid)):
            print(out)
            raise DabbleError("Not all protein was present in the output prmtop."
                              " This indicates a problem with tleap. Check the "
