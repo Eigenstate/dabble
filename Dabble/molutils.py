@@ -228,6 +228,10 @@ def get_num_salt_ions_needed(molid,
             neg_ions_needed = 0
         neg_ions_needed -= to_neutralize
 
+    # Check for less than 0
+    pos_ions_needed = max(0, pos_ions_needed)
+    neg_ions_needed = max(0, neg_ions_needed)
+
     total_cations = len(cations) + pos_ions_needed
     total_anions = len(anions) + neg_ions_needed
 
