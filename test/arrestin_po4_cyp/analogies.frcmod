@@ -1,0 +1,47 @@
+Analogy parameters joining gaff2 terms for modified residues
+MASS
+
+BOND
+C -n3   490.0   1.335   ! C-N
+c -N    490.0   1.335   ! C-N
+c -n3   490.0   1.335   ! C-N
+
+ANGLE
+CX-C -n3   70.0       116.60    ! CX-C-N
+c3-c -n3   70.0       116.60    ! CX-C-N
+C -n3-c3   50.0       121.90    ! C-N-CT
+c -n3-c3   50.0       121.90    ! C-N-CT
+C -n3-hn   50.0       120.00    ! C-N-H
+c -n3-hn   50.0       120.00    ! C-N-H
+c -N -H    50.0       120.00    ! C-N-H
+o -c -N    80.0       122.90    ! N-C-O 
+O -C -n3   80.0       122.90    ! N-C-O
+c3-c -N    70.0       116.60    ! CT-C-N
+c -N -CX   50.0       121.90    ! C-N-CX
+n3-c -o    10.0       120.00    ! made up
+
+DIHE
+CX-C -n3-c3     4   10.00   180.0    2.   ! X-C-N-X
+c3-c -n3-c3     4   10.00   180.0    2.   ! X-C-N-X
+CX-C -n3-hn     4   10.00   180.0    2.   ! X-C-N-X
+O -C -n3-c3     4   10.00   180.0    2.   ! X-C-N-X
+o -c -n3-c3     4   10.00   180.0    2.   ! X-C-N-X
+O -C -n3-hn     1    2.50   180.0   -2.   ! H-N-C-O term 2
+O -C -n3-hn     1    2.00     0.0    1.   ! H-N-C-O term 1
+c3-c -N -H      4   10.00   180.0    2.   ! X-C-N-X
+c3-c -N -CX     4   10.00   180.0    2.   ! X-C-N-X
+o -c -N -H      1    2.50   180.0   -2.   ! H-N-C-O term 2
+o -c -N -H      1    2.00     0.0    1.   ! H-N-C-O term 1
+o -c -n3-hn     1    2.50   180.0   -2.   ! H-N-C-O term 2
+o -c -n3-hn     1    2.00     0.0    1.   ! H-N-C-O term 1
+o -c -N -CX     4   10.00   180.0    2.   ! X-C-N-X
+CX-C -n3-c3     4   10.00   180.0    2.   ! X-C-N-X
+CX-C -n3-hn     4   10.00   180.0    2.   ! X-C-N-X
+c3-c -n3-hn     4   10.00   180.0    2.   ! X-C-N-X
+
+IMPROPER
+
+NONBON
+
+
+
