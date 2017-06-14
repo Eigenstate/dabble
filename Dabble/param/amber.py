@@ -36,7 +36,7 @@ from networkx.drawing.nx_pydot import write_dot
 from parmed.tools import chamber, parmout, HMassRepartition, checkValidity
 from parmed.amber import AmberParm
 from parmed.exceptions import ParameterWarning
-from Dabble.molutils import DabbleError
+from Dabble import DabbleError
 from Dabble.param import CharmmWriter, AmberMatcher
 
 #++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++

@@ -21,14 +21,13 @@ the VMD python API.
 """
 
 from __future__ import print_function
-import inspect
 import os
-import sys
 import tempfile
 import numpy as np
 from vmd import molecule, atomsel
 
-from Dabble import fileutils
+from Dabble import DabbleError
+from Dabble.fileutils import concatenate_mae_files
 # pylint: disable=no-member
 
 #++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
@@ -457,8 +456,8 @@ def tile_system(input_id, times_x, times_y, times_z, tmp_dir):
     merge_output_filename = tempfile.mkstemp(suffix='.mae',
                                              prefix='dabble_merge_tile_tmp',
                                              dir=tmp_dir)[1]
-    fileutils.concatenate_mae_files(merge_output_filename,
-                                    input_filenames=tile_filenames)
+    concatenate_mae_files(merge_output_filename,
+                          input_filenames=tile_filenames)
 
     # Read that large bilayer file in as a new molecule and
     # write it as the output file
@@ -492,7 +491,7 @@ def combine_molecules(input_ids, tmp_dir):
     output_filename = tempfile.mkstemp(suffix='.mae',
                                        prefix='dabble_combine',
                                        dir=tmp_dir)[1]
-    fileutils.concatenate_mae_files(output_filename, input_ids=input_ids)
+    concatenate_mae_files(output_filename, input_ids=input_ids)
     output_id = molecule.load('mae', output_filename)
     molecule.set_top(output_id)
     for i in input_ids:
@@ -594,18 +593,3 @@ def num_lipids_remaining(molid, lipid_sel):
 
 #++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
 
-class DabbleError(Exception):
-    """
-    An error message aimed at users, without a really long traceback.
-    """
-
-    def __init__(self, msg):
-        try:
-            ln = sys.exc_info()[-1].tb_lineno
-        except AttributeError:
-            ln = inspect.currentframe().f_back.f_lineno
-        self.args = "\n\n\n{0.__name__} (line {1}): {2}\n".format(type(self),
-                                                                  ln, msg),
-        sys.exit(self)
-
-    #=========================================================================

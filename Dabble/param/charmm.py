@@ -28,7 +28,7 @@ import tempfile
 from pkg_resources import resource_filename
 from vmd import atomsel, evaltcl, molecule
 
-from Dabble.molutils import DabbleError
+from Dabble import DabbleError
 from Dabble.param import CharmmMatcher
 
 #++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
@@ -866,11 +866,13 @@ class CharmmWriter(object):
                 print("Unmatched topology names: [ %s ]"
                       % ' '.join(topo_only))
 
-                newname = raw_input("  %s  -> " % unmatched)
+                try: input = raw_input
+                except NameError: pass
+                newname = input("  %s  -> " % unmatched)
                 while newname not in topo_only:
                     print("'%s' is not an available name in the topology."
                           "Please try again.\n" % newname)
-                    newname = raw_input("  %s  -> " % unmatched)
+                    newname = input("  %s  -> " % unmatched)
                 atomsel("resname '%s' and user 1.0 and name '%s'"
                         % (resname, unmatched)).set('name', newname)
                 pdb_atoms = set(atomsel("resname '%s' and user 1.0"
@@ -902,16 +904,18 @@ class CharmmWriter(object):
         print("Type NONE for no patch, if your residue is completely "
               "defined in a str file")
         print("Or type HELP for a list of all patches I know about")
-        patchname = raw_input("> ")
+        try: input = raw_input
+        except NameError: pass
+        patchname = input("> ")
         if patchname == "HELP":
             print("   PATCH     COMMENT")
             print("   -----     -------")
             for patch in avail_patches:
                 print("%7s %s" % (patch, avail_patches[patch]))
-            patchname = raw_input("> ")
+            patchname = input("> ")
         while (patchname not in avail_patches) and (patchname != "NONE"):
             print("I don't know about patch %s" % patchname)
-            patchname = raw_input("Try again > ")
+            patchname = input("Try again > ")
         if patchname == "NONE":
             return ""
 

@@ -32,7 +32,7 @@ from networkx.drawing.nx_pydot import write_dot
 from pkg_resources import resource_filename
 from vmd import atomsel
 
-from Dabble.molutils import DabbleError
+from Dabble import DabbleError
 from . import MoleculeMatcher
 logger = logging.getLogger(__name__) # pylint: disable=invalid-name
 
@@ -487,8 +487,8 @@ class AmberMatcher(MoleculeMatcher):
             True if successful
 
         Raises:
-            ValueError if topology file is malformed in various ways
-            ValueError if AMBERHOME is unset
+            DabbleError if topology file is malformed in various ways
+            DabbleError if AMBERHOME is unset
         """
         if ".off" in filename or ".lib" in filename:
             self._load_off(filename)

@@ -29,9 +29,7 @@ import tempfile
 
 from vmd import atomsel, molecule, trans
 
-from Dabble import fileutils
-from Dabble import molutils
-from Dabble.molutils import DabbleError
+from Dabble import fileutils, molutils, DabbleError
 
 #++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
 
