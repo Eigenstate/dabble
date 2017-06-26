@@ -29,8 +29,7 @@ import tempfile
 
 from vmd import atomsel, molecule, trans
 
-from Dabble import fileutils
-from Dabble import molutils
+from Dabble import fileutils, molutils, DabbleError
 
 #++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
 
@@ -623,7 +622,6 @@ class DabbleBuilder(object):
         # Remove waters in the Z direction
         # Check if we are trimming to absolute size and set z buf if so
         total = 0
-        zcoord = atomsel(self.solute_sel).get('z')
         total = _remove_residues('(not (%s) and not (%s)) and noh and z > %f' % \
                                  (self.solute_sel, self.opts['lipid_sel'],
                                   self._zmax), molid=molid)

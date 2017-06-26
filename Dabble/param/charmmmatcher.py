@@ -29,8 +29,8 @@ from networkx.drawing.nx_pydot import write_dot
 from networkx.algorithms import isomorphism
 from vmd import atomsel
 
-from Dabble.molutils import DabbleError
-from . import MoleculeMatcher
+from Dabble import DabbleError
+from Dabble.param import MoleculeMatcher
 logger = logging.getLogger(__name__) # pylint: disable=invalid-name
 
 #++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++

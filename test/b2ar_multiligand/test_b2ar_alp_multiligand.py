@@ -55,30 +55,44 @@ def test_multiligand_parameterizing(tmpdir):
     molecule.set_top(m2)
 
     # Check the system is intact
-    assert(len(set(atomsel("protein").get("resid"))) == 282)
-    assert(len(set(atomsel("resname ACE NMA").get("resid"))) == 4)
-    assert(len(atomsel("water")) == 32106)
-    assert(len(atomsel("lipid")) == 12194)
+    assert len(set(atomsel("protein").get("resid"))) == 282
+    assert len(set(atomsel("resname ACE NMA").get("resid"))) == 4
+    assert len(atomsel("water")) == 32106
+    assert len(atomsel("lipid")) == 12194
 
     # Check for the correct number of alprenolols
-    assert(len(atomsel("resname ALP")) == 420)
-    assert(set(atomsel("resname ALP").get("resid")) == set(range(1,11)))
+    assert len(atomsel("resname ALP")) == 420
+    assert set(atomsel("resname ALP").get("resid")) == set(range(1, 11))
 
 #==============================================================================
 
-def test_multiligand_charmm36m(tmpdir):
+def test_multiligand_amber(tmpdir):
     """
-    Checks parameterization with charmm36m forcefield
+    Checks that multiple ligands work with AMBER.
+    Should rename some atoms in matching
     """
-    from vmd import molecule
+    from vmd import atomsel, molecule
     from Dabble.param import AmberWriter
 
-    p = str(tmpdir.mkdir("charmm36m"))
-    molid = molecule.load("mae", os.path.join(dir, "B2AR_10ALPs.mae"))
-    w = AmberWriter(molid, tmp_dir=p, forcefield="charmm36m", hmr=True,
-                    extra_topos=[os.path.join(dir, "alprenolol.rtf")],
-                    extra_params=[os.path.join(dir, "alprenolol.prm")])
-    w.write("test_charmm36m")
+    # Parameterize the system. One atom name will be changed.
+    p = str(tmpdir.mkdir("multiligand_amber"))
+    molid = molecule.load("mae", os.path.join(dir, "test_multiligand_correct.mae"))
+    w = AmberWriter(tmp_dir=p, molid=molid, forcefield="amber",
+                    extra_topos=[os.path.join(dir, "alp.off")],
+                    extra_params=[os.path.join(dir, "alp.frcmod")])
+    w.write(os.path.join(p, "test"))
+
+    # Check results
+    assert len(set(atomsel("protein").get("resid"))) == 282
+    assert len(set(atomsel("resname ACE NME").get("resid"))) == 4
+    assert len(atomsel("water")) == 32106
+    assert len(atomsel("same fragment as lipid")) == 12194
+
+    # Check for the corrrect number of alprenolols
+    assert len(atomsel("resname ALP")) == 420
+    assert len(set(atomsel("resname ALP").get("resid"))) == 10
+    assert "OX" in set(atomsel("resname ALP").get("name"))
+    assert "O1" not in set(atomsel("resname ALP").get("name"))
 
 #==============================================================================
 

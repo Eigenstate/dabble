@@ -5,6 +5,35 @@ dir = os.path.dirname(__file__) + "/"
 
 #==============================================================================
 
+def check_built_system(p):
+
+    from vmd import atomsel, molecule
+
+    # Load the built system for checking
+    assert os.path.isfile(os.path.join(p, "test.prmtop"))
+
+    # Use psf so we can check HMR was done correctly
+    m3 = molecule.load("parm7", os.path.join(p, "test.prmtop"))
+
+    # Check the protein is there with correct capping groups
+    assert len(atomsel("protein", m3)) == 299
+    assert len(set(atomsel("resname ACE NMA NME", m3).get("resid"))) == 2
+
+    # Check for 3 phosphoserines and no regular serines
+    molecule.set_top(m3)
+    assert atomsel("resname SER SEP").get("name").count("P") == 3
+    assert not atomsel("resname SER SEP and not same residue as name P")
+
+    # Check for one phosphothreonine
+    assert len(set(atomsel("resname THR TPO").get("resid"))) == 3
+    assert len(atomsel("resname THR TPO and name P")) == 1
+
+    # Check HMR was done correctly
+    minmasspost = min(atomsel("all", m3).get("mass"))
+    assert abs(minmasspost - 1.008) > 0.0001
+
+#==============================================================================
+
 def test_water_box(tmpdir):
     """
     Tests building in a water box only
@@ -32,46 +61,39 @@ def test_water_box(tmpdir):
 
 #==============================================================================
 
+def test_hmr_param_amber(tmpdir):
+    """
+    Tests parameterizing with Amber, using phosphoserines
+    """
+    from Dabble.param import AmberWriter
+    from vmd import molecule
+
+    # Build system
+    p = str(tmpdir.mkdir("hmr_amber"))
+    molid = molecule.load("mae", os.path.join(dir, "rho_test.mae"))
+    w = AmberWriter(tmp_dir=p, molid=molid, hmr=True, forcefield="amber",
+                    extra_topos=[os.path.join(os.environ.get("AMBERHOME"),
+                                              "dat", "leap", "cmd",
+                                              "leaprc.phosaa10")])
+    w.write(os.path.join(p, "test"))
+    check_built_system(p)
+
+#==============================================================================
+
 def test_hmr_param(tmpdir):
     """
     Tests phosphorylations on Ser
     Also checks HMR
     """
     from Dabble.param import AmberWriter
-    from vmd import atomsel, molecule
+    from vmd import molecule
 
     # Build the system with HMR
     p = str(tmpdir.mkdir("hmr_param"))
     molid = molecule.load("mae", os.path.join(dir, "rho_test.mae"))
-    w = AmberWriter(tmp_dir=p, molid=molid, hmr=True,
-                    extra_topos=[], extra_params=[])
+    w = AmberWriter(tmp_dir=p, molid=molid, hmr=True, forcefield="charmm36")
     w.write(os.path.join(p, "test"))
-
-    # Load the built system for checking
-    # Use psf so we can check HMR was done correctly
-    m2 = molecule.load("psf", os.path.join(p, "test.psf"))
-    m3 = molecule.load("parm7", os.path.join(p, "test.prmtop"))
-
-    # Check the protein is there with correct capping groups
-    assert len(atomsel("protein", m2)) == 299
-    assert len(atomsel("protein", m3)) == 299
-    assert len(set(atomsel("resname ACE NMA", m2).get("resid"))) == 2
-    assert len(set(atomsel("resname ACE NMA", m3).get("resid"))) == 2
-
-    # Check for 3 phosphoserines and no regular serines
-    molecule.set_top(m2)
-    assert atomsel("resname SER").get("name").count("P") == 3
-    assert not atomsel("resname SER and not same residue as name P")
-
-    # Check for one phosphothreonine
-    assert len(set(atomsel("resname THR").get("resid"))) == 3
-    assert len(atomsel("resname THR and name P")) == 1
-
-    # Check HMR was done correctly
-    minmasspre = min(atomsel("all", m2).get("mass"))
-    minmasspost = min(atomsel("all", m3).get("mass"))
-    assert abs(minmasspre - 1.008) < 0.0001
-    assert abs(minmasspost - 1.008) > 0.0001
+    check_built_system(p)
 
 #==============================================================================
 

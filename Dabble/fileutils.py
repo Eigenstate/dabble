@@ -25,7 +25,7 @@ import os
 import tempfile
 
 from vmd import molecule, atomsel
-from Dabble.molutils import DabbleError
+from Dabble import DabbleError
 from Dabble.param import AmberWriter, CharmmWriter
 
 #++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++

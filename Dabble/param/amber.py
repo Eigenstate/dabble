@@ -36,7 +36,7 @@ from networkx.drawing.nx_pydot import write_dot
 from parmed.tools import chamber, parmout, HMassRepartition, checkValidity
 from parmed.amber import AmberParm
 from parmed.exceptions import ParameterWarning
-from Dabble.molutils import DabbleError
+from Dabble import DabbleError
 from Dabble.param import CharmmWriter, AmberMatcher
 
 #++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
@@ -115,11 +115,12 @@ class AmberWriter(object):
                                                "bin", "tleap")):
                 raise DabbleError("tleap is not present in $AMBERHOME/bin!")
 
+            # Check amber version and set topologies accordingly
             self.topologies = [
                 "leaprc.protein.ff14SB",
                 "leaprc.lipid14",
                 "leaprc.water.tip3p",
-                "leaprc.gaff2",
+                "leaprc.gaff",
             ]
             for i, top in enumerate(self.topologies):
                 self.topologies[i] = os.path.join(os.environ["AMBERHOME"],
@@ -185,9 +186,6 @@ class AmberWriter(object):
             prot_pdbseqs = self._write_protein()
             pdbs.extend(self._write_solvent())
             ligfiles = self._write_ligands()
-
-            # Remove lines from leaprcs that will make leap misbehave
-            #self._alter_leaprcs()
 
             # Now invoke leap to create the prmtop and inpcrd
             outfile = self._run_leap(ligfiles, prot_pdbseqs, pdbs,
@@ -551,11 +549,11 @@ class AmberWriter(object):
         file to get the connectivity correct.
 
         Returns:
-            (list of str): pdb filenames that were written
+            (list of 2-tuple): ilename of each ligand, unit name of ligand
         """
 
         idx = 1
-        pdbs = {}
+        pdbs = []
 
         for residue in set(atomsel("user 1.0").get("residue")):
             temp = tempfile.mkstemp(suffix='.pdb', prefix='amber_extra',
@@ -565,7 +563,7 @@ class AmberWriter(object):
             sel.set('resid', idx)
             sel.write("pdb", temp)
             unit = self.matcher.get_unit(sel)
-            pdbs[unit] = temp
+            pdbs.append((temp, unit))
             idx += 1
         return pdbs
 
@@ -694,26 +692,27 @@ class AmberWriter(object):
                 inside
         """
         pdbinfos = []
-        psel = atomsel("protein or resname ACE NMA NME and user 1.0")
-            # Renumber resids from 1, that info is lost in prmtop anyway
-        #startres = min(psel.get("residue"))
-        #psel.set("resid", [r-startres for r in psel.get("residue")])
+        psel = atomsel("user 1.0 and resname %s" % " ".join(self.matcher._acids))
 
-        for i, frag in enumerate(sorted(set(psel.get('fragment')))):
-            resseq = []
+        # Start the protein numbering from 1, as it's lost in the prmtop anyway.
+        # Make resids increase across chains/fragments too, so that bond section
+        # for covalent modifications is simple.
+        fragres = 1
+        for i, frag in enumerate(sorted(set(psel.get("fragment")))):
             temp = tempfile.mkstemp(suffix='_prot.pdb', prefix='amber_prot_',
                                     dir=self.tmp_dir)[1]
 
-            # Check the numbering starts from 1, if not, renumber.
-            # This is because leap hates bonding things that don't start with 1
-            # Do from the top down to avoid double counting
-            resids = set(atomsel("fragment '%s'" % frag).get("resid"))
-            if min(resids) <= 0:
-                offset = min(resids)-1
-                for r in range(max(resids), min(resids)-1, -1):
-                    atomsel("fragment '%s' and resid '%d'"
-                            % (frag, r)).set("resid", r-offset)
+            for res in sorted(set(atomsel("fragment '%s'" % frag).get("resid"))):
+                ressel = atomsel("fragment '%s' and resid '%d' and user 1.0"
+                                 % (frag, res))
+                ressel.set("resid", fragres)
+                ressel.set("user", 2.0) # Can't select only be resid as it changes
+                fragres += 1
 
+            atomsel("fragment '%s' and user 2.0" % frag).set("user", 1.0)
+
+            # Now write out all the resides to a pdb file
+            resseq = []
             with open(temp, 'w') as fileh:
                 idx = 1
                 # Grab resids again since they may have updated
@@ -727,7 +726,13 @@ class AmberWriter(object):
                 fileh.write("END\n")
                 fileh.close()
 
-            pdbinfos.append((temp, " ".join(resseq)))
+            # Insert line breaks every 100 AA to avoid buffer overflow in tleap
+            seqstring = ""
+            for i, res in enumerate(resseq):
+                seqstring += " %s" % res
+                if i % 100 == 0:
+                    seqstring += "\n"
+            pdbinfos.append((temp, seqstring))
 
         return pdbinfos
 
@@ -775,6 +780,10 @@ class AmberWriter(object):
                     raise DabbleError("Unknown topology type: %s" % i)
             fileh.write('\n')
 
+            # Add off files here
+            for i in [_ for _ in self.topologies + self.parameters if ".off" in _]:
+                fileh.write("loadoff %s\n" %i)
+
             pdbs = [_ for _ in pdbs if _ is not None]
             for i, pdb in enumerate(pdbs):
                 if "pdb" in pdb:
@@ -785,22 +794,17 @@ class AmberWriter(object):
                     raise DabbleError("Unknown coordinate type: %s"
                                      % pdb)
 
-            for unit, f in ligfiles.items():
-                if "pdb" in f:
-                    fileh.write("%s = loadpdb %s\n" % (unit, f))
-                elif "mol2" in f:
-                    fileh.write("%s = loadmol2 %s\n" % (unit, f))
+            for i, f in enumerate(ligfiles):
+                if "pdb" in f[0]:
+                    fileh.write("l%s = loadpdbusingseq %s {%s}\n"
+                                % (i, f[0], f[1]))
+                elif "mol2" in f[0]:
+                    fileh.write("l%s = loadmol2 %s\n" % (i, f[0]))
                 else:
-                    raise DabbleError("Unknown ligand file type: %s" % f)
-
-            # Add off files here since they need to be stated after
-            # ligands are read in
-            for i in [_ for _ in self.topologies + self.parameters if ".off" in _]:
-                fileh.write("loadoff %s\n" %i)
+                    raise DabbleError("Unknown ligand file type: %s" % f[0])
 
             for i, pp in enumerate(prot_pdbseqs):
                 fileh.write("pp%d = loadpdbusingseq %s { %s} \n" % (i, pp[0], pp[1]))
-            #fileh.write("pp = loadpdbusingseq %s { %s }\n" % prot_pdbseq)
 
             # Need to combine before creating bond lines since can't create
             # bonds between UNITs
@@ -820,16 +824,17 @@ class AmberWriter(object):
                 conect.remove(other)
 
                 fileh.write("bond p.{0}.{1} p.{2}.{3}\n".format(
-                    self._get_offset(s1),
+                    s1.get('resid')[0],
                     s1.get('name')[0],
-                    self._get_offset(s2),
+                    s2.get('resid')[0],
                     s2.get('name')[0]))
 
             if len(pdbs):
                 fileh.write("\np = combine { p %s }\n"
                             % ' '.join(["p%d"%i for i in range(len(pdbs))]))
-            if ligfiles.keys():
-                fileh.write("p = combine { p %s }\n" % ' '.join(ligfiles.keys()))
+            if len(ligfiles):
+                fileh.write("p = combine { p %s }\n"
+                            % ' '.join(["l%d"%i for i in range(len(ligfiles))]))
             fileh.write("setbox p centers 0.0\n")
             fileh.write("saveamberparm p %s.prmtop %s.inpcrd\n"
                         % (self.prmtop_name, self.prmtop_name))
@@ -859,8 +864,8 @@ class AmberWriter(object):
         # Do a quick sanity check that all the protein is present.
         mademol = molecule.load("parm7", "%s.prmtop" % self.prmtop_name,
                                 "rst7", "%s.inpcrd" % self.prmtop_name)
-        if len(atomsel("protein and backbone", mademol)) \
-                != len(atomsel("protein and backbone", self.molid)):
+        if len(atomsel("resname %s" % " ".join(self.matcher._acids), mademol)) \
+                != len(atomsel("resname %s" % " ".join(self.matcher._acids), self.molid)):
            print(out)
            raise DabbleError("Not all protein was present in the output prmtop."
                              " This indicates a problem with tleap. Check the "
@@ -903,28 +908,6 @@ class AmberWriter(object):
             new_topos.append(temp)
 
         self.topologies = new_topos
-
-    #==========================================================================
-
-    def _get_offset(self, sel):
-        """
-        Returns the resid number in the combined protein unit.
-
-        Args:
-            sel (atomsel): Atom selection to get offset for
-        Returns:
-            (int): Resid offset for bond command
-        """
-        psel = atomsel("protein or resname ACE NMA NME")
-        pfrags = set(psel.get("fragment"))
-        ofrag = atomsel("fragment %d" % sel.get("fragment")[0])
-
-        # They use 0 based indexing
-        offset = int(sel.get("residue")[0]) - min(ofrag.get("residue"))
-        for frag in [x for x in range(sel.get("fragment")[0])
-                     if x in pfrags]:
-            offset += len(set(atomsel("fragment %d" % frag).get("residue")))
-        return offset+1 # 0 based vs 1 based indexing in leap
 
 #++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
 
