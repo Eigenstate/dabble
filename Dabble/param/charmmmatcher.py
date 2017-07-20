@@ -117,6 +117,48 @@ class CharmmMatcher(MoleculeMatcher):
 
     #=========================================================================
 
+    def get_truncated(self, selection):
+        """
+        Checks if the selection corresponds to a truncated residue.
+        For safety, should only be called on things with a canonical amino
+        acid resname (charmm.py checks when calling).
+
+        Args:
+            selection (atomsel): Selection to match
+
+        Returns:
+            (str) resname matched
+            (dict int->str) translation dictionary from index to atom name
+        """
+        resname = selection.get("resname")[0]
+        rgraph, _ = self.parse_vmd_graph(selection)
+
+        # Check against all amino acids
+        matches = {}
+        for matchname in self._acids:
+            graph = self.known_res.get(matchname)
+            if not graph:
+                continue
+            print("Trying %s" % matchname)
+            if matchname == "LYS": write_dot(graph, "lys.dot")
+            matcher = isomorphism.GraphMatcher(rgraph, graph,
+                          node_match=super(CharmmMatcher, self)._check_atom_match)
+            if matcher.subgraph_is_isomorphic():
+                print("  it matched")
+                matches[matchname] = matcher.match()
+
+        # Find amino acid with maximal subgraph match
+        if not matches:
+            return (None, None)
+        matchname = max(matches.keys(), key=lambda x:len(self.known_res[x]))
+
+        # Invert mapping so it's idx->name bc of need to find subgraph
+        atomnames = dict((v, k) for (k, v) in next(matches[matchname]).items())
+
+        return (matchname, atomnames)
+
+    #=========================================================================
+
     def get_disulfide(self, selstring, fragment, molid): #pylint: disable=too-many-locals
         """
         Checks if the selection corresponds to a cysteine in a disulfide bond.

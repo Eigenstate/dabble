@@ -147,6 +147,7 @@ class CharmmWriter(object):
 
         # Print out topology files
         self.file.write('\n')
+        print("WARNING: Tolerating missing atoms!")
         print("Using the following topologies:")
         for top in self.topologies:
             print("  - %s" % top.split("/")[-1])
@@ -631,6 +632,11 @@ class CharmmWriter(object):
                                                    frag, molid)
                 if newname:
                     extpatches.add(patchline)
+
+            # See if it's a canonical amino acid and just missing a few
+            # atoms
+            if not newname and sel.get("resname")[0] in _acids:
+                (newname, atomnames) = self.matcher.get_truncated(sel)
 
             # Couldn't find a match. See if it's a patched residue
             if not newname:
