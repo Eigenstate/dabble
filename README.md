@@ -1,5 +1,6 @@
 ## Dabble ##
 [![GPLv2](https://img.shields.io/github/license/drorlab/dabble.svg)](http://www.gnu.org/licenses/old-licenses/gpl-2.0.en.html)
+[![DOI](https://zenodo.org/badge/29268375.svg)](https://zenodo.org/badge/latestdoi/29268375)
 ![Downloads](https://anaconda.org/rbetz/dabble/badges/downloads.svg)
 ![CI status](https://img.shields.io/travis/Eigenstate/dabble.svg)
 
