@@ -168,24 +168,24 @@ class CharmmWriter(object):
         if len(atomsel(self.lipid_sel)):
             self._write_lipid_blocks()
 
-        if not len(atomsel("resname %s" % _acids, molid=self.molid)):
-            print("\tDidn't find any protein.\n")
-
         # Now handle the protein
         # Save and reload the protein so residue looping is correct
-        prot_molid = self._renumber_protein_chains(molid=self.molid)
-        extpatches = set()
-        for frag in sorted(set(atomsel("resname %s" % _acids,
-                                molid=prot_molid).get('fragment'))):
-            extpatches.update(self._write_protein_blocks(prot_molid, frag))
-        atomsel("same fragment as resname %s" % _acids,
-                molid=self.molid).set("user", 0.0)
+        if len(atomsel("resname %s" % _acids, molid=self.molid)):
+            prot_molid = self._renumber_protein_chains(molid=self.molid)
+            extpatches = set()
+            for frag in sorted(set(atomsel("resname %s" % _acids,
+                                    molid=prot_molid).get('fragment'))):
+                extpatches.update(self._write_protein_blocks(prot_molid, frag))
+            atomsel("same fragment as resname %s" % _acids,
+                    molid=self.molid).set("user", 0.0)
 
-        # List all patches applied to the protein
-        print("Applying the following patches:\n")
-        print("\t%s" % "\t".join(extpatches))
-        self.file.write(''.join(extpatches))
-        self.file.write("\n")
+            # List all patches applied to the protein
+            print("Applying the following patches:\n")
+            print("\t%s" % "\t".join(extpatches))
+            self.file.write(''.join(extpatches))
+            self.file.write("\n")
+        else:
+            print("\tDidn't find any protein. Continuing...\n")
 
         # Regenerate angles and dihedrals after applying patches
         # Angles must be regenerated FIRST!
