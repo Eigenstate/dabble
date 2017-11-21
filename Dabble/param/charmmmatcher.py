@@ -428,11 +428,11 @@ class CharmmMatcher(MoleculeMatcher):
 
 
         # Assign resname to all atoms
-        nx.set_node_attributes(graph, "resname", resname)
+        nx.set_node_attributes(graph, name="resname", values=resname)
 
         # If we didn't patch, set the whole residue to unpatched atom attribute
         if not patch:
-            nx.set_node_attributes(graph, "patched", False)
+            nx.set_node_attributes(graph, name="patched", values=False)
 
         return graph
 
@@ -530,12 +530,12 @@ def _define_bond(graph, node1, node2, patch):
     # to the atom we are applying a bond to, delete the _join atom.
     # It can be added back later if it was actually needed.
     if graph.node[node1]["patched"] and not graph.node[node2]["patched"]:
-        neighbor_joins = [e[1] for e in nx.edges_iter(graph, nbunch=[node2]) \
+        neighbor_joins = [e[1] for e in graph.edges(nbunch=[node2]) \
                           if graph.node[e[1]]["residue"] != "self" and \
                           not graph.node[e[1]]["patched"]]
         graph.remove_nodes_from(neighbor_joins)
     elif graph.node[node2]["patched"] and not graph.node[node1]["patched"]:
-        neighbor_joins = [e[1] for e in nx.edges_iter(graph, nbunch=[node1]) \
+        neighbor_joins = [e[1] for e in graph.edges(nbunch=[node1]) \
                           if graph.node[e[1]]["residue"] != "self" and \
                           not graph.node[e[1]]["patched"]]
         graph.remove_nodes_from(neighbor_joins)
@@ -560,12 +560,12 @@ def _prune_joins(graph):
 
     unpatched = [n for n in graph.nodes() if not graph.node[n]["patched"]]
     for uun in unpatched:
-        neighbor_joins = [e[1] for e in nx.edges_iter(graph, nbunch=[uun]) if \
+        neighbor_joins = [e[1] for e in graph.edges(nbunch=[uun]) if \
                           graph.node[e[1]]["residue"] != "self" and \
                                   not graph.node[e[1]]["patched"]]
         for nei in neighbor_joins:
             if any(graph.node[e[1]]["element"] == graph.node[nei]["element"] for \
-                   e in nx.edges_iter(graph, nbunch=[uun]) if \
+                   e in graph.edges(nbunch=[uun]) if \
                    graph.node[e[1]]["patched"]):
                 graph.remove_node(nei)
 

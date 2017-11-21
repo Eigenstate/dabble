@@ -322,8 +322,8 @@ class MoleculeMatcher(object): # pylint: disable=too-few-public-methods
             rdict[oth] = sel.get('element')[0]
 
         # Set node attributes
-        nx.set_node_attributes(rgraph, 'element', rdict)
-        nx.set_node_attributes(rgraph, 'residue', edict)
+        nx.set_node_attributes(rgraph, name='element', values=rdict)
+        nx.set_node_attributes(rgraph, name='residue', values=edict)
 
         return (rgraph, is_covalent)
 

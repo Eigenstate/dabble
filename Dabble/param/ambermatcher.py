@@ -400,7 +400,7 @@ class AmberMatcher(MoleculeMatcher):
         # - direction join atom. Necessary to figure out the order in which
         # to list the tails.
         minusbnded = [_ for _ in match.keys() if match[_] in \
-                      [e[1] for e in nx.edges_iter(graph, nbunch=["-"])]]
+                      [e[1] for e in graph.edges(nbunch=["-"])]]
         if len(minusbnded) != 1:
             raise DabbleError("Could not identify tail attached to lipid %s:%s!"
                               % (resname, selection.get('resid')[0]))
