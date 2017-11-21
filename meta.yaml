@@ -22,6 +22,8 @@ requirements:
         - networkx
         - pydotplus
         - parmed
+        - networkx
+        - pydotplus
         - vmd-python
 
 about:
