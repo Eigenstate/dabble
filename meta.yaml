@@ -16,7 +16,7 @@ requirements:
         - networkx
         - pydotplus
         - parmed
-        - vmd-python
+        - vmd-python >=2.0.2
     run:
         - numpy
         - networkx
@@ -24,7 +24,7 @@ requirements:
         - parmed
         - networkx
         - pydotplus
-        - vmd-python
+        - vmd-python >=2.0.2
 
 about:
     home: dabble-md.readthedocs.org
