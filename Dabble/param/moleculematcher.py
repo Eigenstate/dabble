@@ -317,8 +317,21 @@ class MoleculeMatcher(object): # pylint: disable=too-few-public-methods
             resido = sel.get('resid')[0]
             if resido > resid:
                 edict[oth] = "+"
-            else:
+            elif resido < resid:
                 edict[oth] = "-"
+            # Resids match. Look for an insertion code to distinguish them.
+            # Don't actually use this code to determine which one is first
+            # as there isn't really a convention for it. Instead, just go
+            # by atom index as the ordering here should be reliable.
+            else:
+                if set(selection.get("insertion")) == set(sel.get("insertion"))\
+                        and set(selection.get("fragment")) == set(sel.get("fragment")):
+                    raise ValueError("Probable VMD parser bug!"
+                                     "Resid %d has multiple residues" % resid)
+
+                ins = selection.get("index")[0]
+                edict[oth] = "-" if oth < ins else "+"
+
             rdict[oth] = sel.get('element')[0]
 
         # Set node attributes

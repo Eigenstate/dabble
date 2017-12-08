@@ -157,7 +157,7 @@ class CharmmWriter(object):
         check_atom_names(molid=self.molid)
 
         # Now ions if present, changing the atom names
-        if len(atomsel('element Na Cl K', molid=self.molid)) > 0:
+        if len(atomsel('ions', molid=self.molid)) > 0:
             self._write_ion_blocks()
 
         # Save water 10k molecules at a time
@@ -171,11 +171,10 @@ class CharmmWriter(object):
         # Now handle the protein
         # Save and reload the protein so residue looping is correct
         if len(atomsel("resname %s" % _acids, molid=self.molid)):
-            prot_molid = self._renumber_protein_chains(molid=self.molid)
             extpatches = set()
             for frag in sorted(set(atomsel("resname %s" % _acids,
-                                    molid=prot_molid).get('fragment'))):
-                extpatches.update(self._write_protein_blocks(prot_molid, frag))
+                                    molid=self.molid).get('fragment'))):
+                extpatches.update(self._write_protein_blocks(self.molid, frag))
             atomsel("same fragment as resname %s" % _acids,
                     molid=self.molid).set("user", 0.0)
 
@@ -443,9 +442,12 @@ class CharmmWriter(object):
         # Get ion resids that aren't associated w other molecules
         # because some ligands have Na, Cl, K
         total = atomsel('element Na Cl K')
-        not_ions = atomsel("(same fragment as element Na Cl K)  and (not index %s)"
-                           % " ".join([str(s) for s in set(total.get('index'))]))
-        ions = set(total.get('residue')) - set(not_ions.get('residue'))
+        if len(total):
+            not_ions = atomsel("(same fragment as element Na Cl K)  and (not index %s)"
+                               % " ".join([str(s) for s in set(total.get('index'))]))
+            ions = set(total.get('residue')) - set(not_ions.get('residue'))
+        else:
+            ions = set(total.get('residue'))
 
         if not len(ions):
             return
@@ -682,75 +684,6 @@ class CharmmWriter(object):
 
     #==========================================================================
 
-    def _renumber_protein_chains(self, molid):
-        """
-        Pulls all protein fragments and renumbers the residues
-        so that ACE and NMA caps appear to be different residues to VMD.
-        This is necessary so that they don't appear as patches. Proteins with
-        non standard capping groups will have the patches applied.
-
-        Args:
-            molid (int): VMD molecule ID of entire system
-        Returns:
-            (int): Molid of loaded fragment
-        """
-        # Put our molecule on top and grab selection
-        old_top = molecule.get_top()
-        molecule.set_top(molid)
-
-        for frag in set(atomsel("protein or resname ACE NMA").get("fragment")):
-            fragment = atomsel('fragment %s' % frag, molid=molid)
-
-            print("Checking capping groups resids on protein fragment %d" % frag)
-            for resid in sorted(set(fragment.get("resid"))):
-                # Handle bug where capping groups in same residue as the
-                # neighboring amino acid Maestro writes it this way for some
-                # reason but it causes problems down the line when psfgen doesn't
-                # understand the weird combined residue
-                rid = atomsel("fragment '%s' and resid '%d'"
-                              % (frag, resid)).get('residue')[0]
-                names = set(atomsel('residue %d'% rid).get('resname'))
-                assert len(names) < 3, ("More than 2 residues with same number... "
-                                        "currently unhandled. Report a bug")
-
-                if len(names) > 1:
-                    if 'ACE' in names and 'NMA' in names:
-                        print("ERROR: Both ACE and NMA were given the same resid"
-                              "Check your input structure")
-                        quit(1)
-
-                    if 'ACE' in names:
-                        # Set ACE residue number as one less
-                        resid = atomsel('residue %d and not resname ACE' % rid).get('resid')[0]
-                        if len(atomsel("fragment '%s' and resid %d" % (frag, resid-1))):
-                            raise ValueError('ACE resid collision number %d' % (resid-1))
-                        atomsel('residue %d and resname ACE'
-                                % rid).set('resid', resid-1)
-                        print("\tACE %d -> %d" % (resid, resid-1))
-
-                    elif 'NMA' in names:
-                        # Set NMA residue number as one more
-                        resid = int(atomsel('residue %d and not resname NMA' % rid).get('resid')[0])
-                        if len(atomsel("fragment '%s' and resid %d" % (frag, resid+1))):
-                            raise ValueError("NMA resid collision number %d" % (resid+1))
-
-                        atomsel('residue %d and resname NMA'
-                                % rid).set('resid', resid+1)
-                        print("\tNMA %d -> %d" % (resid, resid+1))
-
-        # Have to save and reload so residues are parsed correctly by VMD
-        temp = tempfile.mkstemp(suffix='_renum.mae',
-                                prefix='psf_prot_', dir=self.tmp_dir)[1]
-        atomsel("same fragment as protein or resname ACE NMA").write('mae', temp)
-        prot_molid = molecule.load('mae', temp)
-
-        # Put things back the way they were
-        if old_top != -1:
-            molecule.set_top(old_top)
-        return prot_molid
-
-    #==========================================================================
-
     def _check_psf_output(self):
         """
         Scans the output psf from psfgen for atoms where the coordinate
@@ -975,23 +908,26 @@ def _write_ordered_pdb(filename, sel, molid):
     idx = 1
     # For renumbering capping groups
     for resid in sorted(resids):
-        rid = atomsel("resid '%s' and residue %s"
-                      % (resid, resstr)).get('residue')[0]
-
-        for i in atomsel('residue %d' % rid).get('index'):
-            a = atomsel('index %d' % i) # pylint: disable=invalid-name
-            entry = ('%-6s%5d %-5s%-4s%c%4d    %8.3f%8.3f%8.3f%6.2f%6.2f'
-                     '     %-4s%2s\n' % ('ATOM', idx, a.get('name')[0],
-                                         a.get('resname')[0],
-                                         a.get('chain')[0],
-                                         a.get('resid')[0],
-                                         a.get('x')[0],
-                                         a.get('y')[0],
-                                         a.get('z')[0],
-                                         0.0, 0.0, a.get('segname')[0],
-                                         a.get('element')[0]))
-            idx += 1
-            fileh.write(entry)
+        # Check for alternate locations
+        residues = sorted(set(atomsel("resid '%s' and residue %s"
+                                      % (resid, resstr)).get('residue')))
+        for rid in residues:
+            for i in atomsel('residue %d' % rid).get('index'):
+                a = atomsel('index %d' % i) # pylint: disable=invalid-name
+                ins = a.get("insertion")[0]
+                entry = ('%-6s%5d %-5s%-4s%c%4d%c   %8.3f%8.3f%8.3f%6.2f%6.2f'
+                         '     %-4s%2s\n' % ('ATOM', idx, a.get('name')[0],
+                                             a.get('resname')[0],
+                                             a.get('chain')[0],
+                                             a.get('resid')[0],
+                                             ins if len(ins) else " ",
+                                             a.get('x')[0],
+                                             a.get('y')[0],
+                                             a.get('z')[0],
+                                             0.0, 0.0, a.get('segname')[0],
+                                             a.get('element')[0]))
+                idx += 1
+                fileh.write(entry)
     fileh.write('END\n')
     atomsel(sel).set('user', 0.0) # Mark as written
     fileh.close()

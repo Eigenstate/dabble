@@ -273,10 +273,10 @@ class AmberMatcher(MoleculeMatcher):
 
         # Find resid and fragment for other molecule
         partners = []
-        resid = selection.get("resid")[0]
+        resid = selection.get("residue")[0]
         chain = selection.get("chain")[0]
         for num in externs:
-            rid = atomsel("index %d" % num, molid=molid).get("resid")[0]
+            rid = atomsel("index %d" % num, molid=molid).get("residue")[0]
             ch = atomsel("index %d" % num, molid=molid).get("chain")[0]
             if ch != chain:
                 partners.append(num)

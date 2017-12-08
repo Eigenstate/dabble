@@ -177,7 +177,6 @@ class AmberWriter(object):
 
             # Assign atom types
             print("Assigning AMBER atom types...")
-            self._split_caps()
             conect = self._rename_atoms_amber()
 
             # Create temporary pdb files that will be leap inputs
@@ -478,69 +477,6 @@ class AmberWriter(object):
 
     #==========================================================================
 
-    def _split_caps(self):
-        """
-        Pulls out ACE and NMA caps, renumbers residues, and loads that
-        renumbered molecule. Closes the old molecule and sets this as
-        the top one.
-
-        Returns:
-            (int): Molid of new molecule
-        """
-        # Put our molecule on top and grab selection
-        molecule.set_top(self.molid)
-
-        # Do one fragment at a time to handle duplicate resids across chains
-        print("Checking if capping groups need to be renumbered")
-        for frag in set(atomsel('all').get('fragment')):
-            for resid in sorted(set(atomsel('fragment %d' % frag).get('resid'))):
-                # Handle bug where capping groups in same residue as the
-                # neighboring amino acid Maestro writes it this way for some
-                # reason but it causes problems down the line when psfgen doesn't
-                # understand the weird combined residue
-                rid = atomsel("fragment '%d' and resid '%d'"
-                              % (frag, resid)).get('residue')[0]
-                names = set(atomsel('residue %d'% rid).get('resname'))
-                assert len(names) < 3, ("More than 2 residues with same number... "
-                                        "currently unhandled. Report a bug")
-
-                if len(names) > 1:
-                    if 'ACE' in names and 'NMA' in names:
-                        print("ERROR: Both ACE and NMA were given the same resid"
-                              "Check your input structure")
-                        quit(1)
-
-                    if 'ACE' in names:
-                        # Set ACE residue number as one less
-                        resid = atomsel('residue %d and not resname ACE' % rid).get('resid')[0]
-                        if len(atomsel("fragment '%s' and resid '%d'" % (frag, resid-1))):
-                            raise ValueError('ACE resid collision number %d' % resid-1)
-                        atomsel('residue %d and resname ACE'
-                                % rid).set('resid', resid-1)
-                        print("\tACE %d -> %d" % (resid, resid-1))
-
-                    elif 'NMA' in names:
-                        # Set NMA residue number as one more
-                        resid = atomsel('residue %d and not resname NMA' % rid).get('resid')[0]
-                        if len(atomsel("fragment '%s' and resid '%d'" % (frag, resid+1))):
-                            raise ValueError('NMA resid collision number %d' % resid+1)
-
-                        atomsel('residue %d and resname NMA'
-                                % rid).set('resid', resid+1)
-                        print("\tNMA %d -> %d" % (resid, resid+1))
-
-        # Have to save and reload so residues are parsed correctly by VMD
-        temp = tempfile.mkstemp(suffix='.mae', prefix='mae_renum_',
-                                dir=self.tmp_dir)[1]
-        atomsel('all').write('mae', temp)
-        molecule.delete(self.molid)
-        self.molid = molecule.load('mae', temp)
-        molecule.set_top(self.molid)
-
-        return self.molid
-
-    #==========================================================================
-
     def _write_ligands(self):
         """
         Writes any remaining user=1.0 residues each to a pdb file. Renumbers
@@ -702,27 +638,24 @@ class AmberWriter(object):
             temp = tempfile.mkstemp(suffix='_prot.pdb', prefix='amber_prot_',
                                     dir=self.tmp_dir)[1]
 
-            for res in sorted(set(atomsel("fragment '%s'" % frag).get("resid"))):
-                ressel = atomsel("fragment '%s' and resid '%d' and user 1.0"
-                                 % (frag, res))
-                ressel.set("resid", fragres)
-                ressel.set("user", 2.0) # Can't select only be resid as it changes
-                fragres += 1
-
-            atomsel("fragment '%s' and user 2.0" % frag).set("user", 1.0)
-
             # Now write out all the resides to a pdb file
             resseq = []
             with open(temp, 'w') as fileh:
                 idx = 1
                 # Grab resids again since they may have updated
-                for resid in sorted(set(atomsel("fragment '%s'" % frag).get("resid"))):
-                    sel = atomsel("fragment '%s' and resid '%d' and "
-                                  "user 1.0" % (frag, resid))
-                    idx = self._write_residue(sel, fileh, idx, hetatm=False)
-                    sel.set('segname', str(i))
-                    sel.set('user', 0.0)
-                    resseq.append(sel.get("resname")[0])
+                # Check for multiple residues with the same resid (insertion codes)
+                for resid in sorted(set(atomsel("fragment '%s'" \
+                                                % frag).get("resid"))):
+                    selstr = "fragment '%s' and resid '%d' " \
+                             "and user 1.0" % (frag, resid)
+                    for residue in sorted(set(atomsel(selstr).get("residue"))):
+                        sel = atomsel("residue %d" % residue)
+                        sel.set('resid', fragres)
+                        sel.set('segname', str(i))
+                        sel.set('user', 0.0)
+                        idx = self._write_residue(sel, fileh, idx, hetatm=False)
+                        resseq.append(sel.get("resname")[0])
+                        fragres += 1
                 fileh.write("END\n")
                 fileh.close()
 
