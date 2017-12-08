@@ -16,7 +16,7 @@ def check_correctness(molid):
     molecule.set_top(molid)
 
     # Check the protein is there with the correct capping groups
-    assert len(atomsel("protein")) == 804
+    assert len(atomsel("protein or resname ACE NMA NME")) == 828
     assert len(set(atomsel("all").get("fragment"))) == 2
     assert len(set(atomsel("resname ACE NMA NME").get("residue"))) == 4
 

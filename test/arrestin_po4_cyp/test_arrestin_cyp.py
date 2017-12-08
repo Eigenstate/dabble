@@ -29,7 +29,9 @@ def test_covalent_ligand_patches(tmpdir):
     molecule.set_top(m2)
 
     # Sanity check the system was built completely
-    assert(len(set(atomsel("protein or resname ACE NMA").get("resid"))) == 699)
+    # Some resids match because of insertion codes
+    assert(len(set(atomsel("protein or resname ACE NMA").get("resid"))) == 697)
+    assert(len(set(atomsel("protein or resname ACE NMA").get("residue"))) == 699)
     assert(len(set(atomsel("resname ACE NMA").get("resid"))) == 4)
     assert(len(atomsel("water")) == 654)
     assert(len(set(atomsel("all").get("fragment"))) == 220)
@@ -101,6 +103,7 @@ def test_covalent_ligand_amber(tmpdir):
 
     # Sanity check the system was built completely
     assert(len(set(atomsel("protein or resname ACE NME").get("resid"))) == 699)
+    assert(len(set(atomsel("protein or resname ACE NME").get("residue"))) == 699)
     assert(len(set(atomsel("resname ACE NME").get("resid"))) == 4)
     assert(len(atomsel("water")) == 654)
     assert(len(set(atomsel("all").get("fragment"))) == 220)
@@ -136,5 +139,8 @@ def test_covalent_ligand_amber(tmpdir):
     assert(len(atomsel("resid 339 and resname SEP")) == 14)
     assert("P" in atomsel("resid 339 and resname SEP").get("type"))
     assert("OH" not in atomsel("resid 339 and resname SEP").get("type"))
+
+    # Check for disulfide bonds
+    assert all(len(x)==2 for x in atomsel("resname CYX and element S").bonds)
 
 #==============================================================================
