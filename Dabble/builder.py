@@ -731,12 +731,14 @@ class DabbleBuilder(object):
         Returns:
           (int) number of atoms removed due to clashes
         """
-
         # Select and remove solvent molecules that are clashing
-        clashing_sel = 'not (%s) and noh and not (%s) and ' \
-        '(pbwithin %f of (noh and (%s)))' % (lipid_sel,
-                                             self.solute_sel, dist,
-                                             self.solute_sel)
+        if self.water_only:
+            clashing_sel = "(not (%s)) and (pbwithin %f of (noh and (%s)))" \
+                           % (self.solute_sel, dist, self.solute_sel)
+        else:
+            clashing_sel = 'not (%s) and noh and not (%s) and ' \
+            '(pbwithin %f of (noh and (%s)))' % (lipid_sel, self.solute_sel,
+                                                 dist, self.solute_sel)
         total = _remove_residues(clashing_sel, molid=molid)
 
         # Select and remove lipid molecules that are clashing
