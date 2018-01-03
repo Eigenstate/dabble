@@ -732,9 +732,12 @@ class DabbleBuilder(object):
           (int) number of atoms removed due to clashes
         """
         # Select and remove solvent molecules that are clashing
+        # If water only, remove waters whose oxygen is within 2.5A of a heavy
+        # atom in the solute (doesn't grab crystal waters in original structure!)
         if self.water_only:
-            clashing_sel = "(not (%s)) and (pbwithin %f of (noh and (%s)))" \
-                           % (self.solute_sel, dist, self.solute_sel)
+            clashing_sel = "noh and (not (%s)) and " \
+                           "(pbwithin %f of (noh and (%s)))" \
+                           % (self.solute_sel, max(dist, 2.5), self.solute_sel)
         else:
             clashing_sel = 'not (%s) and noh and not (%s) and ' \
             '(pbwithin %f of (noh and (%s)))' % (lipid_sel, self.solute_sel,
