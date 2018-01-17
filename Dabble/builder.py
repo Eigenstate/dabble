@@ -963,7 +963,7 @@ def _find_convertible_water_molecule(molid, # pylint: disable=invalid-name
     if not len(sel):
         raise DabbleError("No convertible water molecules found in %s" % sel)
 
-    return sel[random.randint(0, len(sel))]
+    return sel[random.randint(0, len(sel)-1)]
 
 #==========================================================================
 
