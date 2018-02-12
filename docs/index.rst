@@ -50,6 +50,15 @@ Supported Simulation Programs
 - [X] Anton (via conversion)
 - [ ] Gromacs
 
+Citing Dabble
+-------------
+
+There is no paper on Dabble yet.
+If you use Dabble, please cite it with the following DOI:
+
+    http://doi.org/10.5281/zenodo.836914
+
+
 Contributing
 ------------
 
