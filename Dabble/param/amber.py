@@ -120,7 +120,7 @@ class AmberWriter(object):
                 "leaprc.protein.ff14SB",
                 "leaprc.lipid14",
                 "leaprc.water.tip3p",
-                "leaprc.gaff",
+                "leaprc.gaff2",
             ]
             for i, top in enumerate(self.topologies):
                 self.topologies[i] = os.path.join(os.environ["AMBERHOME"],
