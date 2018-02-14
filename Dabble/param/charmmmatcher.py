@@ -343,7 +343,13 @@ class CharmmMatcher(MoleculeMatcher):
             ValueError if rtf file is malformed in various ways
         """
 
-        graph = nx.Graph(data=patch)
+        # They changed the copy keyword after version 2.1 so that
+        # graph attributes can have more names
+        if nx.__version__ >= "2.1":
+            graph = nx.Graph(incoming_graph_data=patch)
+        else:
+            graph = nx.Graph(data=patch)
+
         firstcmap = True
 
         for line in data.splitlines():
