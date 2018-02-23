@@ -12,13 +12,18 @@ build:
 requirements:
     build:
         - python
+        - vmd-python >=2.0.4
+        - networkx >=1.11
+        - parmed
+        - pydot
+        - numpy
     run:
         - python
-        - numpy
+        - vmd-python >=2.0.4
         - parmed
         - networkx >=1.11
         - pydot
-        - vmd-python >=2.0.4
+        - numpy
 
 about:
     home: dabble-md.readthedocs.org
