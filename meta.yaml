@@ -16,14 +16,12 @@ requirements:
         - networkx >=1.11
         - parmed
         - pydot
-        - numpy
     run:
         - python
         - vmd-python >=2.0.4
         - parmed
         - networkx >=1.11
         - pydot
-        - numpy
 
 about:
     home: dabble-md.readthedocs.org
