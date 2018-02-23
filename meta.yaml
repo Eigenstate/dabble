@@ -14,16 +14,15 @@ requirements:
         - python
         - numpy
         - networkx
-        - pydotplus
+        - pydot
         - parmed
         - vmd-python >=2.0.4
     run:
+        - python
         - numpy
-        - networkx
-        - pydotplus
         - parmed
         - networkx
-        - pydotplus
+        - pydot
         - vmd-python >=2.0.4
 
 about:
