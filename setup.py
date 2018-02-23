@@ -34,7 +34,11 @@ setup(name='dabble',
       package_data=package_data,
       packages=packages,
       scripts=scripts,
-      install_requires=["networkx>=1.11","pydotplus","vmd-python>=2.0.4","parmed"],
+      install_requires=["numpy",
+                        "networkx>=1.11",
+                        "pydot",
+                        "vmd-python>=2.0.4",
+                        "parmed"],
       tests_require=["pytest"],
       cmdclass = {'test': PyTest}
      )

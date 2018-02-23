@@ -2,21 +2,22 @@
 # mae and str file, and matching up atoms
 import os
 import logging
+import subprocess
 logging.basicConfig()
 
 dir = os.path.dirname(__file__) + "/"
 #==============================================================================
 
-#def test_read_str(capfd, tmpdir):
-#    """
-#    Tests if a str file can be properly read in
-#    """
-#    from Dabble.param import CharmmMatcher
-#    from networkx.drawing.nx_pydot import write_dot
-#
-#    g = CharmmMatcher([dir+"lsd_prot_trunc.str", dir+"masses.rtf"])
-#    write_dot(g.known_res["LSD"], str(tmpdir)+"/test.dot")
-#    subprocess.check_call(["diff", "-q", dir+"correct_str.dot", str(tmpdir)+"/test.dot"])
+def test_read_str(capfd, tmpdir):
+    """
+    Tests if a str file can be properly read in
+    """
+    from Dabble.param import CharmmMatcher
+    from networkx.drawing.nx_pydot import write_dot
+
+    g = CharmmMatcher([dir+"lsd_prot_trunc.str", dir+"masses.rtf"])
+    write_dot(g.known_res["LSD"], str(tmpdir)+"/test.dot")
+    subprocess.check_call(["diff", "-q", dir+"correct_str.dot", str(tmpdir)+"/test.dot"])
 
 #==============================================================================
 
