@@ -625,6 +625,27 @@ ATOM H2'' HN8     0.09
 BOND C2'  H2'
 BILD C1'  C3'  *C2' H2' 0.0 0.0 -115.0 0.0 0.0
 
+PRES DEOS         1.50  ! Patch to convert a single nucleotide in an RNA strand to deoxy
+                        ! for non 5-terminal DEOXyribose nucleotides
+                        ! Do NOT use with patch deox
+DELETE ATOM O2'         ! Follow with AUTOGENERATE ANGLES DIHEDRALS 
+
+GROUP ! To correct O4' atom type in DNA (NF)
+ATOM C4'  CN7     0.16  !
+ATOM H4'  HN7     0.09  !
+ATOM O4'  ON6    -0.50  !
+ATOM C1'  CN7B    0.16  !
+ATOM H1'  HN7     0.09  !
+GROUP
+ATOM C2'  CN8    -0.18
+ATOM H2'  HN8     0.09
+ATOM H2'' HN8     0.09
+
+ATOM +P   P2      1.50  ! convert i+1 phosphorous to P2 for DNA
+
+BOND C2'  H2'
+BILD C1'  C3'  *C2' H2' 0.0 0.0 -115.0 0.0 0.0
+
 PRES DEOR         3.00  ! Patch to maintain a single RNA nucleotide in a DNA oligonucleotide
                         ! Note that patch should be invoked once all the DEOX patches
                         ! for the strand have been called
