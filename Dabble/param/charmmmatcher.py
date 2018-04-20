@@ -291,6 +291,10 @@ class CharmmMatcher(MoleculeMatcher):
                 # Handle new residue definition
                 if tokens[0] == "RESI":
                     resname = tokens[1]
+                    if len(resname) > 4:
+                       raise DabbleError("Residue name '%s' too long for psfgen"
+                                         " to parse. Max is 4 characters!"
+                                         % resname)
                     patch = False
                     if self.known_res.get(resname):
                         logging.info("Skipping duplicate residue %s", resname)
@@ -300,6 +304,10 @@ class CharmmMatcher(MoleculeMatcher):
                 # PRES is a patch
                 elif tokens[0] == "PRES":
                     resname = tokens[1] # prefix with _ so we can tell it's a patch
+                    if len(resname) > 10:
+                       raise DabbleError("Patch name '%s' too long for psfgen"
+                                         " to parse. Max is 10 characters."
+                                         % resname)
                     patch = True
                     if self.patches.get(resname):
                         logging.warning("Skipping duplicate patch %s", resname[1:])
