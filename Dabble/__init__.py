@@ -1,10 +1,11 @@
 """ Builds membrane protein systems """
 
-__version__ = '2.7.5'
+__version__ = '2.7.6'
 __author__ = 'Robin Betz'
 
 import sys
 import inspect
+
 #=========================================================================
 
 class DabbleError(Exception):
@@ -17,9 +18,10 @@ class DabbleError(Exception):
             ln = sys.exc_info()[-1].tb_lineno
         except AttributeError:
             ln = inspect.currentframe().f_back.f_lineno
-        self.args = "\n\n\n{0.__name__} (line {1}): {2}\n".format(type(self),
-                                                                  ln, msg),
-        sys.exit(self)
+
+        print("\n\n\n{0.__name__} (line {1}): {2}\n".format(type(self), ln, msg))
+        #self.args = "\n\n\n{0.__name__} (line {1}): {2}\n".format(type(self),
+        #                                                          ln, msg)
 
 #=========================================================================
 
