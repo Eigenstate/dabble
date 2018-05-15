@@ -32,6 +32,10 @@ from glob import glob
 _acids = ('ACE ALA ARG ASN ASP CYS CYX GLN GLU GLY HIE HIS HSP HSE '
           'HSD ILE LEU LYS MET NMA PHE PRO SER THR TRP TYR VAL')
 
+# For python 2, want raw_input
+if hasattr(__builtins__, "raw_input"):
+    input = raw_input
+
 #==============================================================================
 
 def parseSelection(inputstr):
