@@ -291,7 +291,8 @@ class CharmmMatcher(MoleculeMatcher):
                 # Handle new residue definition
                 if tokens[0] == "RESI":
                     resname = tokens[1]
-                    if len(resname) > 4:
+                    # Only warn for too long str files
+                    if len(resname) > 4 and filename.split('.')[-1] == "str":
                        raise DabbleError("Residue name '%s' too long for psfgen"
                                          " to parse. Max is 4 characters!"
                                          % resname)

@@ -59,6 +59,16 @@ def test_patches():
 
 #==============================================================================
 
+def test_check_resname():
+    import pytest
+    from Dabble import DabbleError
+    from Dabble.param import CharmmMatcher
+
+    with pytest.raises(DabbleError):
+        _ = CharmmMatcher([dir + "lsd_toolong.str"])
+
+#==============================================================================
+
 #def test_protein(tmpdir):
 #    from vmd import molecule
 #
