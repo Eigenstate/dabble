@@ -8,7 +8,7 @@
   
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   
-  <title>API Examples &mdash; Dabble 2.7.3 documentation</title>
+  <title>API Examples &mdash; Dabble 2.7.6 documentation</title>
   
 
   
@@ -35,7 +35,7 @@
         <link rel="index" title="Index"
               href="genindex.html"/>
         <link rel="search" title="Search" href="search.html"/>
-    <link rel="top" title="Dabble 2.7.3 documentation" href="index.html"/>
+    <link rel="top" title="Dabble 2.7.6 documentation" href="index.html"/>
         <link rel="prev" title="Utility Programs" href="utility_programs.html"/> 
 
   
@@ -65,7 +65,7 @@
             
             
               <div class="version">
-                2.7.3
+                2.7.6
               </div>
             
           
@@ -172,7 +172,7 @@ parameters were working, but the ligand atom names were different than my
 ParamChem .str file, and matching them up by hand is really tedious.</p>
 <p>Instead, I'll use the Dabble parameterization API to match up atom names
 and save an input file suitable for use in AMBER.:</p>
-<div class="highlight-python"><div class="highlight"><pre><span></span><span class="kn">import</span> <span class="nn">vmd</span><span class="o">,</span> <span class="nn">molecule</span>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="kn">import</span> <span class="nn">vmd</span><span class="o">,</span> <span class="nn">molecule</span>
 <span class="kn">from</span> <span class="nn">Dabble.param</span> <span class="kn">import</span> <span class="n">AmberWriter</span>
 
 <span class="nb">id</span> <span class="o">=</span> <span class="n">molecule</span><span class="o">.</span><span class="n">load</span><span class="p">(</span><span class="s2">&quot;mol2&quot;</span><span class="p">,</span> <span class="s2">&quot;ligand.mol2&quot;</span><span class="p">)</span>
@@ -181,8 +181,8 @@ and save an input file suitable for use in AMBER.:</p>
 <span class="n">w</span><span class="o">.</span><span class="n">write</span><span class="p">(</span><span class="s2">&quot;ligand_parameterized&quot;</span><span class="p">)</span>
 </pre></div>
 </div>
-<p>This will produce two files, <code class="docutils literal"><span class="pre">ligand_parameterized.prmtop</span></code> and
-<code class="docutils literal"><span class="pre">ligand_parameterized.inpcrd</span></code> that can be simulated in a vacuum or
+<p>This will produce two files, <code class="docutils literal notranslate"><span class="pre">ligand_parameterized.prmtop</span></code> and
+<code class="docutils literal notranslate"><span class="pre">ligand_parameterized.inpcrd</span></code> that can be simulated in a vacuum or
 implicit solvent.</p>
 </div>
 </div>
@@ -229,7 +229,7 @@ implicit solvent.</p>
     <script type="text/javascript">
         var DOCUMENTATION_OPTIONS = {
             URL_ROOT:'./',
-            VERSION:'2.7.3',
+            VERSION:'2.7.6',
             COLLAPSE_INDEX:false,
             FILE_SUFFIX:'.html',
             HAS_SOURCE:  true,
