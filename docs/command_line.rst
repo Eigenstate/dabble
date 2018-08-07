@@ -143,11 +143,16 @@ Dabble does all the heavy lifting, most of which is dealing with the quirks of p
 and handling translation from pdb atom names and types to CHARMM ones. This matching functionality can even detect and apply patches! For more on how
 this is done, please see :ref:`parameterization`.
 
-By default, the charmm36 atom names, types, and topologies are used when you specify the ``-ff charmm`` flag indicating you want CHARMM parameters. If you wish to override this, pass the ``--no-default-ff`` flag and your own forcefield files.
+By default, the `CHARMM36m <https://www.nature.com/articles/nmeth.4067>`_ atom
+names, types, and topologies are used when you specify the ``-ff charmm36``
+flag indicating you want CHARMM parameters. You can also use the older CHARMM36
+parameters with the ``-ff charmm36`` flag. You can also use the Dabble API and
+create a ``CharmmWriter`` instance with ``override_default=True`` and your own
+forcefield files.
 
 Provide additional ``str``, ``rtf``/``top``, or ``par``/``prm`` files with the appropriate flag. Each flag may used multiple times in case you need to add multiple additional parameter sets.::
 
-    -o output.psf -ff charmm -top ligand1.rtf -top ligand2.rtf -par ligands.prm -str ligand3.str
+    -o output.psf -ff charmm36m -top ligand1.rtf -top ligand2.rtf -par ligands.prm -str ligand3.str
 
 If you want to simulate in AMBER with CHARMM parameters, Dabble will invoke the `ParmEd
 API <http://parmed.github.io/ParmEd/html/index.html>`_ to produce AMBER input files
@@ -155,7 +160,7 @@ with CHARMM parameters. Just request an AMBER format output topology file ``(prm
 and specify CHARMM parameterization ``-ff charmm``. A coordinate file ``(inpcrd)``
 will also be produced in AMBER format.::
 
-    -o output.prmtop -ff charmm -str ligand.str
+    -o output.prmtop -ff charmm36m -str ligand.str
 
 **NOTE:** These files may not view correctly in older versions of VMD. There will
 be a complaint about the CTITLE record and no bond will appear. This is due to
@@ -175,7 +180,9 @@ Request AMBER parameterization with the ``-ff amber`` flag. By default,
 the `ff14SB <http://pubs.acs.org/doi/abs/10.1021/acs.jctc.5b00255>`_ protein parameter
 set, `lipid14 <http://pubs.acs.org/doi/abs/10.1021/ct4010307>`_ lipid parameteres, 
 and TIP3P water model, and GAFF2 small molecule parameters will be used. To override
-these defaults, pass the ``--no-default-ff`` flag and your own forcefield leaprc files.
+these defaults, use the Dabble API and create an ``AmberWriter`` instance with
+the ``override_defaults=True`` option set and your own forcefield files. A command
+line flag may be available soon.
 
 Provide parameter and residue definition files for ligands (``off`` or ``lib`` files)
 using the ``-top`` flag, forcefield definition ``leaprc`` files with the ``-str`` flag,

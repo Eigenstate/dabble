@@ -8,7 +8,7 @@
   
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   
-  <title>Parameterization with Dabble &mdash; Dabble 2.7.3 documentation</title>
+  <title>Parameterization with Dabble &mdash; Dabble 2.7.6 documentation</title>
   
 
   
@@ -35,7 +35,7 @@
         <link rel="index" title="Index"
               href="genindex.html"/>
         <link rel="search" title="Search" href="search.html"/>
-    <link rel="top" title="Dabble 2.7.3 documentation" href="index.html"/>
+    <link rel="top" title="Dabble 2.7.6 documentation" href="index.html"/>
         <link rel="next" title="Utility Programs" href="utility_programs.html"/>
         <link rel="prev" title="System Building with Dabble" href="builder_api.html"/> 
 
@@ -66,7 +66,7 @@
             
             
               <div class="version">
-                2.7.3
+                2.7.6
               </div>
             
           
@@ -203,43 +203,43 @@ Dabble's builder, but you can use them on systems you have already
 built as well, or extend them to other systems.</p>
 <div class="section" id="automatic-atom-naming">
 <span id="match-system-residues"></span><h2>Automatic atom naming<a class="headerlink" href="#automatic-atom-naming" title="Permalink to this headline">¶</a></h2>
-<p>Atom matching classes inherit from <code class="docutils literal"><span class="pre">MoleculeMatcher</span></code>, which
+<p>Atom matching classes inherit from <code class="docutils literal notranslate"><span class="pre">MoleculeMatcher</span></code>, which
 defines basic functionality for matching:</p>
 <dl class="class">
 <dt id="Dabble.param.MoleculeMatcher">
 <em class="property">class </em><code class="descclassname">Dabble.param.</code><code class="descname">MoleculeMatcher</code><span class="sig-paren">(</span><em>**kwargs</em><span class="sig-paren">)</span><a class="headerlink" href="#Dabble.param.MoleculeMatcher" title="Permalink to this definition">¶</a></dt>
-<dd><p>Bases: <code class="xref py py-class docutils literal"><span class="pre">object</span></code></p>
+<dd><p>Bases: <code class="xref py py-class docutils literal notranslate"><span class="pre">object</span></code></p>
 <p>Represents a collection of graphs of all residues defined in the
 topology files. Can pass in VMD molecules to be checked and atom
 names corrected</p>
 <dl class="attribute">
-<dt id="MoleculeMatcher.topologies">
-<code class="descname">topologies</code><a class="headerlink" href="#MoleculeMatcher.topologies" title="Permalink to this definition">¶</a></dt>
+<dt id="Dabble.param.MoleculeMatcher.topologies">
+<code class="descname">topologies</code><a class="headerlink" href="#Dabble.param.MoleculeMatcher.topologies" title="Permalink to this definition">¶</a></dt>
 <dd><p><em>list of str</em> -- The topology files this molecule graph
 knows about</p>
 </dd></dl>
 
 <dl class="attribute">
-<dt id="MoleculeMatcher.known_res">
-<code class="descname">known_res</code><a class="headerlink" href="#MoleculeMatcher.known_res" title="Permalink to this definition">¶</a></dt>
+<dt id="Dabble.param.MoleculeMatcher.known_res">
+<code class="descname">known_res</code><a class="headerlink" href="#Dabble.param.MoleculeMatcher.known_res" title="Permalink to this definition">¶</a></dt>
 <dd><p><em>dict str resname -&gt; networkx graph</em> -- The molecule graphs</p>
 </dd></dl>
 
 <dl class="attribute">
-<dt id="MoleculeMatcher.known_pres">
-<code class="descname">known_pres</code><a class="headerlink" href="#MoleculeMatcher.known_pres" title="Permalink to this definition">¶</a></dt>
+<dt id="Dabble.param.MoleculeMatcher.known_pres">
+<code class="descname">known_pres</code><a class="headerlink" href="#Dabble.param.MoleculeMatcher.known_pres" title="Permalink to this definition">¶</a></dt>
 <dd><p><em>dict tuple (str resname, patchname) -&gt; networkx graph</em></p>
 </dd></dl>
 
 <dl class="attribute">
-<dt id="MoleculeMatcher.patches">
-<code class="descname">patches</code><a class="headerlink" href="#MoleculeMatcher.patches" title="Permalink to this definition">¶</a></dt>
+<dt id="Dabble.param.MoleculeMatcher.patches">
+<code class="descname">patches</code><a class="headerlink" href="#Dabble.param.MoleculeMatcher.patches" title="Permalink to this definition">¶</a></dt>
 <dd><p><em>dict patchname -&gt; str instructions</em> -- Known patches</p>
 </dd></dl>
 
 <dl class="attribute">
-<dt id="MoleculeMatcher.nodenames">
-<code class="descname">nodenames</code><a class="headerlink" href="#MoleculeMatcher.nodenames" title="Permalink to this definition">¶</a></dt>
+<dt id="Dabble.param.MoleculeMatcher.nodenames">
+<code class="descname">nodenames</code><a class="headerlink" href="#Dabble.param.MoleculeMatcher.nodenames" title="Permalink to this definition">¶</a></dt>
 <dd><p><em>dict name -&gt; element</em> -- Translates atom names to
 elements</p>
 </dd></dl>
@@ -306,7 +306,7 @@ if matching fails. Set to false if you'll try patches later.</li>
 (dict int-&gt;str) Atom index to atom name matched up</p>
 </td>
 </tr>
-<tr class="field-odd field"><th class="field-name">Raises:</th><td class="field-body"><p class="first last"><code class="xref py py-exc docutils literal"><span class="pre">KeyError</span></code> -- if no matching possible</p>
+<tr class="field-odd field"><th class="field-name">Raises:</th><td class="field-body"><p class="first last"><code class="xref py py-exc docutils literal notranslate"><span class="pre">KeyError</span></code> -- if no matching possible</p>
 </td>
 </tr>
 </tbody>
@@ -355,10 +355,10 @@ parameters can be challenging. Also, there is no reason to reinvent the wheel.</
 Dabble generates an input file for these programs, invokes them, and
 checks the output for correctness.</p>
 <p>The design philosophy here is that this should be accomplished by a
-<code class="docutils literal"><span class="pre">Writer</span></code> class, that when initialized with a VMD molecule ID corresponding
+<code class="docutils literal notranslate"><span class="pre">Writer</span></code> class, that when initialized with a VMD molecule ID corresponding
 to the built system  as well as parameter and/or topology files to be applied.
 It invokes the atom matching, then generates a new molecule
-with corrected atom and residue names. Invoking <code class="docutils literal"><span class="pre">Writer.write</span></code> with an
+with corrected atom and residue names. Invoking <code class="docutils literal notranslate"><span class="pre">Writer.write</span></code> with an
 output file name then generates an input file for and calls the setup program,
 checking the output along the way.</p>
 </div>
@@ -370,25 +370,25 @@ of disulfide bonds.</p>
 <dl class="class">
 <dt id="Dabble.param.AmberMatcher">
 <em class="property">class </em><code class="descclassname">Dabble.param.</code><code class="descname">AmberMatcher</code><span class="sig-paren">(</span><em>topologies</em><span class="sig-paren">)</span><a class="headerlink" href="#Dabble.param.AmberMatcher" title="Permalink to this definition">¶</a></dt>
-<dd><p>Bases: <code class="xref py py-class docutils literal"><span class="pre">Dabble.param.moleculematcher.MoleculeMatcher</span></code></p>
+<dd><p>Bases: <code class="xref py py-class docutils literal notranslate"><span class="pre">Dabble.param.moleculematcher.MoleculeMatcher</span></code></p>
 <p>Matches up names and residues for molecules for use with leap and
 the amber stack of preparatory programs</p>
 <dl class="attribute">
-<dt id="AmberMatcher.topologies">
-<code class="descname">topologies</code><a class="headerlink" href="#AmberMatcher.topologies" title="Permalink to this definition">¶</a></dt>
+<dt id="Dabble.param.AmberMatcher.topologies">
+<code class="descname">topologies</code><a class="headerlink" href="#Dabble.param.AmberMatcher.topologies" title="Permalink to this definition">¶</a></dt>
 <dd><p><em>list of str</em> -- The topology files this molecule graph
 knows about. For amber, these are leaprc files.</p>
 </dd></dl>
 
 <dl class="attribute">
-<dt id="AmberMatcher.known_res">
-<code class="descname">known_res</code><a class="headerlink" href="#AmberMatcher.known_res" title="Permalink to this definition">¶</a></dt>
+<dt id="Dabble.param.AmberMatcher.known_res">
+<code class="descname">known_res</code><a class="headerlink" href="#Dabble.param.AmberMatcher.known_res" title="Permalink to this definition">¶</a></dt>
 <dd><p><em>dict str resname -&gt; networkx graph</em> -- The molecule graphs</p>
 </dd></dl>
 
 <dl class="attribute">
-<dt id="AmberMatcher.nodenames">
-<code class="descname">nodenames</code><a class="headerlink" href="#AmberMatcher.nodenames" title="Permalink to this definition">¶</a></dt>
+<dt id="Dabble.param.AmberMatcher.nodenames">
+<code class="descname">nodenames</code><a class="headerlink" href="#Dabble.param.AmberMatcher.nodenames" title="Permalink to this definition">¶</a></dt>
 <dd><p><em>dict name -&gt; element</em> -- Translates atom names to
 elements</p>
 </dd></dl>
@@ -459,7 +459,7 @@ describing a possible lipid.</p>
 (dict int-&gt;str) Atom index to atom name matched up
 (int) Atom index corresponding to - direction tail</td>
 </tr>
-<tr class="field-odd field"><th class="field-name">Raises:</th><td class="field-body"><code class="xref py py-exc docutils literal"><span class="pre">KeyError</span></code> -- if no matching possible</td>
+<tr class="field-odd field"><th class="field-name">Raises:</th><td class="field-body"><code class="xref py py-exc docutils literal notranslate"><span class="pre">KeyError</span></code> -- if no matching possible</td>
 </tr>
 </tbody>
 </table>
@@ -494,7 +494,7 @@ dictionaries for both tails</p>
 <tr class="field-odd field"><th class="field-name">Return type:</th><td class="field-body"><p class="first">(array of tuples that are dict int-&gt;str)</p>
 </td>
 </tr>
-<tr class="field-even field"><th class="field-name">Raises:</th><td class="field-body"><p class="first last"><code class="xref py py-exc docutils literal"><span class="pre">ValueError</span></code> -- If a tail could not be matched or if there is an
+<tr class="field-even field"><th class="field-name">Raises:</th><td class="field-body"><p class="first last"><code class="xref py py-exc docutils literal notranslate"><span class="pre">ValueError</span></code> -- If a tail could not be matched or if there is an
 incorrect number of tails somehow attached.</p>
 </td>
 </tr>
@@ -522,7 +522,7 @@ if matching fails. Set to false if you'll try patches later.</li>
 (dict int-&gt;str) Atom index to atom name matched up</p>
 </td>
 </tr>
-<tr class="field-odd field"><th class="field-name">Raises:</th><td class="field-body"><p class="first last"><code class="xref py py-exc docutils literal"><span class="pre">KeyError</span></code> -- if no matching possible</p>
+<tr class="field-odd field"><th class="field-name">Raises:</th><td class="field-body"><p class="first last"><code class="xref py py-exc docutils literal notranslate"><span class="pre">KeyError</span></code> -- if no matching possible</p>
 </td>
 </tr>
 </tbody>
@@ -556,10 +556,10 @@ infrequently, on ligands only.</p>
 
 </dd></dl>
 
-<p>The <code class="docutils literal"><span class="pre">AmberWriter</span></code> class requires an installation of AmberTools in
-<code class="docutils literal"><span class="pre">$AMBERHOME</span></code>, enabling the use of the most up to date forcefields and
+<p>The <code class="docutils literal notranslate"><span class="pre">AmberWriter</span></code> class requires an installation of AmberTools in
+<code class="docutils literal notranslate"><span class="pre">$AMBERHOME</span></code>, enabling the use of the most up to date forcefields and
 bugfixes. The following parameter and topology sets are used by default:</p>
-<div class="highlight-python"><div class="highlight"><pre><span></span><span class="o">-</span> <span class="n">leaprc</span><span class="o">.</span><span class="n">protein</span><span class="o">.</span><span class="n">ff14SB</span>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="o">-</span> <span class="n">leaprc</span><span class="o">.</span><span class="n">protein</span><span class="o">.</span><span class="n">ff14SB</span>
 <span class="o">-</span> <span class="n">leaprc</span><span class="o">.</span><span class="n">lipid14</span>
 <span class="o">-</span> <span class="n">leaprc</span><span class="o">.</span><span class="n">lipid16</span>
 <span class="o">-</span> <span class="n">leaprc</span><span class="o">.</span><span class="n">water</span><span class="o">.</span><span class="n">tip3p</span>
@@ -569,13 +569,13 @@ bugfixes. The following parameter and topology sets are used by default:</p>
 <p>The <cite>tleap</cite> program is used to do the parameterization, and the ParmEd
 API then applies HMR if desired, and checks the result.</p>
 <p>If the user is asking for input files for AMBER using CHARMM parameters,
-the <code class="docutils literal"><span class="pre">AmberWriter</span></code> class can also take the molecule ID of a
-CHARMM-parameterized molecule, and invoke <code class="docutils literal"><span class="pre">chamber</span></code> through the ParmEd
+the <code class="docutils literal notranslate"><span class="pre">AmberWriter</span></code> class can also take the molecule ID of a
+CHARMM-parameterized molecule, and invoke <code class="docutils literal notranslate"><span class="pre">chamber</span></code> through the ParmEd
 API to convert to the AMBER format.</p>
 <dl class="class">
 <dt id="Dabble.param.AmberWriter">
 <em class="property">class </em><code class="descclassname">Dabble.param.</code><code class="descname">AmberWriter</code><span class="sig-paren">(</span><em>molid</em>, <em>**kwargs</em><span class="sig-paren">)</span><a class="headerlink" href="#Dabble.param.AmberWriter" title="Permalink to this definition">¶</a></dt>
-<dd><p>Bases: <code class="xref py py-class docutils literal"><span class="pre">object</span></code></p>
+<dd><p>Bases: <code class="xref py py-class docutils literal notranslate"><span class="pre">object</span></code></p>
 <p>Creates AMBER-format input files, using either CHARMM or AMBER parameters.</p>
 <p>When using the CHARMM parameters, creates a psf/pdb file and interfaces
 with ParmEd chamber command to create AMBER format files.
@@ -612,40 +612,40 @@ Maestro).</p>
 <dl class="class">
 <dt id="Dabble.param.CharmmMatcher">
 <em class="property">class </em><code class="descclassname">Dabble.param.</code><code class="descname">CharmmMatcher</code><span class="sig-paren">(</span><em>topologies</em><span class="sig-paren">)</span><a class="headerlink" href="#Dabble.param.CharmmMatcher" title="Permalink to this definition">¶</a></dt>
-<dd><p>Bases: <code class="xref py py-class docutils literal"><span class="pre">Dabble.param.moleculematcher.MoleculeMatcher</span></code></p>
+<dd><p>Bases: <code class="xref py py-class docutils literal notranslate"><span class="pre">Dabble.param.moleculematcher.MoleculeMatcher</span></code></p>
 <p>Represents a collection of graphs of all residues defined in the
 topology files. Can pass in VMD molecules to be checked and atom
 names corrected</p>
 <dl class="attribute">
-<dt id="CharmmMatcher.topologies">
-<code class="descname">topologies</code><a class="headerlink" href="#CharmmMatcher.topologies" title="Permalink to this definition">¶</a></dt>
+<dt id="Dabble.param.CharmmMatcher.topologies">
+<code class="descname">topologies</code><a class="headerlink" href="#Dabble.param.CharmmMatcher.topologies" title="Permalink to this definition">¶</a></dt>
 <dd><p><em>list of str</em> -- The topology files this molecule graph
 knows about, from parent class</p>
 </dd></dl>
 
 <dl class="attribute">
-<dt id="CharmmMatcher.known_res">
-<code class="descname">known_res</code><a class="headerlink" href="#CharmmMatcher.known_res" title="Permalink to this definition">¶</a></dt>
+<dt id="Dabble.param.CharmmMatcher.known_res">
+<code class="descname">known_res</code><a class="headerlink" href="#Dabble.param.CharmmMatcher.known_res" title="Permalink to this definition">¶</a></dt>
 <dd><p><em>dict str resname -&gt; networkx graph</em> -- The molecule graphs,
 from parent class</p>
 </dd></dl>
 
 <dl class="attribute">
-<dt id="CharmmMatcher.nodenames">
-<code class="descname">nodenames</code><a class="headerlink" href="#CharmmMatcher.nodenames" title="Permalink to this definition">¶</a></dt>
+<dt id="Dabble.param.CharmmMatcher.nodenames">
+<code class="descname">nodenames</code><a class="headerlink" href="#Dabble.param.CharmmMatcher.nodenames" title="Permalink to this definition">¶</a></dt>
 <dd><p><em>dict name -&gt; element</em> -- Translates atom names to
 elements, from parent class</p>
 </dd></dl>
 
 <dl class="attribute">
-<dt id="CharmmMatcher.known_pres">
-<code class="descname">known_pres</code><a class="headerlink" href="#CharmmMatcher.known_pres" title="Permalink to this definition">¶</a></dt>
+<dt id="Dabble.param.CharmmMatcher.known_pres">
+<code class="descname">known_pres</code><a class="headerlink" href="#Dabble.param.CharmmMatcher.known_pres" title="Permalink to this definition">¶</a></dt>
 <dd><p><em>dict tuple (str resname, patchname) -&gt; networkx graph</em></p>
 </dd></dl>
 
 <dl class="attribute">
-<dt id="CharmmMatcher.patches">
-<code class="descname">patches</code><a class="headerlink" href="#CharmmMatcher.patches" title="Permalink to this definition">¶</a></dt>
+<dt id="Dabble.param.CharmmMatcher.patches">
+<code class="descname">patches</code><a class="headerlink" href="#Dabble.param.CharmmMatcher.patches" title="Permalink to this definition">¶</a></dt>
 <dd><p><em>dict patchname -&gt; str instructions</em> -- Known patches</p>
 </dd></dl>
 
@@ -667,8 +667,8 @@ a subgraph match to the normal cysteine residue</p>
 </td>
 </tr>
 <tr class="field-even field"><th class="field-name">Returns:</th><td class="field-body"><p class="first last"><dl class="docutils">
-<dt>(str, str, dict) resname matched, patch line to put directly</dt>
-<dd><p class="first last">into psfgen, name translation dictionary</p>
+<dt>(str, Patch, dict) resname matched, patch object for psfgen,</dt>
+<dd><p class="first last">name translation dictionary</p>
 </dd>
 </dl>
 </p>
@@ -722,7 +722,7 @@ disulfides!</p>
 <tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><strong>selection</strong> (<em>VMD atomsel</em>) -- Selection that is patched</td>
 </tr>
 <tr class="field-even field"><th class="field-name">Returns:</th><td class="field-body"><dl class="docutils">
-<dt>(str, str, dict) resname matched, patch applied,</dt>
+<dt>(str, str, dict) resname matched, patch name applied,</dt>
 <dd>name translation dictionary</dd>
 </dl>
 </td>
@@ -740,7 +740,7 @@ to have more than 10,000 atoms because its PDB parser is the worst).</p>
 <dl class="class">
 <dt id="Dabble.param.CharmmWriter">
 <em class="property">class </em><code class="descclassname">Dabble.param.</code><code class="descname">CharmmWriter</code><span class="sig-paren">(</span><em>tmp_dir</em>, <em>molid</em>, <em>lipid_sel='lipid'</em>, <em>**kwargs</em><span class="sig-paren">)</span><a class="headerlink" href="#Dabble.param.CharmmWriter" title="Permalink to this definition">¶</a></dt>
-<dd><p>Bases: <code class="xref py py-class docutils literal"><span class="pre">object</span></code></p>
+<dd><p>Bases: <code class="xref py py-class docutils literal notranslate"><span class="pre">object</span></code></p>
 <p>An object that handles all the conversions to a psf file
 by interfacing with psfgen.</p>
 <p>Writes a pdb/psf file pair from the current molecule using the
@@ -750,54 +750,54 @@ Prompts the user for additional topology files and helps with
 matching atom names that cannot be automatically translated to the
 charmm naming conventions.</p>
 <dl class="attribute">
-<dt id="CharmmWriter.file">
-<code class="descname">file</code><a class="headerlink" href="#CharmmWriter.file" title="Permalink to this definition">¶</a></dt>
+<dt id="Dabble.param.CharmmWriter.file">
+<code class="descname">file</code><a class="headerlink" href="#Dabble.param.CharmmWriter.file" title="Permalink to this definition">¶</a></dt>
 <dd><p><em>file handle</em> -- Temporary file to write TCL script that invokes
 psfgen</p>
 </dd></dl>
 
 <dl class="attribute">
-<dt id="CharmmWriter.tmp_dir">
-<code class="descname">tmp_dir</code><a class="headerlink" href="#CharmmWriter.tmp_dir" title="Permalink to this definition">¶</a></dt>
+<dt id="Dabble.param.CharmmWriter.tmp_dir">
+<code class="descname">tmp_dir</code><a class="headerlink" href="#Dabble.param.CharmmWriter.tmp_dir" title="Permalink to this definition">¶</a></dt>
 <dd><p><em>string</em> -- Directory where temporary files are stored</p>
 </dd></dl>
 
 <dl class="attribute">
-<dt id="CharmmWriter.psf_name">
-<code class="descname">psf_name</code><a class="headerlink" href="#CharmmWriter.psf_name" title="Permalink to this definition">¶</a></dt>
+<dt id="Dabble.param.CharmmWriter.psf_name">
+<code class="descname">psf_name</code><a class="headerlink" href="#Dabble.param.CharmmWriter.psf_name" title="Permalink to this definition">¶</a></dt>
 <dd><p><em>str</em> -- Prefix for the pdb/psf output files, extension will
 be appended</p>
 </dd></dl>
 
 <dl class="attribute">
-<dt id="CharmmWriter.molid">
-<code class="descname">molid</code><a class="headerlink" href="#CharmmWriter.molid" title="Permalink to this definition">¶</a></dt>
+<dt id="Dabble.param.CharmmWriter.molid">
+<code class="descname">molid</code><a class="headerlink" href="#Dabble.param.CharmmWriter.molid" title="Permalink to this definition">¶</a></dt>
 <dd><p><em>str,optional</em> -- the VMD molecule id to write. Defaults to 0.</p>
 </dd></dl>
 
 <dl class="attribute">
-<dt id="CharmmWriter.lipid_sel">
-<code class="descname">lipid_sel</code><a class="headerlink" href="#CharmmWriter.lipid_sel" title="Permalink to this definition">¶</a></dt>
+<dt id="Dabble.param.CharmmWriter.lipid_sel">
+<code class="descname">lipid_sel</code><a class="headerlink" href="#Dabble.param.CharmmWriter.lipid_sel" title="Permalink to this definition">¶</a></dt>
 <dd><p><em>str,optional</em> -- atomselect string describing what should count
 as &quot;lipid&quot;.  Defaults to &quot;lipid&quot;</p>
 </dd></dl>
 
 <dl class="attribute">
-<dt id="CharmmWriter.topologies">
-<code class="descname">topologies</code><a class="headerlink" href="#CharmmWriter.topologies" title="Permalink to this definition">¶</a></dt>
+<dt id="Dabble.param.CharmmWriter.topologies">
+<code class="descname">topologies</code><a class="headerlink" href="#Dabble.param.CharmmWriter.topologies" title="Permalink to this definition">¶</a></dt>
 <dd><p><em>list of str</em> -- Topology files that were used in creating the
 psf</p>
 </dd></dl>
 
 <dl class="attribute">
-<dt id="CharmmWriter.prompt_topos">
-<code class="descname">prompt_topos</code><a class="headerlink" href="#CharmmWriter.prompt_topos" title="Permalink to this definition">¶</a></dt>
+<dt id="Dabble.param.CharmmWriter.prompt_topos">
+<code class="descname">prompt_topos</code><a class="headerlink" href="#Dabble.param.CharmmWriter.prompt_topos" title="Permalink to this definition">¶</a></dt>
 <dd><p><em>bool</em> -- Whether to ask for more topology files</p>
 </dd></dl>
 
 <dl class="attribute">
-<dt id="CharmmWriter.matcher">
-<code class="descname">matcher</code><a class="headerlink" href="#CharmmWriter.matcher" title="Permalink to this definition">¶</a></dt>
+<dt id="Dabble.param.CharmmWriter.matcher">
+<code class="descname">matcher</code><a class="headerlink" href="#Dabble.param.CharmmWriter.matcher" title="Permalink to this definition">¶</a></dt>
 <dd><p><em>CharmmMatcher</em> -- Molecular graph matcher object</p>
 </dd></dl>
 
@@ -818,7 +818,7 @@ will be appended</td>
 </dl>
 </td>
 </tr>
-<tr class="field-odd field"><th class="field-name">Return type:</th><td class="field-body"><a class="reference internal" href="#MoleculeMatcher.topologies" title="MoleculeMatcher.topologies">topologies</a> (list of str)</td>
+<tr class="field-odd field"><th class="field-name">Return type:</th><td class="field-body">topologies (list of str)</td>
 </tr>
 </tbody>
 </table>
@@ -873,7 +873,7 @@ will be appended</td>
     <script type="text/javascript">
         var DOCUMENTATION_OPTIONS = {
             URL_ROOT:'./',
-            VERSION:'2.7.3',
+            VERSION:'2.7.6',
             COLLAPSE_INDEX:false,
             FILE_SUFFIX:'.html',
             HAS_SOURCE:  true,

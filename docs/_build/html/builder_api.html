@@ -8,7 +8,7 @@
   
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   
-  <title>System Building with Dabble &mdash; Dabble 2.7.3 documentation</title>
+  <title>System Building with Dabble &mdash; Dabble 2.7.6 documentation</title>
   
 
   
@@ -35,7 +35,7 @@
         <link rel="index" title="Index"
               href="genindex.html"/>
         <link rel="search" title="Search" href="search.html"/>
-    <link rel="top" title="Dabble 2.7.3 documentation" href="index.html"/>
+    <link rel="top" title="Dabble 2.7.6 documentation" href="index.html"/>
         <link rel="next" title="Parameterization with Dabble" href="parameter_api.html"/>
         <link rel="prev" title="Command-line Usage" href="command_line.html"/> 
 
@@ -66,7 +66,7 @@
             
             
               <div class="version">
-                2.7.3
+                2.7.6
               </div>
             
           
@@ -171,8 +171,8 @@ systems, proteins in a water box, and manipulating various molecule
 file formats.</p>
 <div class="section" id="basic-system-building">
 <h2>Basic system building<a class="headerlink" href="#basic-system-building" title="Permalink to this headline">¶</a></h2>
-<p>The command line invocation of Dabble constructs a <code class="docutils literal"><span class="pre">DabbleBuilder</span></code>
-object. <code class="docutils literal"><span class="pre">DabbleBuilder.write</span></code> then does all of the work. This class
+<p>The command line invocation of Dabble constructs a <code class="docutils literal notranslate"><span class="pre">DabbleBuilder</span></code>
+object. <code class="docutils literal notranslate"><span class="pre">DabbleBuilder.write</span></code> then does all of the work. This class
 is a good place to look for methods that handle multiple VMD molecules,
 and use other Dabble building functions.</p>
 <dl class="class">
@@ -182,38 +182,38 @@ and use other Dabble building functions.</p>
 <p>Tiles box appropriately, inserts protein into box,
 removes conflicts, trims excess solvent and adds ions.</p>
 <dl class="attribute">
-<dt id="DabbleBuilder.molids">
-<code class="descname">molids</code><a class="headerlink" href="#DabbleBuilder.molids" title="Permalink to this definition">¶</a></dt>
+<dt id="Dabble.DabbleBuilder.molids">
+<code class="descname">molids</code><a class="headerlink" href="#Dabble.DabbleBuilder.molids" title="Permalink to this definition">¶</a></dt>
 <dd><p><em>dict str-&gt;int</em> -- Molecule IDs comprising system components</p>
 </dd></dl>
 
 <dl class="attribute">
-<dt id="DabbleBuilder.size">
-<code class="descname">size</code><a class="headerlink" href="#DabbleBuilder.size" title="Permalink to this definition">¶</a></dt>
+<dt id="Dabble.DabbleBuilder.size">
+<code class="descname">size</code><a class="headerlink" href="#Dabble.DabbleBuilder.size" title="Permalink to this definition">¶</a></dt>
 <dd><p><em>array len 3 of floats</em> -- Size of the x, y, and z dimensions of the system</p>
 </dd></dl>
 
 <dl class="attribute">
-<dt id="DabbleBuilder.solute_sel">
-<code class="descname">solute_sel</code><a class="headerlink" href="#DabbleBuilder.solute_sel" title="Permalink to this definition">¶</a></dt>
+<dt id="Dabble.DabbleBuilder.solute_sel">
+<code class="descname">solute_sel</code><a class="headerlink" href="#Dabble.DabbleBuilder.solute_sel" title="Permalink to this definition">¶</a></dt>
 <dd><p><em>str</em> -- VMD atom selection string for original solute</p>
 </dd></dl>
 
 <dl class="attribute">
-<dt id="DabbleBuilder.opts">
-<code class="descname">opts</code><a class="headerlink" href="#DabbleBuilder.opts" title="Permalink to this definition">¶</a></dt>
+<dt id="Dabble.DabbleBuilder.opts">
+<code class="descname">opts</code><a class="headerlink" href="#Dabble.DabbleBuilder.opts" title="Permalink to this definition">¶</a></dt>
 <dd><p><em>dictionary</em> -- All options passed to the system builder</p>
 </dd></dl>
 
 <dl class="attribute">
-<dt id="DabbleBuilder.tmp_dir">
-<code class="descname">tmp_dir</code><a class="headerlink" href="#DabbleBuilder.tmp_dir" title="Permalink to this definition">¶</a></dt>
+<dt id="Dabble.DabbleBuilder.tmp_dir">
+<code class="descname">tmp_dir</code><a class="headerlink" href="#Dabble.DabbleBuilder.tmp_dir" title="Permalink to this definition">¶</a></dt>
 <dd><p><em>str</em> -- Directory in which to save temporary files</p>
 </dd></dl>
 
 <dl class="attribute">
-<dt id="DabbleBuilder.water_only">
-<code class="descname">water_only</code><a class="headerlink" href="#DabbleBuilder.water_only" title="Permalink to this definition">¶</a></dt>
+<dt id="Dabble.DabbleBuilder.water_only">
+<code class="descname">water_only</code><a class="headerlink" href="#Dabble.DabbleBuilder.water_only" title="Permalink to this definition">¶</a></dt>
 <dd><p><em>bool</em> -- If the solvent is just a water box</p>
 </dd></dl>
 
@@ -298,7 +298,7 @@ return dx_sol, dy_sol, dx_tm, dy_tm, dz_full</p>
 <col class="field-name" />
 <col class="field-body" />
 <tbody valign="top">
-<tr class="field-odd field"><th class="field-name">Raises:</th><td class="field-body"><code class="xref py py-exc docutils literal"><span class="pre">ValueError</span></code> -- if filename and molid are both specified</td>
+<tr class="field-odd field"><th class="field-name">Raises:</th><td class="field-body"><code class="xref py py-exc docutils literal notranslate"><span class="pre">ValueError</span></code> -- if filename and molid are both specified</td>
 </tr>
 </tbody>
 </table>
@@ -343,7 +343,7 @@ return dx_sol, dy_sol, dx_tm, dy_tm, dz_full</p>
 <h2>Manipulating single molecules<a class="headerlink" href="#manipulating-single-molecules" title="Permalink to this headline">¶</a></h2>
 <p>Dabble provides many functions for manipulating molecules using
 both the VMD atom selection language as well as use of intermediate
-molecules. These may be found in the <code class="docutils literal"><span class="pre">molutils</span></code> module.</p>
+molecules. These may be found in the <code class="docutils literal notranslate"><span class="pre">molutils</span></code> module.</p>
 <span class="target" id="module-Dabble.molutils"></span><p>This module contains functions for manipulating molecules using
 the VMD python API.</p>
 <dl class="function">
@@ -765,9 +765,9 @@ in each direction to produce a larger system.</p>
 <h2>Working with multiple molecule files<a class="headerlink" href="#working-with-multiple-molecule-files" title="Permalink to this headline">¶</a></h2>
 <p>When constructing a system, Dabble performs operations such as tiling
 template membrane pieces, merging those pieces with a protein, and
-deleting atoms that are in the way. The <code class="docutils literal"><span class="pre">fileutils</span></code> module provides
+deleting atoms that are in the way. The <code class="docutils literal notranslate"><span class="pre">fileutils</span></code> module provides
 functionality for doing these things.</p>
-<p>All intermediate files are in the <code class="docutils literal"><span class="pre">mae</span></code> file format, as it provides
+<p>All intermediate files are in the <code class="docutils literal notranslate"><span class="pre">mae</span></code> file format, as it provides
 explicit connectivity and charge information, and allows combination of
 multiple molecules for easy combining of systems without renumbering
 all of the atoms. It is also easily extensible and not too difficult
@@ -794,8 +794,8 @@ internal variables as necessary.</p>
 </td>
 </tr>
 <tr class="field-odd field"><th class="field-name">Raises:</th><td class="field-body"><ul class="first last simple">
-<li><code class="xref py py-exc docutils literal"><span class="pre">ValueError</span></code> -- if the output format requested is currently unsupported</li>
-<li><code class="xref py py-exc docutils literal"><span class="pre">NotImplementedError</span></code> -- if hydrogen mass repartitioning is requested
+<li><code class="xref py py-exc docutils literal notranslate"><span class="pre">ValueError</span></code> -- if the output format requested is currently unsupported</li>
+<li><code class="xref py py-exc docutils literal notranslate"><span class="pre">NotImplementedError</span></code> -- if hydrogen mass repartitioning is requested
 for amber files</li>
 </ul>
 </td>
@@ -855,8 +855,8 @@ corresponding to each id.</p>
 </td>
 </tr>
 <tr class="field-odd field"><th class="field-name">Raises:</th><td class="field-body"><ul class="first last simple">
-<li><code class="xref py py-exc docutils literal"><span class="pre">ValueError</span></code> -- if input_filenames and input_ids are both specified</li>
-<li><code class="xref py py-exc docutils literal"><span class="pre">AssertionError</span></code> -- if there are no input files</li>
+<li><code class="xref py py-exc docutils literal notranslate"><span class="pre">ValueError</span></code> -- if input_filenames and input_ids are both specified</li>
+<li><code class="xref py py-exc docutils literal notranslate"><span class="pre">AssertionError</span></code> -- if there are no input files</li>
 </ul>
 </td>
 </tr>
@@ -992,7 +992,7 @@ masses</li>
     <script type="text/javascript">
         var DOCUMENTATION_OPTIONS = {
             URL_ROOT:'./',
-            VERSION:'2.7.3',
+            VERSION:'2.7.6',
             COLLAPSE_INDEX:false,
             FILE_SUFFIX:'.html',
             HAS_SOURCE:  true,
