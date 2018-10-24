@@ -184,12 +184,22 @@ class AmberMatcher(MoleculeMatcher):
         """
         rgraph = self.parse_vmd_graph(selection)[0]
 
+        # First try to short-circuit if the name already matches a unit
+        resname = selection.get('resname')[0]
+        if resname in self.known_res.keys():
+            graph = self.known_res[resname]
+            matcher = isomorphism.GraphMatcher(rgraph, graph,
+                                               node_match=self._check_atom_match)
+            if matcher.is_isomorphic():
+                return resname
+
         for matchname in self.known_res.keys():
             graph = self.known_res[matchname]
             matcher = isomorphism.GraphMatcher(rgraph, graph,
                                                node_match=self._check_atom_match)
             if matcher.is_isomorphic():
                 return matchname
+
         return None
 
     #=========================================================================
