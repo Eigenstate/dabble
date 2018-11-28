@@ -86,6 +86,9 @@ def test_residue_renaming(tmpdir):
     Reads a mol2 of LSD with incorrect names as a VMD graph.
     Then, loads a lib file for LSD with correct names, and gaff
     atom types. Should ideally match them up correctly.
+
+    The LSD definition also has a pseudoatom that needs to be correctly
+    ignored in order for matching to occur.
     """
     from vmd import atomsel, molecule
     from Dabble.param import AmberMatcher
@@ -101,6 +104,8 @@ def test_residue_renaming(tmpdir):
     molecule.load("mae", os.path.join(dir, "lsd_prot.mae"))
     g = AmberMatcher([filename])
     resnaem, mdict = g.get_names(atomsel())
+
+    assert resnaem is not None
 
     # Check matching. Ignore hydrogens since those can vary
     assert set(resnaem.values()) == set(["LIG"])

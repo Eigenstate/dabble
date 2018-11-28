@@ -79,6 +79,7 @@ addAtomTypes {
 	{ "cl"  "Cl" "sp3" }
 	{ "br"  "Br" "sp3" }
 	{ "i"   "I"  "sp3" }
+	{ "EP"  ""  "sp3" } # Pseudoatom for test case
 }
 #
 #	Load the general force field parameter set.

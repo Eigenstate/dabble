@@ -51,6 +51,7 @@
  "H151" "hc" 0 1 131072 48 1 0.0
  "HN1" "hn" 0 1 131072 49 1 0.0
  "HN2" "hn" 0 1 131072 50 1 0.0
+ "EP" "EP" 0 1 131072 51 0 -1.04000
 !entry.lsd.unit.atomspertinfo table  str pname  str ptype  int ptypex  int pelmnt  dbl pchg
  "C13" "c3" 0 -1 0.0
  "N2" "n4" 0 -1 0.0

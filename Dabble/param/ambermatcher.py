@@ -65,6 +65,7 @@ class AmberMatcher(MoleculeMatcher):
         # Add the water without TIP3 bond
         self._load_off(resource_filename(__name__, "charmm_parameters/hoh.lib"))
 
+
     #++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
     #                                CONSTANTS                                    #
     #++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
@@ -537,7 +538,7 @@ class AmberMatcher(MoleculeMatcher):
                         raise DabbleError("Malformed line in %s: %s"
                                           % (filename, line))
                     if not tokens[2]:
-                        logger.warning("Ignoring pseudoatom %s", tokens[1])
+                        self.pseudoatoms.append(tokens[1])
                         continue
 
                     if tokens[2] not in self.MASS_LOOKUP.values() and \

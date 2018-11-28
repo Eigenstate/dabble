@@ -53,6 +53,7 @@ class MoleculeMatcher(object): # pylint: disable=too-few-public-methods
         patches (dict patchname -> str instructions): Known patches
         nodenames (dict name -> element): Translates atom names to
             elements
+        pseudoatoms (list of str): Atom types for pseudo or dummy atoms
     """
 
     #++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
@@ -95,16 +96,26 @@ class MoleculeMatcher(object): # pylint: disable=too-few-public-methods
             self.topologies = kwargs.get("topologies")
             self.nodenames = {}
             self.known_res = {}
+            self.pseudoatoms = []
 
-            # Parse input topology files
+            # Parse input topology files (this populates pseudoatoms)
             for filename in self.topologies:
                 self._parse_topology(filename)
+
+            # Trim out pseudoatoms from the topologies as they will prevent
+            # topology matching. We do this here rather than at parse time
+            # as it allows more error checking in the parsing.
+            for unit, graph in self.known_res.items():
+                graph.remove_nodes_from([i for i in graph.nodes() if
+                                         graph.node[i].get("type") in
+                                         self.pseudoatoms])
 
         elif kwargs.get("matcher"):
             matcher = kwargs.get("matcher")
             assert isinstance(matcher, MoleculeMatcher)
             self.known_res = matcher.known_res
             self.nodenames = matcher.nodenames
+            self.pseudoatoms = matcher.pseudoatoms
         else:
             raise ValueError("No valid constructor for %s" % kwargs)
 
