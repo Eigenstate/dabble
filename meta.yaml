@@ -21,10 +21,11 @@ requirements:
         - vmd-python >=2.0.4
         - parmed
         - networkx >=1.11
+        - psfgen
         - pydot
 
 about:
-    home: dabble-md.readthedocs.org
+    home: dabble.robinbetz.com
     license: GPL2
     summary: Membrane protein system builder and parameterizer
 

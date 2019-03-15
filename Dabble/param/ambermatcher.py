@@ -5,7 +5,7 @@
 
  Author: Robin Betz
 
- Copyright (C) 2015 Robin Betz
+ Copyright (C) 2019 Robin Betz
 """
 #
 # This program is free software; you can redistribute it and/or modify it under

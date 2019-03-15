@@ -26,10 +26,11 @@ from __future__ import print_function
 import os
 import tempfile
 from pkg_resources import resource_filename
-from vmd import atomsel, evaltcl, molecule
+from psfgen import PsfGen
+from vmd import atomsel, molecule
 
 from Dabble import DabbleError
-from Dabble.param import CharmmMatcher
+from Dabble.param import CharmmMatcher, Patch
 
 #++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
 #                                CONSTANTS                                    #
@@ -74,12 +75,13 @@ class CharmmWriter(object):
 
     def __init__(self, tmp_dir, molid, lipid_sel="lipid", **kwargs):
 
-        # Create TCL temp file and directory
+        # Create a temporary directory for segment files, etc
         self.tmp_dir = tmp_dir
-        self.filename = tempfile.mkstemp(suffix='.tcl', prefix='dabble_psfgen',
-                                         dir=self.tmp_dir)[1]
         self.lipid_sel = lipid_sel
-        self.file = open(self.filename, 'w')
+
+        # Create a psf generator object
+        self.psfgen = PsfGen()
+
         self.molid = molid
         self.psf_name = ""
         # Default parameter sets
@@ -131,26 +133,15 @@ class CharmmWriter(object):
         except OSError:
             pass
 
-        #  Finds the psfgen package and sets the output file name
-        string = '''
-        set dir [file join $env(VMDDIR) plugins [vmdinfo arch] tcl psfgen1.6]
-        package ifneeded psfgen 1.6 [list load [file join $dir libpsfgen.so]]
-        package require psfgen
-        set output "%s"
-        resetpsf
-        ''' % self.psf_name
-        self.file.write(string)
-
         # Put our molecule on top
         old_top = molecule.get_top()
         molecule.set_top(self.molid)
 
         # Print out topology files
-        self.file.write('\n')
         print("Using the following topologies:")
         for top in self.topologies:
             print("  - %s" % top.split("/")[-1])
-            self.file.write('   topology %s\n' % top)
+            self.psfgen.read_topology(top)
 
         # Mark all atoms as unsaved with the user field
         atomsel('all', molid=self.molid).set('user', 1.0)
@@ -180,31 +171,30 @@ class CharmmWriter(object):
 
             # List all patches applied to the protein
             print("Applying the following patches:\n")
-            print("\t%s" % "\t".join(extpatches))
-            self.file.write(''.join(extpatches))
-            self.file.write("\n")
+            print("\t%s" % "\n\t".join(str(_) for _ in extpatches))
+
+            # Apply all multi segment patches to the protein
+            for p in extpatches:
+                self.psfgen.patch(p.name, p.targets())
         else:
             print("\tDidn't find any protein. Continuing...\n")
 
         # Regenerate angles and dihedrals after applying patches
         # Angles must be regenerated FIRST!
         # See http://www.ks.uiuc.edu/Research/namd/mailing_list/namd-l.2009-2010/4137.html
-        self.file.write("regenerate angles\nregenerate dihedrals\n")
+        self.psfgen.regenerate_angles()
+        self.psfgen.regenerate_dihedrals()
 
         # Check if there is anything else and let the user know about it
         leftovers = atomsel('user 1.0', molid=self.molid)
         for lig in set(leftovers.get('resname')):
-            residues = self._find_single_residue_names(resname=lig, molid=self.molid)
+            residues = self._find_single_residue_names(resname=lig,
+                                                       molid=self.molid)
             self._write_generic_block(residues)
 
         # Write the output files and run
-        string = '''
-        writepsf x-plor cmap ${output}.psf
-        writepdb ${output}.pdb'''
-        self.file.write(string)
-        self.file.close()
-
-        evaltcl('play %s' % self.filename)
+        self.psfgen.write_psf(filename="%s.psf" % self.psf_name, type="x-plor")
+        self.psfgen.write_pdb(filename="%s.pdb" % self.psf_name)
         self._check_psf_output()
 
         # Reset top molecule
@@ -274,24 +264,14 @@ class CharmmWriter(object):
                 batch.write('pdb', temp)
                 allw.update()
 
-        # Now write the problem waters
-        self._write_unorderedindex_waters(problems, self.molid)
+                self.psfgen.add_segment(segid="W%d" % i, pdbfile=temp)
+                self.psfgen.read_coords(segid="W%d" % i, filename=temp)
 
-        string = '''
-        set waterfiles [glob -directory %s psf_wat_*.pdb]
-        set i 0
-        foreach watnam $waterfiles {
-           segment W${i} {
-              auto none
-              first none
-              last none
-              pdb $watnam
-           }
-           coordpdb $watnam W${i}
-           incr i
-        }
-          ''' % self.tmp_dir
-        self.file.write(string)
+        # Now write the problem waters
+        updb = self._write_unorderedindex_waters(problems, self.molid)
+        self.psfgen.add_segment(segid="W%d" % (num_written+1), pdbfile=updb)
+        self.psfgen.read_coords(segid="W%d" % (num_written+1), filename=updb)
+
         molecule.set_top(old_top)
 
         return num_written
@@ -310,7 +290,7 @@ class CharmmWriter(object):
             residues (list of int): Problem water molecules
             molid (int): VMD molecule ID to write
         Returns:
-            (int) Number of waters written
+            (str): Filename where waters are written
         """
         temp = tempfile.mkstemp(suffix='_indexed.pdb', prefix='psf_wat_',
                                 dir=self.tmp_dir)[1]
@@ -337,7 +317,7 @@ class CharmmWriter(object):
 
         fileh.write('END\n')
         fileh.close()
-        return idx
+        return temp
 
     #==========================================================================
 
@@ -410,19 +390,9 @@ class CharmmWriter(object):
         alll.set('user', 0.0)
         alll.write('pdb', temp)
 
-        # Write to file
-        string = '''
-       set lipidfile %s
-       set mid [mol new $lipidfile]
-       segment L {
-          first none
-          last none
-          pdb $lipidfile
-       }
-       coordpdb $lipidfile L
-       mol delete $mid
-        ''' % temp
-        self.file.write(string)
+        # Generate lipid segment
+        self.psfgen.add_segment(segid="L", pdbfile=temp)
+        self.psfgen.read_coords(segid="L", filename=temp)
 
         # Put old top back
         molecule.set_top(old_top)
@@ -472,16 +442,9 @@ class CharmmWriter(object):
         atomsel('name SOD CLA POT').set('user', 0.0) # mark as saved
         atomsel('name SOD CLA POT').write('pdb', temp)
 
-        string = '''
-       set ionfile %s
-       segment I {
-          pdb $ionfile
-          first none
-          last none
-       }
-       coordpdb $ionfile I
-        ''' % temp
-        self.file.write(string)
+        self.psfgen.add_segment(segid="I", pdbfile=temp)
+        self.psfgen.read_coords(segid="I", filename=temp)
+
         molecule.set_top(old_top)
 
     #==========================================================================
@@ -576,18 +539,13 @@ class CharmmWriter(object):
         # Write temporary file containg the residues and update tcl commands
         temp = tempfile.mkstemp(suffix='.pdb', prefix='psf_block_',
                                 dir=self.tmp_dir)[1]
-        string = '''
-       set blockfile %s
-       segment B%s {
-         pdb $blockfile
-         first none
-         last none
-       }
-       coordpdb $blockfile B%s
-        ''' % (temp, residues[0], residues[0])
         alig.write('pdb', temp)
         alig.set('user', 0.0)
-        self.file.write(string)
+
+        self.psfgen.add_segment(segid="B%s" % residues[0], pdbfile=temp)
+        self.psfgen.read_coords(segid="B%s" % residues[0],
+                                filename=temp)
+
         if old_top != -1:
             molecule.set_top(old_top)
         return True
@@ -604,8 +562,7 @@ class CharmmWriter(object):
             frag (str): Fragment to write
 
         Returns:
-            (list of str): Patches to add to the psfgen input file
-                after all proteins have been loaded
+            (list of Patches): Patches to add to psfgen input files
        """
 
         print("Setting protein atom names")
@@ -628,17 +585,19 @@ class CharmmWriter(object):
 
             # See if it's a disulfide bond participant
             else:
-                (newname, patchline, atomnames) = \
+                (newname, patch, atomnames) = \
                         self.matcher.get_disulfide("residue %d" % residue,
                                                    frag, molid)
                 if newname:
-                    extpatches.add(patchline)
+                    extpatches.add(patch)
 
             # Couldn't find a match. See if it's a patched residue
             if not newname:
-                (newname, patch, atomnames) = self.matcher.get_patches(sel)
+                (newname, patchname, atomnames) = self.matcher.get_patches(sel)
                 if newname:
-                    patches.add("patch %s %s:%d\n" % (patch, seg, resid))
+                    # This returns patch name only, not a Patch object
+                    patches.add(Patch(name=patchname, segids=[seg],
+                                      resids=[resid]))
 
             # Fall through to error condition
             if not newname:
@@ -659,23 +618,15 @@ class CharmmWriter(object):
         print("\tWrote %d atoms to the protein segment %s"
               % (len(atomsel("fragment %s" % frag)), seg))
 
-        # Now write to psfgen input file
-        string = '''
-        set protnam %s
-        segment %s {
-          first none
-          last none
-          pdb $protnam
-        }
-        ''' % (filename, seg)
-        self.file.write(string)
+        # Now invoke psfgen for the protein segments
+        self.psfgen.add_segment(segid=seg, pdbfile=filename)
 
         print("Applying the following single-residue patches to P%s:\n" % frag)
-        print("\t%s" % "\t".join(patches))
-        self.file.write(''.join(patches))
-        self.file.write("\n")
+        print("\t%s" % "\t".join(str(_) for _ in patches))
+        for p in patches:
+            self.psfgen.patch(patchname=p.name, targets=p.targets())
 
-        self.file.write("coordpdb $protnam %s\n" % seg)
+        self.psfgen.read_coords(segid=seg, filename=filename)
 
         if old_top != -1:
             molecule.set_top(old_top)
@@ -703,7 +654,7 @@ class CharmmWriter(object):
         errors = atomsel("occupancy=-1", molid=fileh)
 
         # Print out error messages
-        if len(errors):
+        if errors:
             print("\nERROR: Couldn't find the following atoms.")
             for i in range(len(errors)):
                 print("  %s%s:%s" % (errors.get("resname")[i], errors.get("resid")[i],
