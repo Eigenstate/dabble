@@ -6,7 +6,7 @@
 
  Author: Robin Betz
 
- Copyright (C) 2015 Robin Betz
+ Copyright (C) 2019 Robin Betz
 """
 #
 # This program is free software; you can redistribute it and/or modify it under
@@ -299,22 +299,23 @@ class AmberWriter(object):
             print("\n")
 
         # Begin assembling chamber input string
-        args = "-crd %s.pdb -psf %s.psf" % (self.prmtop_name, self.prmtop_name)
+        args = ["-psf", "%s.psf" % self.prmtop_name,
+                "-crd", "%s.pdb" % self.prmtop_name]
 
         # Add topology and parameter arguments
         for inp in set(self.topologies + self.parameters):
-            args += ' -toppar %s' % inp
+            args += ["-toppar", inp]
 
         # Add box information since it is not in the pdb
         box = molecule.get_periodic(molid=self.molid)
-        args += " -box %f,%f,%f" % (box['a'], box['b'], box['c'])
-        args += " nosettle"
+        args += ["-box", " %f,%f,%f" % (box['a'], box['b'], box['c'])]
+        args += ["nosettle"]
 
         print("Running chamber. This may take a while...")
         sys.stdout.flush()
         parm = AmberParm()
         with warnings.catch_warnings(record=True) as w:
-            action = chamber(parm, args)
+            action = chamber(parm, *args)
             action.execute()
             w = [i for i in w if issubclass(i.category, ParameterWarning)]
 
@@ -327,8 +328,8 @@ class AmberWriter(object):
             action.execute()
 
         print("\tRan chamber")
-        write = parmout(action.parm, "%s.prmtop %s.inpcrd"
-                        %(self.prmtop_name, self.prmtop_name))
+        write = parmout(action.parm, "%s.prmtop" % self.prmtop_name,
+                        "%s.inpcrd" % self.prmtop_name)
         write.execute()
         print("\nWrote output prmtop and inpcrd")
         return True
