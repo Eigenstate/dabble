@@ -1,6 +1,6 @@
 """ Builds membrane protein systems """
 
-__version__ = '2.7.8'
+__version__ = '2.7.9'
 __author__ = 'Robin Betz'
 
 import sys
