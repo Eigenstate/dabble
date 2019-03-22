@@ -1,28 +1,25 @@
 
-from setuptools import setup
+from setuptools import setup, find_packages
 from setuptools.command.test import test as TestCommand
 
 import sys
 
 # Testing
 class PyTest(TestCommand):
+    user_options = [("pytest-args=", "a", "Arguments to pass to pytest")]
 
     def initialize_options(self):
         TestCommand.initialize_options(self)
-        self.pytest_args = []
+        self.pytest_args = ""
 
     def run(self):
+        import shlex
         import pytest
-        errno = pytest.main()
-        sys.exit(errno)
+        errno = pytest.main(shlex.split(self.pytest_args))
+        raise SystemExit(errno)
 
-packages = ['Dabble', 'Dabble.param']
-scripts = ['dabble', 'get_restraint_mask.py', 'convert_step5_to_dabble.py',
+scripts = ['get_restraint_mask.py', 'convert_step5_to_dabble.py',
            'amber_rst2cms_v_noparams.py']
-package_data = {
-        'Dabble' : ['lipid_membranes/*.mae'],
-        'Dabble.param' : ['charmm_parameters/*'],
-        }
 
 setup(name='dabble',
       version='2.7.9',
@@ -31,15 +28,21 @@ setup(name='dabble',
       author_email='robin@robinbetz.com',
       url='http://robinbetz.com',
       license='GPLv2 or later',
-      package_data=package_data,
-      packages=packages,
+      packages=find_packages(),
       scripts=scripts,
+      include_package_data=True,
       install_requires=["numpy",
                         "networkx>=1.11",
                         "pydot",
                         "vmd-python>=2.0.4",
                         "parmed"],
+      entry_points={
+          "console_scripts": [
+              "dabble = dabble.__main__:main"
+          ]
+      },
       tests_require=["pytest"],
-      cmdclass = {'test': PyTest}
+      cmdclass = {'test': PyTest},
+      zip_safe=False
      )
 
