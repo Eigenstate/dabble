@@ -443,7 +443,8 @@ def tile_system(input_id, times_x, times_y, times_z, tmp_dir):
             for nz in range(times_z):
                 tx = np.array([nx * wx, ny * wy, nz * wz])
                 atomsel('all', molid=input_id).moveby(tuple(tx))
-                atomsel('all', molid=input_id).set('resid', new_resid)
+                atomsel('all', molid=input_id).set('resid',
+                                                   [int(_) for _ in new_resid])
                 new_resid += num_residues
                 tile_filename = tempfile.mkstemp(suffix='.mae',
                                                  prefix='dabble_tile_tmp',
