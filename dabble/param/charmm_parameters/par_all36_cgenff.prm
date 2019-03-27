@@ -6904,7 +6904,7 @@ PG1      0.0       -0.5850     2.1500 ! phosphate -1
 PG2      0.0       -0.5850     2.1500 ! phosphate -2
 ALG1     0.0       -0.6500     2.0000 ! Aluminum tetraflouride, ALF4
 !Halogens with lone-pairs
-LPH     0.0        0.0000     0.0000 ! lone-pair on chlorine attached to aromatic, isg/fylin
+LPH     0.0        -0.0000     0.0000 ! lone-pair on chlorine attached to aromatic, isg/fylin
 CLGR1    0.0       -0.2300     1.8600 ! CHLB, chlorobenzene, adjusted for lone-pair, fylin
 BRGR1    0.0       -0.3200     1.9800 ! BROB, bromobenzene, adjusted for lone-pair,  fylin
 IGR1     0.0       -0.5200     2.2400 ! IODB, iodobenzene, adjusted for lone-pair,  fylin
@@ -6919,15 +6919,121 @@ NBFIX
 !!! 1) top_all36_prot.rtf/par_all36_prot.rtf
 !!! 2) top_all36_na.rtf/par_all36_na.rtf
 !!! 3) top_all36_carb.rtf/par_all36_carb.rtf
-!!! IMPORTANT!!!
-OG2D1   CLGR1      -0.2000      3.4000 ! NBFIX based on NMA (carbonyl oxygen in amide) and CL of CGenFF
-O       CLGR1      -0.2000      3.4000 ! NBFIX for carbonyl oxygen in amide of protein 
-ON1     CLGR1      -0.2000      3.4000 ! NBFIX for carbonyl oxygen in nucleic acid bases
-ON1C    CLGR1      -0.2000      3.4000 ! NBFIX for carbonyl oxygen in nucleic acid bases 
-OC2D1   CLGR1      -0.2000      3.4000 ! NBFIX for carbonyl oxygen in carbohydrate amides
-S       CLGR1      -0.3800      3.8300 ! NBFIX for cysteine sulphur
-HS      CLGR1      -0.2000      2.8200 ! NBFIX for cysteine sulphur
+!!
+!!========================================================================================================
+!! Below are NBFIXs for chlorine/bromine and protein-model compounds Jan 12, 2018, fylin
+!!=======================================================================================================
+!!
+!!========================================================================================================
+!! NBFIXs for chlorine/bromine and CGenFF model compounds. Jan 12, 2018, fylin
+!!=======================================================================================================
+!!!!! MEOH/PHEN NBFIX not required; initial results yield balanced HBD/HBA interactions
+!!!OG311    CLGR1  -0.35        3.60   ! CHLB..MEOH/PHEN  
+! ACEM  N-CL/ (O-CL is based on CHLB and NMA which were already optimized ) 
+NG2S2     CLGR1    -0.40        3.88   ! CHLB..ACME   
+! NMA  N-CL/  (O-CL is based on CHLB and NMA which were already optimized ) 
+NG2S1     CLGR1    -0.40        3.88   ! CHLB..NMA    
+NG2P1     CLGR1    -1.05        3.50   ! CHLB..MGUA
+NG2R50    CLGR1    -0.46        3.42   ! CHLB..IMIA(NE2) 
+NG2R51    CLGR1    -0.48        3.75   ! CHLB..IMIA(ND1-HD2)/INDO(NE1)   
+NG3P3     CLGR1    -3.60        3.18   ! CHLB..MAMM   
+OG2D1     CLGR1    -0.20        3.40   ! NMA (carbonyl oxygen in amide) and CL of CGenFF
+OG2D2     CLGR1    -2.50        2.80   ! CHLB..ACET   
+! MESH previously optimized
+SG311     CLGR1    -0.38        3.83   ! CHLB..MESH  ;  they are already in the prm for protein
+HGP3      CLGR1    -0.20        2.82   ! CHLB..MESH  ;  they are already in the prm for protein
+!--------------------------------------------------------
+!!!!! MEOH/PHEN  not necessary to change, initial results are in balance of HBD/HBA interactions
+!!!!!OG311     BRGR1    -0.36      3.68   ! BROB..MEOH/PHEN  
+                                                            
+NG2S2     BRGR1    -0.30        4.05   ! BROB..ACEM   
+NG2S1     BRGR1    -0.30        4.02   ! BROB..NMA    
+OG2D1     BRGR1    -0.27        3.52   ! BROB..NMA/ACEM    
+NG2R50    BRGR1    -0.22        3.61   ! BROB..IMIA(NE2)   
+NG2R51    BRGR1    -0.72        3.80   ! BROB..IMIA(ND1-HD2)/INDO(NE1) 
+SG311     BRGR1    -0.49        3.70   ! BROB...MESH
+HGP3      BRGR1    -0.24        2.97   ! BROB...MESH
+NG3P3     BRGR1    -3.65        3.33   ! BROB..MAMM
+NG2P1     BRGR1    -1.10        3.66   ! BROB..MGUA
+OG2D2     BRGR1    -1.25        2.98   ! BROB..ACET
 
+!!========================================================================================================
+!! NBFIXs for chlorine/bromine and proteins. Jan 12, 2018, fylin
+!!=======================================================================================================
+!!!!! MEOH/PHEN  not necessary to change, initial results are in balance of HBD/HBA interactions
+!!OH1    CLGR1      -0.35     3.60  ! CHLB..MEOH/PHEN-OG311 
+NH2    CLGR1       -0.40       3.88  ! CHLB..ACME-NG2S2 
+NH1     CLGR1      -0.40       3.88  ! CHLB..NMA-NG2S1, backbone N 
+NR2     CLGR1      -0.46       3.42  ! CHLB..IMIA-NG2R50(NE2)
+NR1     CLGR1      -0.48       3.75  ! CHLB..IMIA-NG2R51(ND1-HD2)
+NY      CLGR1      -0.48       3.75  ! CHLB..INDO-NG2R51(NE1)
+! -SH  already optimized for Kaushik system and put in the main toppar                                                     
+NH3     CLGR1      -3.60       3.18   ! CHLB..MAMM-NG3P3,  larger eps was used to inprove interE
+NC2     CLGR1      -1.05       3.50   ! CHLB..MGUA-NG2P1,  larger eps was used to inprove interE
+O       CLGR1      -0.20       3.40   ! NMA, carbonyl oxygen in amide of protein 
+OC      CLGR1      -2.50       2.80   ! CHLB..ACET-OG2D2,  larger eps was used to inprove interE
+S       CLGR1      -0.38       3.83   ! NBFIX for cysteine sulphur
+HS      CLGR1      -0.20       2.82   ! NBFIX for cysteine sulphur
+
+! BROB
+!-------------------------------------------------------- 
+!!!!! MEOH/PHEN  not necessary to change, initial results are in balance of HBD/HBA interactions
+!!OH1     BRGR1    -0.36       3.68  ! BROB..MEOH/PHEN-OG311 
+NH2      BRGR1     -0.30       4.05  ! BROB..ACEM-NG2S2 
+NH1      BRGR1     -0.30       4.02  ! BROB..NMA-NG2S1, backbone N 
+O        BRGR1     -0.27       3.52  ! BROB..NMA/ACEM-OG2D1 
+NR2      BRGR1     -0.22       3.61  ! BROB..IMIA-NG2R50(NE2)
+NR1      BRGR1     -0.72       3.80  ! BROB..IMIA-NG2R51(ND1-HD2)
+NY       BRGR1     -0.72       3.80  ! BROB..IMIA-NG2R51(NE1)
+SG311    BRGR1     -0.49       3.70  ! BROB..MESH, for cysteine SG311 sulphur
+HGP3     BRGR1     -0.24       2.97  ! BROB..MESH, for cysteine HGP3  sulphur
+NH3      BRGR1     -3.65       3.33  ! BROB..MAMM-NG3P3, larger eps was used to inprove interE
+NC2      BRGR1     -1.10       3.66  ! BROB..MGUA-NG2P1, larger eps was used to inprove interE
+OC       BRGR1     -1.25       2.98  ! BROB..ACET-OG2D2, larger eps was used to inprove interE
+
+!!========================================================================================================
+!! Below are NBFIXs for chlorine/bromine and carbohydrates, Mar 22, 2018, fylin
+!! - HO..CL/BR initial results are already good, nbfixs were not applied
+!!=======================================================================================================
+OC2D1     CLGR1    -0.20       3.40   ! NMA, carbonyl oxygen in carbohydrate amides
+OC2D2     CLGR1    -2.50       2.80   ! from CLGR1 OG2D2, ACET
+OC2D3     CLGR1    -0.20       3.40   ! from CLGR1 OG2D1, NMA 
+OC2D4     CLGR1    -0.20       3.40   ! from CLGR1 OG2D1, NMA 
+OC2D2     BRGR1    -1.25       2.98   ! from BRGR1 OG2D2, ACET
+OC2D3     BRGR1    -0.27       3.52   ! from BRGR1 OG2D1, NMA 
+OC2D4     BRGR1    -0.27       3.52   ! from BRGR1 OG2D1, NMA 
+!========================================================================================================
+!! Below are NBFIXs for chlorine/bromine and lipids, Mar 22, 2018, fylin
+!!=======================================================================================================
+OBL       CLGR1    -0.20       3.40   ! from CLGR1 OG2D1, NMA
+NH3L      CLGR1    -3.60       3.18   ! from NG3P3 CLGR1, MAMM 
+OCL       CLGR1    -2.50       2.80   ! from CLGR1 OG2D2, ACET
+OBL       BRGR1    -0.27       3.52   ! from BRGR1 OG2D1, NMA 
+NH3L      BRGR1    -3.65       3.33   ! from NG3P3 BRGR1, MAMM
+OCL       BRGR1    -1.25       2.98   ! from BRGR1 OG2D2, ACET
+!========================================================================================================
+!! Below are NBFIXs for chlorine/bromine and nucleic acid Mar 22, 2018, fylin
+!!=======================================================================================================
+NN1       CLGR1    -0.40       3.88  ! from CLGR1 NG2S2, ACEM
+NN2       CLGR1    -0.48       3.75  ! from CLGR1 NG2R51, NH-IMID
+NN2U      CLGR1    -0.48       3.75  ! from CLGR1 NG2R51, NH-IMID
+NN2G      CLGR1    -0.48       3.75  ! from CLGR1 NG2R51, HN-IMID
+NN3       CLGR1    -0.46       3.42  ! from CLGR1 NG2R50, N-IMID
+NN3A      CLGR1    -0.46       3.42  ! from CLGR1 NG2R50, N-IMID
+NN3G      CLGR1    -0.46       3.42  ! from CLGR1 NG2R50, N-IMID
+NN4       CLGR1    -0.46       3.42  ! from CLGR1 NG2R50, N-IMID
+ON1       CLGR1    -0.20       3.40  ! from CLGR1 OG2D1, NMA
+ON1C      CLGR1    -0.20       3.40  ! from CLGR1 OG2D1, NMA
+NN1       BRGR1    -0.30       4.05  ! from BRGR1 NG2S2, ACEM
+NN2       BRGR1    -0.72       3.80  ! from BRGR1 NG2R51, NH-IMID
+NN2U      BRGR1    -0.72       3.80  ! from BRGR1 NG2R51, NH-IMID
+NN2G      BRGR1    -0.72       3.80  ! from BRGR1 NG2R51, HN-IMID
+NN3       BRGR1    -0.22       3.61  ! from BRGR1 NG2R50, N-IMID
+NN3A      BRGR1    -0.22       3.61  ! from BRGR1 NG2R50, N-IMID
+NN3G      BRGR1    -0.22       3.61  ! from BRGR1 NG2R50, N-IMID
+NN4       BRGR1    -0.22       3.61  ! from BRGR1 NG2R50, N-IMID
+ON1       BRGR1    -0.27       3.52  ! from BRGR1 OG2D1, NMA
+ON1C      BRGR1    -0.27       3.52  ! from BRGR1 OG2D1, NMA
 
 HBOND CUTHB 0.5  ! If you want to do hbond analysis (only), then use
                  ! READ PARAM APPEND CARD

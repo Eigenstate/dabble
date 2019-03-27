@@ -1328,7 +1328,7 @@ IC HN1  CA   *N   CD    0.0000  0.0000  120.0000  0.0000  0.0000
 IC HN2  CA   *N   HN1   0.0000  0.0000  120.0000  0.0000  0.0000
 
 PRES ACE          0.00 ! acetylated N-terminus
-                        ! do NOT use to create dipeptides, see ACED
+                       ! do NOT use to create dipeptides, see ACED
 GROUP                  ! use in generate statement
 ATOM CAY  CT3    -0.27 !
 ATOM HY1  HA3     0.09 ! HY1 HY2 HY3
@@ -1351,85 +1351,79 @@ IC N    CAY  *CY  OY    0.0000  0.0000  180.0000  0.0000  0.0000
 IC OY   CY   CAY  HY1   0.0000  0.0000  180.0000  0.0000  0.0000
 IC OY   CY   CAY  HY2   0.0000  0.0000   60.0000  0.0000  0.0000
 IC OY   CY   CAY  HY3   0.0000  0.0000  -60.0000  0.0000  0.0000
-!
-! The following patches are commented out:
-! ACED ACP ACPD
-! This is because Dabble represents them as residues
-!
-! -- Robin
-! 
-! PRES ACED         0.00 ! acetylated N-terminus (to create dipeptide)
-! GROUP                  ! use in generate statement
-! ATOM CAY  CT3    -0.27 !
-! ATOM HY1  HA3     0.09 ! HY1 HY2 HY3
-! ATOM HY2  HA3     0.09 !    \ | /
-! ATOM HY3  HA3     0.09 !     CAY
-! GROUP                  !      |
-! ATOM CY   C       0.51 !      CY=OY
-! ATOM OY   O      -0.51 !      |
-!                        !
-! BOND CY CAY CY N CAY HY1 CAY HY2 CAY HY3
-! DOUBLE OY CY  
-! IMPR CY CAY N OY    
-! IMPR N CY CA HN    
-! CMAP CY  N  CA  C   N  CA  C  NT
-! ACCEPTOR OY CY   
-! IC CY   N    CA   C     0.0000  0.0000  -60.0000  0.0000  0.0000
-! IC CY   CA   *N   HN    0.0000  0.0000  180.0000  0.0000  0.0000
-! IC CAY  CY   N    CA    0.0000  0.0000  180.0000  0.0000  0.0000
-! IC N    CAY  *CY  OY    0.0000  0.0000  180.0000  0.0000  0.0000
-! IC OY   CY   CAY  HY1   0.0000  0.0000  180.0000  0.0000  0.0000
-! IC OY   CY   CAY  HY2   0.0000  0.0000   60.0000  0.0000  0.0000
-! IC OY   CY   CAY  HY3   0.0000  0.0000  -60.0000  0.0000  0.0000
-! 
-! PRES ACP          0.00 ! acetylated N-terminus for proline
-!                        ! do NOT use to create dipeptide, see ACPD
-! GROUP                  ! use in generate statement
-! ATOM CAY  CT3    -0.27 !
-! ATOM HY1  HA3     0.09 ! HY1 HY2 HY3
-! ATOM HY2  HA3     0.09 !    \ | /
-! ATOM HY3  HA3     0.09 !     CAY
-! GROUP                  !      |
-! ATOM CY   C       0.51 !      CY=OY
-! ATOM OY   O      -0.51 !      |
-!                        !
-! BOND CY CAY CY N CAY HY1 CAY HY2 CAY HY3
-! DOUBLE OY CY
-! IMPR CY CAY N OY
-! IMPR N CY CA CD 
-! CMAP CY  N  CA  C   N  CA  C  +N
-! ACCEPTOR OY CY  
-! IC CY   N    CA   C     0.0000  0.0000  -60.0000  0.0000  0.0000
-! IC CY   CA   *N   CD    0.0000  0.0000  180.0000  0.0000  0.0000
-! IC CAY  CY   N    CA    0.0000  0.0000  180.0000  0.0000  0.0000
-! IC N    CAY  *CY  OY    0.0000  0.0000  180.0000  0.0000  0.0000
-! IC OY   CY   CAY  HY1   0.0000  0.0000  180.0000  0.0000  0.0000
-! IC OY   CY   CAY  HY2   0.0000  0.0000   60.0000  0.0000  0.0000 
-! IC OY   CY   CAY  HY3   0.0000  0.0000  -60.0000  0.0000  0.0000
-! 
-! PRES ACPD         0.00 ! acetylated N-terminus for proline (to create dipeptide)
-! GROUP                  ! use in generate statement
-! ATOM CAY  CT3    -0.27 !
-! ATOM HY1  HA3     0.09 ! HY1 HY2 HY3
-! ATOM HY2  HA3     0.09 !    \ | /
-! ATOM HY3  HA3     0.09 !     CAY
-! GROUP                  !      |
-! ATOM CY   C       0.51 !      CY=OY
-! ATOM OY   O      -0.51 !      |
-!                        !
-! BOND CY CAY CY N CAY HY1 CAY HY2 CAY HY3
-! DOUBLE OY CY
-! IMPR CY CAY N OY
-! IMPR N CY CA CD 
-! CMAP CY  N  CA  C   N  CA  C  NT
-! ACCEPTOR OY CY  
-! IC CY   N    CA   C     0.0000  0.0000  -60.0000  0.0000  0.0000
-! IC CY   CA   *N   CD    0.0000  0.0000  180.0000  0.0000  0.0000
-! IC CAY  CY   N    CA    0.0000  0.0000  180.0000  0.0000  0.0000
-! IC N    CAY  *CY  OY    0.0000  0.0000  180.0000  0.0000  0.0000
-! IC OY   CY   CAY  HY1   0.0000  0.0000  180.0000  0.0000  0.0000
-! IC OY   CY   CAY  HY2   0.0000  0.0000   60.0000  0.0000  0.0000 
-! IC OY   CY   CAY  HY3   0.0000  0.0000  -60.0000  0.0000  0.0000
+
+PRES ACED         0.00 ! acetylated N-terminus (to create dipeptide)
+GROUP                  ! use in generate statement
+ATOM CAY  CT3    -0.27 !
+ATOM HY1  HA3     0.09 ! HY1 HY2 HY3
+ATOM HY2  HA3     0.09 !    \ | /
+ATOM HY3  HA3     0.09 !     CAY
+GROUP                  !      |
+ATOM CY   C       0.51 !      CY=OY
+ATOM OY   O      -0.51 !      |
+                       !
+BOND CY CAY CY N CAY HY1 CAY HY2 CAY HY3
+DOUBLE OY CY  
+IMPR CY CAY N OY    
+IMPR N CY CA HN    
+CMAP CY  N  CA  C   N  CA  C  NT
+ACCEPTOR OY CY   
+IC CY   N    CA   C     0.0000  0.0000  -60.0000  0.0000  0.0000
+IC CY   CA   *N   HN    0.0000  0.0000  180.0000  0.0000  0.0000
+IC CAY  CY   N    CA    0.0000  0.0000  180.0000  0.0000  0.0000
+IC N    CAY  *CY  OY    0.0000  0.0000  180.0000  0.0000  0.0000
+IC OY   CY   CAY  HY1   0.0000  0.0000  180.0000  0.0000  0.0000
+IC OY   CY   CAY  HY2   0.0000  0.0000   60.0000  0.0000  0.0000
+IC OY   CY   CAY  HY3   0.0000  0.0000  -60.0000  0.0000  0.0000
+
+PRES ACP          0.00 ! acetylated N-terminus for proline
+                       ! do NOT use to create dipeptide, see ACPD
+GROUP                  ! use in generate statement
+ATOM CAY  CT3    -0.27 !
+ATOM HY1  HA3     0.09 ! HY1 HY2 HY3
+ATOM HY2  HA3     0.09 !    \ | /
+ATOM HY3  HA3     0.09 !     CAY
+GROUP                  !      |
+ATOM CY   C       0.51 !      CY=OY
+ATOM OY   O      -0.51 !      |
+                       !
+BOND CY CAY CY N CAY HY1 CAY HY2 CAY HY3
+DOUBLE OY CY
+IMPR CY CAY N OY
+IMPR N CY CA CD 
+CMAP CY  N  CA  C   N  CA  C  +N
+ACCEPTOR OY CY  
+IC CY   N    CA   C     0.0000  0.0000  -60.0000  0.0000  0.0000
+IC CY   CA   *N   CD    0.0000  0.0000  180.0000  0.0000  0.0000
+IC CAY  CY   N    CA    0.0000  0.0000  180.0000  0.0000  0.0000
+IC N    CAY  *CY  OY    0.0000  0.0000  180.0000  0.0000  0.0000
+IC OY   CY   CAY  HY1   0.0000  0.0000  180.0000  0.0000  0.0000
+IC OY   CY   CAY  HY2   0.0000  0.0000   60.0000  0.0000  0.0000 
+IC OY   CY   CAY  HY3   0.0000  0.0000  -60.0000  0.0000  0.0000
+
+PRES ACPD         0.00 ! acetylated N-terminus for proline (to create dipeptide)
+GROUP                  ! use in generate statement
+ATOM CAY  CT3    -0.27 !
+ATOM HY1  HA3     0.09 ! HY1 HY2 HY3
+ATOM HY2  HA3     0.09 !    \ | /
+ATOM HY3  HA3     0.09 !     CAY
+GROUP                  !      |
+ATOM CY   C       0.51 !      CY=OY
+ATOM OY   O      -0.51 !      |
+                       !
+BOND CY CAY CY N CAY HY1 CAY HY2 CAY HY3
+DOUBLE OY CY
+IMPR CY CAY N OY
+IMPR N CY CA CD 
+CMAP CY  N  CA  C   N  CA  C  NT
+ACCEPTOR OY CY  
+IC CY   N    CA   C     0.0000  0.0000  -60.0000  0.0000  0.0000
+IC CY   CA   *N   CD    0.0000  0.0000  180.0000  0.0000  0.0000
+IC CAY  CY   N    CA    0.0000  0.0000  180.0000  0.0000  0.0000
+IC N    CAY  *CY  OY    0.0000  0.0000  180.0000  0.0000  0.0000
+IC OY   CY   CAY  HY1   0.0000  0.0000  180.0000  0.0000  0.0000
+IC OY   CY   CAY  HY2   0.0000  0.0000   60.0000  0.0000  0.0000 
+IC OY   CY   CAY  HY3   0.0000  0.0000  -60.0000  0.0000  0.0000
 
 PRES NNEU         0.00 ! neutral N-terminus; charges from LSN 
 GROUP                  ! use in generate statement
@@ -1492,7 +1486,7 @@ IC N    CA   C    OT2   0.0000  0.0000  180.0000  0.0000  0.0000
 IC OT2  CA   *C   OT1   0.0000  0.0000  180.0000  0.0000  0.0000
 IC CA   C    OT2  HT2   0.0000  0.0000  180.0000  0.0000  0.0000
 
-PRES CTP          0.00 ! protonated C-terminus
+PRES PCTE         0.00 ! protonated C-terminus (previously CTP)
 GROUP                  ! use in generate statement
 ATOM C    CD      0.72 !   OT2--HT2
 ATOM OT1  OB     -0.55 !  /
