@@ -115,7 +115,7 @@ class AmberMatcher(MoleculeMatcher):
             KeyError: if no matching possible
         """
 
-        resname = selection.get('resname')[0]
+        resname = selection.resname[0]
         rgraph = self.parse_vmd_graph(selection)[0]
         matched = False
 
@@ -141,27 +141,29 @@ class AmberMatcher(MoleculeMatcher):
 
         # Only return within-residue atom naming dictionary (no _join)
         if matched:
-            nammatch = dict((i, graph.node[match[i]].get("atomname")) \
-                            for i in match.keys() if \
-                            graph.node[match[i]].get("residue") == "self")
-            resmatch = dict((i, graph.node[match[i]].get("resname")) \
-                            for i in match.keys() if \
-                            graph.node[match[i]].get("residue") == "self")
+            nammatch = {i: graph.node[match[i]].get("atomname")
+                        for i in match.keys()
+                        if graph.node[match[i]].get("residue") == "self"}
+            resmatch = {i: graph.node[match[i]].get("resname")
+                        for i in match.keys()
+                        if graph.node[match[i]].get("residue") == "self"}
 
             return (resmatch, nammatch)
 
         # Try to print out a helpful error message here if matching failed
         if print_warning:
-            print("\nERROR: Couldn't find a topological match for resname '%s'" % resname)
+            print("\nERROR: Couldn't find a topological match for resname '%s'"
+                  % resname)
             if self.known_res.get(resname):
-                print("      I found a residue definition with the same name, but "
-                      "it didn't match up")
-                print("      That definition had %d atoms, and your residue had "
-                      "%d atoms" % (len(self.known_res[resname]), len(selection)))
-                print("      If that's the same, check the connectivity")
-                print("      If it's not, check your hydrogens")
+                print("\tI found a residue definition with the same name, "
+                      "but it didn't match up")
+                print("\tThat definition had %d atoms, and your residue had "
+                      "%d atoms"
+                      % (len(self.known_res[resname]), len(selection)))
+                print("\tIf that's the same, check the connectivity")
+                print("\tIf it's not, check your hydrogens")
             else:
-                print("      I couldn't find any residues with that name. Did you "
+                print("\tI couldn't find any residues with that name. Did you "
                       "forget to provide a topology file?")
 
         return (None, None)
@@ -186,7 +188,7 @@ class AmberMatcher(MoleculeMatcher):
         rgraph = self.parse_vmd_graph(selection)[0]
 
         # First try to short-circuit if the name already matches a unit
-        resname = selection.get('resname')[0]
+        resname = selection.resname[0]
         if resname in self.known_res.keys():
             graph = self.known_res[resname]
             matcher = isomorphism.GraphMatcher(rgraph, graph,
@@ -222,7 +224,7 @@ class AmberMatcher(MoleculeMatcher):
             conect (str) Leap patch line to apply for this linkage
         """
         # Sanity check selection corresponds to one resid
-        resids = set(selection.get("resid"))
+        resids = set(selection.resid)
         if len(resids) > 1:
             raise ValueError("Multiple resids in selection: %s" % resids)
 
@@ -266,7 +268,7 @@ class AmberMatcher(MoleculeMatcher):
                 matchname = canonicals.pop()
             else:
                 raise DabbleError("Ambiguous bonded residue %s"
-                                  % selection.get("resname")[0])
+                                  % selection.resname[0])
         else:
             matchname = possible_matches.pop()
 
@@ -275,23 +277,23 @@ class AmberMatcher(MoleculeMatcher):
         graph = self.known_res.get(matchname)
 
         # Generate naming dictionaries to return
-        nammatch = dict((i, graph.node[mapping[i]].get("atomname")) \
-                         for i in mapping.keys() if \
-                         graph.node[mapping[i]].get("residue") == "self")
-        resmatch = dict((i, graph.node[mapping[i]].get("resname")) \
-                        for i in mapping.keys() if \
-                        graph.node[mapping[i]].get("residue") == "self")
+        nammatch = {i: graph.node[mapping[i]].get("atomname")
+                    for i in mapping.keys()
+                    if graph.node[mapping[i]].get("residue") == "self"}
+        resmatch = {i: graph.node[mapping[i]].get("resname")
+                    for i in mapping.keys()
+                    if graph.node[mapping[i]].get("residue") == "self"}
 
         # Find resid and fragment for other molecule
         partners = []
-        resid = selection.get("residue")[0]
-        chain = selection.get("chain")[0]
+        residue = selection.residue[0]
+        chain = selection.chain[0]
         for num in externs:
-            rid = atomsel("index %d" % num, molid=molid).get("residue")[0]
-            ch = atomsel("index %d" % num, molid=molid).get("chain")[0]
+            rid = atomsel("index %d" % num, molid=molid).residue[0]
+            ch = atomsel("index %d" % num, molid=molid).chain[0]
             if ch != chain:
                 partners.append(num)
-            elif rid != resid+1 and rid != resid-1:
+            elif rid != residue+1 and rid != residue-1:
                 partners.append(num)
         if len(partners) != 1:
             return (None, None, None)
@@ -337,23 +339,23 @@ class AmberMatcher(MoleculeMatcher):
             return (None, None, None)
 
         # Generate naming dictionaries to return
-        nammatch = dict((i, graph.node[match[i]].get("atomname")) \
-                        for i in match.keys() if \
-                        graph.node[match[i]].get("residue") == "self")
-        resmatch = dict((i, graph.node[match[i]].get("resname")) \
-                        for i in match.keys() if \
-                        graph.node[match[i]].get("residue") == "self")
+        nammatch = {i: graph.node[match[i]].get("atomname")
+                    for i in match.keys()
+                    if graph.node[match[i]].get("residue") == "self"}
+        resmatch = {i: graph.node[match[i]].get("resname")
+                    for i in match.keys()
+                    if graph.node[match[i]].get("residue") == "self"}
 
         # Now we know it's a cysteine in a disulfide bond
         # Identify which resid and fragment corresponds to the other cysteine
         partners = [n for n in externs if \
                     atomsel("index %d" % n,
-                            molid=molid).get("element")[0] == "S"]
+                            molid=molid).element[0] == "S"]
         if not partners:
             raise DabbleError("3 bonded Cys %d isn't a valid disulfide!"
-                             % selection.get('resid')[0])
+                             % selection.resid[0])
         osel = atomsel("index %d" % partners[0], molid=molid)
-        conect = osel.get("residue")[0]
+        conect = osel.residue[0]
 
         return (resmatch, nammatch, conect)
 
@@ -376,7 +378,7 @@ class AmberMatcher(MoleculeMatcher):
             KeyError: if no matching possible
         """
 
-        resname = selection.get('resname')[0]
+        resname = selection.resname[0]
         rgraph = self.parse_vmd_graph(selection)[0]
 
         # Check if a lipid head group is part of this selection.
@@ -400,12 +402,12 @@ class AmberMatcher(MoleculeMatcher):
         graph = self.known_res.get(matchname)
 
         # Generate naming dictionaries to return
-        nammatch = dict((i, graph.node[match[i]].get("atomname")) \
-                        for i in match.keys() if \
-                        graph.node[match[i]].get("residue") == "self")
-        resmatch = dict((i, graph.node[match[i]].get("resname")) \
-                        for i in match.keys() if \
-                        graph.node[match[i]].get("residue") == "self")
+        nammatch = {i: graph.node[match[i]].get("atomname")
+                    for i in match.keys()
+                    if graph.node[match[i]].get("residue") == "self"}
+        resmatch = {i: graph.node[match[i]].get("resname")
+                    for i in match.keys()
+                    if graph.node[match[i]].get("residue") == "self"}
 
         # Find atom index on non-truncated graph that corresponds to the
         # - direction join atom. Necessary to figure out the order in which
@@ -414,12 +416,12 @@ class AmberMatcher(MoleculeMatcher):
                       [e[1] for e in graph.edges(nbunch=["-"])]]
         if len(minusbnded) != 1:
             raise DabbleError("Could not identify tail attached to lipid %s:%s!"
-                              % (resname, selection.get('resid')[0]))
+                              % (resname, selection.resid[0]))
         minusidx = [_ for _ in atomsel("index %s" % minusbnded[0]).bonds[0] \
                     if _ not in match.keys()]
         if len(minusidx) != 1:
             raise DabbleError("Could not identify tail attached to lipid %s:%s!"
-                              % (resname, selection.get('resid')[0]))
+                              % (resname, selection.resid[0]))
 
         return (resmatch, nammatch, minusidx[0])
 
@@ -445,13 +447,13 @@ class AmberMatcher(MoleculeMatcher):
             ValueError: If a tail could not be matched or if there is an
                 incorrect number of tails somehow attached.
         """
-        resname = selection.get('resname')[0]
+        resname = selection.resname[0]
         rgraph = self.parse_vmd_graph(selection)[0]
         rgraph.remove_nodes_from(head)
 
         if nx.number_connected_components(rgraph) != 2:
             raise DabbleError("Incorrect number of tails attached to %s:%s!" %
-                              (resname, selection.get('resid')[0]))
+                              (resname, selection.resid[0]))
 
         taildicts = []
         for tgraph in nx.connected_component_subgraphs(rgraph, copy=True):
@@ -468,17 +470,17 @@ class AmberMatcher(MoleculeMatcher):
                 if matcher.is_isomorphic():
                     matched = True
                     match = next(matcher.match())
-                    nammatch = dict((i, graph.node[match[i]].get("atomname")) \
-                                    for i in match.keys() if \
-                                    graph.node[match[i]].get("residue") == "self")
-                    resmatch = dict((i, graph.node[match[i]].get("resname")) \
-                                    for i in match.keys() if \
-                                    graph.node[match[i]].get("residue") == "self")
+                    nammatch = {i: graph.node[match[i]].get("atomname")
+                                for i in match.keys()
+                                if graph.node[match[i]].get("residue") == "self"}
+                    resmatch = {i: graph.node[match[i]].get("resname")
+                                for i in match.keys()
+                                if graph.node[match[i]].get("residue") == "self"}
                     taildicts.append((resmatch, nammatch))
                     break
             if not matched:
                 raise DabbleError("Couldn't find a match for tail %s:%s" %
-                                  (resname, selection.get('resid')[0]))
+                                  (resname, selection.resid[0]))
         return taildicts
 
     #=========================================================================

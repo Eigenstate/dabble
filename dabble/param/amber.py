@@ -232,7 +232,7 @@ class AmberWriter(object):
         """
 
         nonlips = set(atomsel("not (%s)" % self.lipid_sel,
-                              molid=self.molid).get("residue"))
+                              molid=self.molid).residue)
         n_res = len(nonlips)
         conect = set() # Atom indices bound to noncanonical residues
         while nonlips:
@@ -252,18 +252,18 @@ class AmberWriter(object):
                     rgraph = self.matcher.parse_vmd_graph(sel)[0]
                     write_dot(rgraph, "rgraph.dot")
                     raise DabbleError("ERROR: Could not find a residue definition "
-                                      "for %s:%s" % (sel.get("resname")[0],
-                                                     sel.get("resid")[0]))
+                                      "for %s:%s" % (sel.resname[0],
+                                                     sel.resid[0]))
 
-                print("\tBonded residue: %s:%d -> %s" % (sel.get("resname")[0],
-                                                         sel.get("resid")[0],
+                print("\tBonded residue: %s:%d -> %s" % (sel.resname[0],
+                                                         sel.resid[0],
                                                          list(resnames.values())[0]))
                 conect.add(other)
 
             # Do the renaming
             self._apply_naming_dictionary(resnames, atomnames)
 
-        atomsel('all').set('user', 1.0)
+        atomsel('all').user = 1.0
         sys.stdout.write("\n")
         return conect
 
@@ -349,7 +349,7 @@ class AmberWriter(object):
         Raises:
             ValueError if an invalid lipid is found
         """
-        lipid_res = set(atomsel(self.lipid_sel).get('residue'))
+        lipid_res = set(atomsel(self.lipid_sel).residue)
         n_lips = len(lipid_res)
         if not n_lips:
             return None
@@ -378,9 +378,9 @@ class AmberWriter(object):
                 resnames, atomnames = self.matcher.get_names(sel, print_warning=False)
                 if not resnames:
                     raise DabbleError("Residue %s:%s not a valid lipid" %
-                                      (sel.get('resname')[0], sel.get('resid')[0]))
+                                      (sel.resname[0], sel.resid[0]))
                 self._apply_naming_dictionary(resnames, atomnames)
-                sel.set('resid', resid)
+                sel.resid = resid
                 resid += 1
                 continue
             else:
@@ -400,28 +400,28 @@ class AmberWriter(object):
                 firstdict = [_ for _ in taildicts if minusidx in _[0].keys()]
                 if len(firstdict) != 1:
                     raise DabbleError("Error finding tails for lipid %s:%s" %
-                                     (sel.get('resname')[0], sel.get('resid')[0]))
+                                     (sel.resname[0], sel.resid[0]))
                 firstdict = firstdict[0]
 
                 lsel = atomsel('index %s' % ' '.join([str(x) for x in \
                                firstdict[0].keys()]))
-                lsel.set('resid', resid)
-                lsel.set('user', 0.0)
+                lsel.resid = resid
+                lsel.user = 0.0
                 idx = self._write_residue(lsel, fileh, idx)
                 taildicts.remove(firstdict)
 
                 # Head
                 lsel = atomsel('index %s' % ' '.join([str(x) for x in \
                                headnam.keys()]))
-                lsel.set('resid', resid+1)
-                lsel.set('user', 0.0)
+                lsel.resid = resid + 1
+                lsel.user = 0.0
                 idx = self._write_residue(lsel, fileh, idx)
 
                 # Second tail
                 lsel = atomsel('index %s' % ' '.join([str(x) for x in \
                                taildicts[0][0].keys()]))
-                lsel.set('resid', resid+2)
-                lsel.set('user', 0.0)
+                lsel.resid = resid + 2
+                lsel.user = 0.0
                 idx = self._write_residue(lsel, fileh, idx)
                 resid += 3
                 fileh.write("TER\n") # TER card between lipid residues
@@ -447,19 +447,22 @@ class AmberWriter(object):
             atm = "HETATM"
         else:
             atm = "ATOM"
-        for i in ressel.get('index'):
+        for i in ressel.index:
             a = atomsel('index %d' % i) # pylint: disable=invalid-name
             assert len(a) == 1
             entry = ('%-6s%5d %-5s%-4s%c%4d    %8.3f%8.3f%8.3f%6.2f%6.2f'
-                     '     %-4s%2s\n' % (atm, idx, a.get('name')[0],
-                                         a.get('resname')[0],
-                                         a.get('chain')[0],
-                                         a.get('resid')[0],
-                                         a.get('x')[0],
-                                         a.get('y')[0],
-                                         a.get('z')[0],
-                                         0.0, 0.0, a.get('segname')[0],
-                                         a.get('element')[0]))
+                     '     %-4s%2s\n' % (atm,
+                                         idx,
+                                         a.name[0],
+                                         a.resname[0],
+                                         a.chain[0],
+                                         a.resid[0],
+                                         a.x[0],
+                                         a.y[0],
+                                         a.z[0],
+                                         0.0, 0.0,
+                                         a.segname[0],
+                                         a.element[0]))
             fileh.write(entry)
             idx += 1
         return idx
@@ -472,9 +475,9 @@ class AmberWriter(object):
         """
         for idx, name in atomnames.items():
             atom = atomsel('index %s' % idx)
-            if atom.get('name')[0] != name:
-                atom.set('name', name)
-            atom.set('resname', resnames[idx])
+            if atom.name[0] != name:
+                atom.name = name
+            atom.resname = resnames[idx]
 
     #==========================================================================
 
@@ -492,12 +495,12 @@ class AmberWriter(object):
         idx = 1
         pdbs = []
 
-        for residue in set(atomsel("user 1.0").get("residue")):
+        for residue in set(atomsel("user 1.0").residue):
             temp = tempfile.mkstemp(suffix='.pdb', prefix='amber_extra',
                                     dir=self.tmp_dir)[1]
             sel = atomsel("residue %d" % residue)
-            sel.set('user', 0.0)
-            sel.set('resid', idx)
+            sel.user = 0.0
+            sel.resid = idx
             sel.write("pdb", temp)
             unit = self.matcher.get_unit(sel)
             pdbs.append((temp, unit))
@@ -522,9 +525,9 @@ class AmberWriter(object):
         ionnames = [_ for _ in self.matcher.known_res.keys() if '+' in _ or '-' in _]
         ions = atomsel("resname NA CL %s and user 1.0" % ' '.join("'%s'" % _ for _ in ionnames))
         if len(ions):
-            ions.set('resid', range(1, len(ions)+1))
+            ions.resid = range(1, len(ions) + 1)
             ions.write('pdb', temp)
-            ions.set('user', 0.0)
+            ions.user = 0.0
             written.append(temp)
 
         # Select all the unwritten waters, using the user field to track which
@@ -533,11 +536,11 @@ class AmberWriter(object):
 
         # Find the problem waters with unordered indices
         problems = []
-        for r in set(allw.get('residue')):
-            widx = atomsel('residue %s' % r).get("index")
+        for r in set(allw.residue):
+            widx = atomsel('residue %s' % r).index
             if max(widx) - min(widx) != 2:
                 problems.append(r)
-                atomsel('residue %s' % r).set("user", 0.0) # get it out of allw
+                atomsel('residue %s' % r).user = 0.0 # get it out of allw
 
         allw.update()
         num_written = int(len(allw)/(9999*3))+1
@@ -547,15 +550,17 @@ class AmberWriter(object):
             print("Going to write %d files for %d water atoms"
                   % (num_written, len(allw)))
             for i in range(num_written):
-                temp = tempfile.mkstemp(suffix='_%d.pdb' % i, prefix='amber_wat_',
+                temp = tempfile.mkstemp(suffix='_%d.pdb' % i,
+                                        prefix='amber_wat_',
                                         dir=self.tmp_dir)[1]
                 written.append(temp)
-                residues = list(set(allw.get('residue')))[:9999]
+                residues = list(set(allw.residue))[:9999]
 
-                batch = atomsel('residue %s' % ' '.join([str(x) for x in residues]))
+                batch = atomsel('residue %s'
+                                % ' '.join([str(x) for x in residues]))
                 try:
-                    batch.set('resid', [k for k in range(1, int(len(batch)/3)+1)
-                                        for _ in range(3)])
+                    batch.resid = [k for k in range(1, int(len(batch)/3)+1)
+                                   for _ in range(3)]
                 except ValueError:
                     print("\nERROR! You have some waters missing hydrogens!\n"
                           "Found %d water residues, but %d water atoms. Check "
@@ -594,20 +599,23 @@ class AmberWriter(object):
         idx = 1
         for residx, residue in enumerate(residues):
             res = atomsel('residue %d' % residue)
-            res.set('user', 0.0)
+            res.user = 0.0
 
-            for i in res.get('index'):
+            for i in res.index:
                 a = atomsel('index %d' % i) # pylint: disable=invalid-name
                 entry = ('%-6s%5d %-5s%-4s%c%4d    %8.3f%8.3f%8.3f%6.2f%6.2f'
-                         '     %-4s%2s\n' % ('ATOM', idx, a.get('name')[0],
-                                             a.get('resname')[0],
-                                             a.get('chain')[0],
-                                             residx+1,
-                                             a.get('x')[0],
-                                             a.get('y')[0],
-                                             a.get('z')[0],
-                                             0.0, 0.0, a.get('segname')[0],
-                                             a.get('element')[0]))
+                         '     %-4s%2s\n' % ('ATOM',
+                                             idx,
+                                             a.name[0],
+                                             a.resname[0],
+                                             a.chain[0],
+                                             residx + 1,
+                                             a.x[0],
+                                             a.y[0],
+                                             a.z[0],
+                                             0.0, 0.0,
+                                             a.segname[0],
+                                             a.element[0]))
                 idx += 1
                 fileh.write(entry)
 
@@ -635,7 +643,7 @@ class AmberWriter(object):
         # Make resids increase across chains/fragments too, so that bond section
         # for covalent modifications is simple.
         fragres = 1
-        for i, frag in enumerate(sorted(set(psel.get("fragment")))):
+        for i, frag in enumerate(sorted(set(psel.fragment))):
             temp = tempfile.mkstemp(suffix='_prot.pdb', prefix='amber_prot_',
                                     dir=self.tmp_dir)[1]
 
@@ -645,17 +653,16 @@ class AmberWriter(object):
                 idx = 1
                 # Grab resids again since they may have updated
                 # Check for multiple residues with the same resid (insertion codes)
-                for resid in sorted(set(atomsel("fragment '%s'" \
-                                                % frag).get("resid"))):
+                for resid in sorted(set(atomsel("fragment '%s'" % frag).resid)):
                     selstr = "fragment '%s' and resid '%d' " \
                              "and user 1.0" % (frag, resid)
-                    for residue in sorted(set(atomsel(selstr).get("residue"))):
+                    for residue in sorted(set(atomsel(selstr).residue)):
                         sel = atomsel("residue %d" % residue)
-                        sel.set('resid', fragres)
-                        sel.set('segname', str(i))
-                        sel.set('user', 0.0)
+                        sel.resid = fragres
+                        sel.segname = str(i)
+                        sel.user = 0.0
                         idx = self._write_residue(sel, fileh, idx, hetatm=False)
-                        resseq.append(sel.get("resname")[0])
+                        resseq.append(sel.resname[0])
                         fragres += 1
                 fileh.write("END\n")
                 fileh.close()
@@ -758,10 +765,11 @@ class AmberWriter(object):
                 conect.remove(other)
 
                 fileh.write("bond p.{0}.{1} p.{2}.{3}\n".format(
-                    s1.get('resid')[0],
-                    s1.get('name')[0],
-                    s2.get('resid')[0],
-                    s2.get('name')[0]))
+                    s1.resid[0],
+                    s1.name[0],
+                    s2.resid[0],
+                    s2.name[0])
+                )
 
             if len(pdbs):
                 fileh.write("\np = combine { p %s }\n"
