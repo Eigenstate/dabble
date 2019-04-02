@@ -29,7 +29,7 @@ def test_absolute_box(tmpdir):
     molecule.set_top(m2)
 
     # Check all the ligands are there
-    assert(len(set(atomsel("resname FRAG").get("residue"))) == 3)
+    assert len(set(atomsel("resname FRAG").residue)) == 3
 
 #==============================================================================
 

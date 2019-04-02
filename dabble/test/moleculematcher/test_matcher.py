@@ -77,7 +77,7 @@ def test_residue_parsing(tmpdir):
 
     # Check extra bonds
     assert (C, "+") in ala.edges() or ("+", C) in ala.edges()
-    assert("-" not in ala.nodes())
+    assert "-" not in ala.nodes()
 
 #==============================================================================
 

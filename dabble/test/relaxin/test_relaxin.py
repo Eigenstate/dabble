@@ -17,19 +17,19 @@ def check_correctness(molid):
 
     # Check the protein is there with the correct capping groups
     assert len(atomsel("protein or resname ACE NMA NME")) == 828
-    assert len(set(atomsel("all").get("fragment"))) == 2
-    assert len(set(atomsel("resname ACE NMA NME").get("residue"))) == 4
+    assert len(set(atomsel("all").fragment)) == 2
+    assert len(set(atomsel("resname ACE NMA NME").residue)) == 4
 
     # Check for 6 cysteines, 2 with same resid
-    assert len(set(atomsel("resname CYS CYX").get("residue"))) == 6
+    assert len(set(atomsel("resname CYS CYX").residue)) == 6
 
     # Check connectivity between cysteines is correct
-    for res in set(atomsel("resname CYS CYX").get("residue")):
+    for res in set(atomsel("resname CYS CYX").residue):
         assert len(atomsel("residue %d" % res)) == 10
         assert len(atomsel("residue %d and name SG" % res)) == 1
         idxs = atomsel("residue %d and name SG" % res).bonds[0]
         assert set(atomsel("index %s"
-                           % " ".join(str(i) for i in idxs)).get("name")) \
+                           % " ".join(str(i) for i in idxs)).name) \
             == set(["CB", "SG"])
 
 #==============================================================================

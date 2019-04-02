@@ -24,15 +24,15 @@ def test_multiligand_building(tmpdir):
 
     # Check the system dimensions are correct
     solsel = atomsel("protein or resname ACE NMA ALP")
-    prot_x = max(solsel.get("x")) - min(solsel.get("x"))
-    prot_y = max(solsel.get("y")) - min(solsel.get("y"))
-    prot_z = max(solsel.get("z")) - min(solsel.get("z"))
-    assert(abs(molecule.get_periodic(m2)["a"] - prot_x - 20.0) < 0.1)
-    assert(abs(molecule.get_periodic(m2)["b"] - prot_y - 20.0) < 0.1)
-    assert(abs(molecule.get_periodic(m2)["c"] - prot_z - 20.0) < 0.1)
+    prot_x = max(solsel.x) - min(solsel.x)
+    prot_y = max(solsel.y) - min(solsel.y)
+    prot_z = max(solsel.z) - min(solsel.z)
+    assert abs(molecule.get_periodic(m2)["a"] - prot_x - 20.0) < 0.1
+    assert abs(molecule.get_periodic(m2)["b"] - prot_y - 20.0) < 0.1
+    assert abs(molecule.get_periodic(m2)["c"] - prot_z - 20.0) < 0.1
 
     # Check all the alprenolols are there
-    assert(len(set(atomsel("resname ALP").get("resid"))) == 10)
+    assert len(set(atomsel("resname ALP").resid)) == 10
     assert len(atomsel("resname ALP")) == 420
 
     molecule.delete(m2)
@@ -59,19 +59,19 @@ def test_multiligand_parameterizing(tmpdir):
     molecule.set_top(m2)
 
     # Check the system is intact
-    assert len(set(atomsel("protein").get("resid"))) == 282
-    assert len(set(atomsel("resname ACE NMA").get("resid"))) == 4
+    assert len(set(atomsel("protein").resid)) == 282
+    assert len(set(atomsel("resname ACE NMA").resid)) == 4
     assert len(atomsel("water")) == 32106
     assert len(atomsel("lipid")) == 12194
 
     # Check for the correct number of alprenolols
     assert len(atomsel("resname ALP")) == 420
-    assert set(atomsel("resname ALP").get("resid")) == set(range(1, 11))
+    assert set(atomsel("resname ALP").resid) == set(range(1, 11))
 
     # Check coordinates are unique (not zero)
     # It's 419 because two of them have the same x
     assert len(atomsel("resname ALP")) == 420
-    assert len(set(atomsel("resname ALP").get("x"))) == 419
+    assert len(set(atomsel("resname ALP").x)) == 419
 
     molecule.delete(m2)
 
@@ -99,21 +99,21 @@ def test_multiligand_amber(tmpdir):
     molecule.set_top(m2)
 
     # Check results
-    assert len(set(atomsel("protein").get("resid"))) == 282
-    assert len(set(atomsel("resname ACE NME").get("resid"))) == 4
+    assert len(set(atomsel("protein").resid)) == 282
+    assert len(set(atomsel("resname ACE NME").resid)) == 4
     assert len(atomsel("water")) == 32106
     assert len(atomsel("same fragment as lipid")) == 12194
 
     # Check for the corrrect number of alprenolols
     assert len(atomsel("resname ALP")) == 420
-    assert len(set(atomsel("resname ALP").get("resid"))) == 10
-    assert "OX" in set(atomsel("resname ALP").get("name"))
-    assert "O1" not in set(atomsel("resname ALP").get("name"))
+    assert len(set(atomsel("resname ALP").resid)) == 10
+    assert "OX" in set(atomsel("resname ALP").name)
+    assert "O1" not in set(atomsel("resname ALP").name)
 
     # Check coordinates are unique (not zero)
     # It's 419 because two of them have the same x
     assert len(atomsel("resname ALP")) == 420
-    assert len(set(atomsel("resname ALP").get("x"))) == 419
+    assert len(set(atomsel("resname ALP").x)) == 419
 
     molecule.delete(m2)
 
@@ -141,20 +141,20 @@ def test_multiligand_chamber(tmpdir):
     molecule.set_top(m2)
 
     # Check results
-    assert len(set(atomsel("protein").get("resid"))) == 282
-    assert len(set(atomsel("resname ACE NMA").get("resid"))) == 4
+    assert len(set(atomsel("protein").resid)) == 282
+    assert len(set(atomsel("resname ACE NMA").resid)) == 4
     assert len(atomsel("water")) == 32106
     assert len(atomsel("same fragment as lipid")) == 12194
 
     # Check for the corrrect number of alprenolols
     assert len(atomsel("resname ALP")) == 420
-    assert len(set(atomsel("resname ALP").get("resid"))) == 10
-    assert "O1" in set(atomsel("resname ALP").get("name"))
-    assert "OX" not in set(atomsel("resname ALP").get("name"))
+    assert len(set(atomsel("resname ALP").resid)) == 10
+    assert "O1" in set(atomsel("resname ALP").name)
+    assert "OX" not in set(atomsel("resname ALP").name)
 
     # Check coordinates are unique (not zero)
     # Two atoms have the same X but that is okay
-    assert len(set(atomsel("resname ALP").get("x"))) == 419
+    assert len(set(atomsel("resname ALP").x)) == 419
 
     molecule.delete(m2)
 

@@ -17,19 +17,19 @@ def check_built_system(p):
 
     # Check the protein is there with correct capping groups
     assert len(atomsel("protein", m3)) == 299
-    assert len(set(atomsel("resname ACE NMA NME", m3).get("resid"))) == 2
+    assert len(set(atomsel("resname ACE NMA NME", m3).resid)) == 2
 
     # Check for 3 phosphoserines and no regular serines
     molecule.set_top(m3)
-    assert atomsel("resname SER SEP").get("name").count("P") == 3
+    assert atomsel("resname SER SEP").name.count("P") == 3
     assert not atomsel("resname SER SEP and not same residue as name P")
 
     # Check for one phosphothreonine
-    assert len(set(atomsel("resname THR TPO").get("resid"))) == 3
+    assert len(set(atomsel("resname THR TPO").resid)) == 3
     assert len(atomsel("resname THR TPO and name P")) == 1
 
     # Check HMR was done correctly
-    minmasspost = min(atomsel("all", m3).get("mass"))
+    minmasspost = min(atomsel("all", m3).mass)
     assert abs(minmasspost - 1.008) > 0.0001
 
 #==============================================================================

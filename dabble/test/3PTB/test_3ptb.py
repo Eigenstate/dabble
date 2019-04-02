@@ -22,20 +22,20 @@ def test_multiple_insertion_codes(tmpdir):
     molecule.set_top(m2)
 
     # Check the entire protein is there and connected
-    assert(len(atomsel("protein or resname ACE NMA NME")) == 3229)
-    assert(len(set(atomsel("protein or resname ACE NMA NME").get("fragment"))) == 1)
+    assert len(atomsel("protein or resname ACE NMA NME")) == 3229
+    assert len(set(atomsel("protein or resname ACE NMA NME").fragment)) == 1
 
     # Check the calcium ion is present
     assert(atomsel("element Ca").get("resname") == ["CAL"])
 
     # Check residues with insertion codes
-    assert(set(atomsel("resid 184").get("resname")) == set(["GLY", "TYR"]))
-    assert(set(atomsel("resid 188").get("resname")) == set(["GLY", "LYS"]))
-    assert(set(atomsel("resid 221").get("resname")) == set(["ALA", "GLN"]))
-    assert(set(atomsel("resid 245").get("resname")) == set(["ASN", "NMA"]))
-    assert(set(atomsel("all").get("insertion")) == set([" ", "A"]))
+    assert set(atomsel("resid 184").resname) == set(["GLY", "TYR"])
+    assert set(atomsel("resid 188").resname) == set(["GLY", "LYS"])
+    assert set(atomsel("resid 221").resname) == set(["ALA", "GLN"])
+    assert set(atomsel("resid 245").resname) == set(["ASN", "NMA"])
+    assert set(atomsel("all").insertion) == set([" ", "A"])
 
     # Check the ligand is there
-    assert(len(atomsel("resname BAMI")) == 18)
+    assert len(atomsel("resname BAMI")) == 18
 
 #==============================================================================

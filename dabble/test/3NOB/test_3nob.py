@@ -26,21 +26,21 @@ def test_amber_custom_residues(tmpdir):
     molecule.set_top(m2)
 
     # Check the two custom residues are present
-    assert(len(atomsel("resname GLX")) == 7)
-    assert(len(atomsel("resname LYX")) == 20)
+    assert len(atomsel("resname GLX")) == 7
+    assert len(atomsel("resname LYX")) == 20
 
     # Check the custom residues have gaff2 atom types
-    assert("n" in atomsel("resname LYX").get("type"))
-    assert("n2" in atomsel("resname GLX").get("type"))
+    assert "n" in atomsel("resname LYX").type
+    assert "n2" in atomsel("resname GLX").type
 
     # Check the normal residues have ff14SB atom types
-    assert("N" in atomsel("resname LYS").get("type"))
-    assert("N" in atomsel("resname GLY").get("type"))
+    assert "N" in atomsel("resname LYS").type
+    assert "N" in atomsel("resname GLY").type
 
     # Check that the isopeptide bond is there
     lybonds = []
     for x in atomsel("resname LYX").bonds:
         lybonds.extend(x)
-    assert(any(x in lybonds for x in atomsel("resname GLX").get("index")))
+    assert any(x in lybonds for x in atomsel("resname GLX").index)
 
 #==============================================================================
