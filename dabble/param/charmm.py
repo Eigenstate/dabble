@@ -90,12 +90,12 @@ class CharmmWriter(object):
         else:
             self.topologies = [
                 "top_all36_caps.rtf",
-                "top_water_ions.rtf",
                 "top_all36_cgenff.rtf",
                 "top_all36_prot.rtf",
                 "top_all36_lipid.rtf",
                 "top_all36_carb.rtf",
                 "top_all36_na.rtf",
+                "toppar_water_ions.str",
                 "toppar_all36_prot_na_combined.str",
                 "toppar_all36_prot_fluoro_alkanes.str",
             ]
