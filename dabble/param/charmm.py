@@ -164,10 +164,10 @@ class CharmmWriter(object):
         if len(atomsel("resname %s" % _acids, molid=self.molid)):
             extpatches = set()
             for frag in sorted(set(atomsel("resname %s" % _acids,
-                                    molid=self.molid).get('fragment'))):
+                                    molid=self.molid).fragment)):
                 extpatches.update(self._write_protein_blocks(self.molid, frag))
             atomsel("same fragment as resname %s" % _acids,
-                    molid=self.molid).set("user", 0.0)
+                    molid=self.molid).user = 0.0
 
             # List all patches applied to the protein
             print("Applying the following patches:\n")
@@ -187,7 +187,7 @@ class CharmmWriter(object):
 
         # Check if there is anything else and let the user know about it
         leftovers = atomsel('user 1.0', molid=self.molid)
-        for lig in set(leftovers.get('resname')):
+        for lig in set(leftovers.resname):
             residues = self._find_single_residue_names(resname=lig,
                                                        molid=self.molid)
             self._write_generic_block(residues)
@@ -217,26 +217,26 @@ class CharmmWriter(object):
 
         # Set consistent residue and atom names, crystal waters
         # can be named HOH, etc
-        atomsel('water').set('resname', 'TIP3')
-        atomsel('resname TIP3').set('chain', 'W')
-        atomsel('resname TIP3 and element O').set('name', 'OH2')
+        atomsel('water').resname = "TIP3"
+        atomsel('resname TIP3').chain = "W"
+        atomsel('resname TIP3 and element O').name = "OH2"
 
         # Dowser can name water hydrogens strangely
-        atomsel('resname TIP3 and name HW1').set('name', 'H1')
-        atomsel('resname TIP3 and name HW2').set('name', 'H2')
+        atomsel('resname TIP3 and name HW1').name = "H1"
+        atomsel('resname TIP3 and name HW2').name = "H2"
 
         # Select all the waters. We'll use the user field to track which
         # ones have been written
         allw = atomsel('water and user 1.0')
-        print("Found %d water residues" % len(set(atomsel('water and user 1.0').get('residue'))))
+        print("Found %d water residues" % len(set(allw.residue)))
 
         # Find the problem waters with unordered indices
         problems = []
-        for r in set(allw.get('residue')):
-            widx = atomsel('residue %s' % r).get("index")
+        for r in set(allw.residue):
+            widx = atomsel('residue %s' % r).index
             if max(widx) - min(widx) != 2:
                 problems.append(r)
-                atomsel('residue %s' % r).set("user", 0.0) # get it out of allw
+                atomsel('residue %s' % r).user = 0.0 # get it out of allw
 
         allw.update()
         num_written = int(len(allw)/(9999*3))+1
@@ -248,19 +248,19 @@ class CharmmWriter(object):
             for i in range(num_written):
                 temp = tempfile.mkstemp(suffix='_%d.pdb' % i, prefix='psf_wat_',
                                         dir=self.tmp_dir)[1]
-                residues = list(set(allw.get('residue')))[:9999]
+                residues = list(set(allw.residue))[:9999]
 
                 batch = atomsel('residue %s' % ' '.join([str(x) for x in residues]))
                 try:
-                    batch.set('resid', [k for k in range(1, int(len(batch)/3)+1)
-                                        for _ in range(3)])
+                    batch.resid = [k for k in range(1, int(len(batch)/3)+1)
+                                   for _ in range(3)]
                 except ValueError:
                     print("\nERROR! You have some waters missing hydrogens!\n"
                           "Found %d water residues, but %d water atoms. Check "
                           " your crystallographic waters in the input structure."
                           % (len(residues), len(batch)))
                     quit(1)
-                batch.set('user', 0.0)
+                batch.user = 0.0
                 batch.write('pdb', temp)
                 allw.update()
 
@@ -300,18 +300,20 @@ class CharmmWriter(object):
         for ridx, residue in enumerate(residues):
             res = atomsel('residue %d' % residue, molid=molid)
 
-            for i in res.get('index'):
+            for i in res.index:
                 a = atomsel('index %d' % i, molid) # pylint: disable=invalid-name
                 entry = ('%-6s%5d %-5s%-4s%c%4d    %8.3f%8.3f%8.3f%6.2f%6.2f'
-                         '     %-4s%2s\n' % ('ATOM', idx, a.get('name')[0],
-                                             a.get('resname')[0],
-                                             a.get('chain')[0],
+                         '     %-4s%2s\n' % ('ATOM', idx,
+                                             a.name[0],
+                                             a.resname[0],
+                                             a.chain[0],
                                              ridx+1,
-                                             a.get('x')[0],
-                                             a.get('y')[0],
-                                             a.get('z')[0],
-                                             0.0, 0.0, a.get('segname')[0],
-                                             a.get('element')[0]))
+                                             a.x[0],
+                                             a.y[0],
+                                             a.z[0],
+                                             0.0, 0.0,
+                                             a.segname[0],
+                                             a.element[0]))
                 idx += 1
                 fileh.write(entry)
 
@@ -339,55 +341,25 @@ class CharmmWriter(object):
 
         # Collect lipid residues up
         alll = atomsel('(%s) and user 1.0' % self.lipid_sel)
-        residues = list(set(alll.get('residue')))
+        residues = list(set(alll.residue))
         residues.sort()
 
         # Sanity check for < 10k lipids
         if len(residues) >= 10000:
             raise NotImplementedError("More than 10k lipids found")
 
-        # Rename lipid residues by resname
-        # This assumes all lipids with the same resname are the same
-        # If that's not the case, the system is really broken in some way
-#        for resname in set(alll.get('resname')):
-#            ressel = atomsel("(%s) and user 1.0 and resname '%s'"
-#                             % (self.lipid_sel, resname))
-#
-#            # Get naming dictionary for one representative residue
-#            repsel = atomsel('residue %s' % ressel.get('residue')[0])
-#            (newname, atomnames) = self.matcher.get_names(sel)
-#
-#            # Apply naming dictionary to all of these residues
-#            for idx, name in atomnames.items():
-#                oldname = atomsel('index %s' % idx).get('name')
-#                if oldname != name:
-
         # Loop through all residues and renumber and correctly name them
         counter = 1
         for res in residues:
             # Renumber residue
             sel = atomsel('residue %s' % res)
-            sel.set('resid', counter)
+            sel.resid = counter
             counter = counter + 1
-
-            # Rename residue
-#            (newname, atomnames) = self.matcher.get_names(sel,
-#                                                          print_warning=False)
-#
-#            for idx, name in atomnames.items():
-#                atom = atomsel('index %s' % idx)
-#                if atom.get('name')[0] != name:
-#                    print("Renaming %s:%s: %s -> %s" % (sel.get('resname')[0],
-#                                                        sel.get('resid')[0],
-#                                                        atom.get('name')[0],
-#                                                        name))
-#                    atom.set('name', name)
-#            sel.set('resname', newname)
 
         # Write temporary lipid pdb
         temp = tempfile.mkstemp(suffix='.pdb', prefix='psf_lipid_',
                                 dir=self.tmp_dir)[1]
-        alll.set('user', 0.0)
+        alll.user = 0.0
         alll.write('pdb', temp)
 
         # Generate lipid segment
@@ -414,32 +386,32 @@ class CharmmWriter(object):
         total = atomsel('element Na Cl K')
         if len(total):
             not_ions = atomsel("(same fragment as element Na Cl K)  and (not index %s)"
-                               % " ".join([str(s) for s in set(total.get('index'))]))
-            ions = set(total.get('residue')) - set(not_ions.get('residue'))
+                               % " ".join([str(s) for s in set(total.index)]))
+            ions = set(total.residue) - set(not_ions.residue)
         else:
-            ions = set(total.get('residue'))
+            ions = set(total.residue)
 
         if not len(ions):
             return
         ionstr = "residue " + " ".join([str(s) for s in ions])
 
         # Fix the names
-        atomsel('%s and name NA' % ionstr).set('name', 'SOD')
-        atomsel('%s and name CL' % ionstr).set('name', 'CLA')
-        atomsel('%s and name K' % ionstr).set('name', 'POT')
-        atomsel('%s and name NA' % ionstr).set('resname', 'SOD')
-        atomsel('%s and name CL' % ionstr).set('resname', 'CLA')
-        atomsel('%s and name K' % ionstr).set('resname', 'POT')
+        atomsel('%s and name NA' % ionstr).name = "SOD"
+        atomsel('%s and name CL' % ionstr).name = "CLA"
+        atomsel('%s and name K' % ionstr).name = "POT"
+        atomsel('%s and name NA' % ionstr).resname = "SOD"
+        atomsel('%s and name CL' % ionstr).resname = "CLA"
+        atomsel('%s and name K' % ionstr).resname = "POT"
 
         # Renumber the residues since some may be above 10k
-        residues = atomsel('name SOD CLA POT').get('residue')
+        residues = atomsel('name SOD CLA POT').residue
         batch = atomsel('residue %s' % ' '.join([str(s) for s in set(residues)]))
-        batch.set('resid', [k for k in range(1, len(batch)+1)])
+        batch.resid = [k for k in range(1, len(batch)+1)]
 
         # Save the temporary ions file
         temp = tempfile.mkstemp(suffix='.pdb', prefix='psf_ions_',
                                 dir=self.tmp_dir)[1]
-        atomsel('name SOD CLA POT').set('user', 0.0) # mark as saved
+        atomsel('name SOD CLA POT').user = 0.0
         atomsel('name SOD CLA POT').write('pdb', temp)
 
         self.psfgen.add_segment(segid="I", pdbfile=temp)
@@ -477,11 +449,11 @@ class CharmmWriter(object):
 
         # Sanity check that there is no discrepancy between defined resids and
         # residues as interpreted by VMD.
-        for chain in set(atomsel("user 1.0 and resname '%s'" % resname).get('chain')):
+        for chain in set(atomsel("user 1.0 and resname '%s'" % resname).chain):
             residues = list(set(atomsel("user 1.0 and resname '%s' and chain %s"
-                                        % (resname, chain)).get('residue')))
+                                        % (resname, chain)).residue))
             resids = list(set(atomsel("user 1.0 and resname '%s' and chain %s"
-                                      % (resname, chain)).get('resid')))
+                                      % (resname, chain)).resid))
             if len(residues) != len(resids):
                 raise DabbleError("VMD found %d residues for resname '%s', "
                                   "but there are %d resids! Check input."
@@ -503,13 +475,13 @@ class CharmmWriter(object):
             # Do the renaming
             for idx, name in atomnames.items():
                 atom = atomsel('index %s' % idx)
-                if atom.get('name')[0] != name and "+" not in name and \
-                   "-" not in name:
+                if atom.name[0] != name and "+" not in name \
+                   and "-" not in name:
                     print("Renaming %s:%s: %s -> %s" % (resname, residue,
-                                                        atom.get('name')[0],
+                                                        atom.name[0],
                                                         name))
-                    atom.set('name', name)
-            sel.set('resname', newname)
+                    atom.name = name
+            sel.resname = newname
 
         #logger.info("Renamed %d atoms for all resname %s->%s" % (num_renamed, resname, name))
         molecule.set_top(old_top)
@@ -540,7 +512,7 @@ class CharmmWriter(object):
         temp = tempfile.mkstemp(suffix='.pdb', prefix='psf_block_',
                                 dir=self.tmp_dir)[1]
         alig.write('pdb', temp)
-        alig.set('user', 0.0)
+        alig.user = 0.0
 
         self.psfgen.add_segment(segid="B%s" % residues[0], pdbfile=temp)
         self.psfgen.read_coords(segid="B%s" % residues[0],
@@ -574,10 +546,10 @@ class CharmmWriter(object):
         extpatches = set()
         seg = "P%s" % frag
 
-        residues = list(set(atomsel("fragment '%s'" % frag).get('residue')))
+        residues = list(set(atomsel("fragment '%s'" % frag).residue))
         for residue in residues:
             sel = atomsel('residue %s' % residue)
-            resid = sel.get('resid')[0]
+            resid = sel.resid[0]
             # Only try to match single amino acid if there are 1 or 2 bonds
             if len(self.matcher.get_extraresidue_atoms(sel)) < 3:
                 (newname, atomnames) = self.matcher.get_names(sel,
@@ -602,15 +574,15 @@ class CharmmWriter(object):
             # Fall through to error condition
             if not newname:
                 raise DabbleError("Couldn't find a patch for %s:%s"
-                                  % (sel.get('resname')[0], resid))
+                                  % (sel.resname[0], resid))
 
             # Do the renaming
             for idx, name in atomnames.items():
                 atom = atomsel('index %s' % idx)
-                if atom.get('name')[0] != name and "+" not in name and \
+                if atom.name[0] != name and "+" not in name and \
                    "-" not in name:
-                    atom.set('name', name)
-            sel.set('resname', newname)
+                    atom.name = name
+            sel.resname = newname
 
         # Save protein chain in the correct order
         filename = self.tmp_dir + '/psf_protein_%s.pdb' % seg
@@ -657,8 +629,8 @@ class CharmmWriter(object):
         if errors:
             print("\nERROR: Couldn't find the following atoms.")
             for i in range(len(errors)):
-                print("  %s%s:%s" % (errors.get("resname")[i], errors.get("resid")[i],
-                                     errors.get("name")[i]))
+                print("  %s%s:%s" % (errors.resname[i], errors.resid[i],
+                                     errors.name[i]))
 
             print("Check if they are present in the original structure.\n"
                   "If they are, check dabble name translation or file a "
@@ -704,8 +676,8 @@ class CharmmWriter(object):
         print("Successfully found residue %s in input topologies" % resname)
 
         # Match up atoms with python sets
-        pdb_atoms = set(atomsel("resname '%s' and user 1.0"
-                                % resname, molid=molid).get('name'))
+        pdb_atoms = set(atomsel("resname '%s' and user 1.0" % resname,
+                                molid=molid).name)
         pdb_only = pdb_atoms - topo_atoms
         topo_only = topo_atoms - pdb_atoms
 
@@ -758,9 +730,9 @@ class CharmmWriter(object):
                           "Please try again.\n" % newname)
                     newname = input("  %s  -> " % unmatched)
                 atomsel("resname '%s' and user 1.0 and name '%s'"
-                        % (resname, unmatched)).set('name', newname)
+                        % (resname, unmatched)).name = newname
                 pdb_atoms = set(atomsel("resname '%s' and user 1.0"
-                                        % resname).get('name'))
+                                        % resname).name
                 topo_only = topo_atoms-pdb_atoms
                 resname = newname
 
@@ -850,27 +822,28 @@ def _write_ordered_pdb(filename, sel, molid):
     # Use resids since order can be wrong when sorting by residue
     # Then, use residue to pull out each one since it is much much
     # faster then trying to pull out residues
-    resids = set(atomsel(sel).get('resid'))
+    resids = set(atomsel(sel).resid
 
     # Add additional residue constraint to selection since pulling out
     # by resid can match something in a different chain
-    resstr = ' '.join([str(x) for x in set(atomsel(sel).get('residue'))])
+    resstr = ' '.join([str(x) for x in set(atomsel(sel).residue)])
 
     idx = 1
     # For renumbering capping groups
     for resid in sorted(resids):
         # Check for alternate locations
         residues = sorted(set(atomsel("resid '%s' and residue %s"
-                                      % (resid, resstr)).get('residue')))
+                                      % (resid, resstr)).residue))
         for rid in residues:
-            for i in atomsel('residue %d' % rid).get('index'):
+            for i in atomsel('residue %d' % rid).index:
                 a = atomsel('index %d' % i) # pylint: disable=invalid-name
-                ins = a.get("insertion")[0]
+                ins = a.insertion[0]
                 entry = ('%-6s%5d %-5s%-4s%c%4d%c   %8.3f%8.3f%8.3f%6.2f%6.2f'
-                         '     %-4s%2s\n' % ('ATOM', idx, a.get('name')[0],
-                                             a.get('resname')[0],
-                                             a.get('chain')[0],
-                                             a.get('resid')[0],
+                         '     %-4s%2s\n' % ('ATOM', idx,
+                                             a.name[0],
+                                             a.resname[0],
+                                             a.chain[0],
+                                             a.resid[0],
                                              ins if len(ins) else " ",
                                              a.get('x')[0],
                                              a.get('y')[0],
