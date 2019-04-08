@@ -26,7 +26,7 @@ def test_multiple_insertion_codes(tmpdir):
     assert len(set(atomsel("protein or resname ACE NMA NME").fragment)) == 1
 
     # Check the calcium ion is present
-    assert(atomsel("element Ca").get("resname") == ["CAL"])
+    assert atomsel("element Ca") == ["CAL"]
 
     # Check residues with insertion codes
     assert set(atomsel("resid 184").resname) == set(["GLY", "TYR"])

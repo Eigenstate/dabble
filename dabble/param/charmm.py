@@ -144,7 +144,7 @@ class CharmmWriter(object):
             self.psfgen.read_topology(top)
 
         # Mark all atoms as unsaved with the user field
-        atomsel('all', molid=self.molid).set('user', 1.0)
+        atomsel('all', molid=self.molid).user = 1.0
         check_atom_names(molid=self.molid)
 
         # Now ions if present, changing the atom names
@@ -732,7 +732,7 @@ class CharmmWriter(object):
                 atomsel("resname '%s' and user 1.0 and name '%s'"
                         % (resname, unmatched)).name = newname
                 pdb_atoms = set(atomsel("resname '%s' and user 1.0"
-                                        % resname).name
+                                        % resname).name)
                 topo_only = topo_atoms-pdb_atoms
                 resname = newname
 
@@ -822,7 +822,7 @@ def _write_ordered_pdb(filename, sel, molid):
     # Use resids since order can be wrong when sorting by residue
     # Then, use residue to pull out each one since it is much much
     # faster then trying to pull out residues
-    resids = set(atomsel(sel).resid
+    resids = set(atomsel(sel).resid)
 
     # Add additional residue constraint to selection since pulling out
     # by resid can match something in a different chain
@@ -845,15 +845,16 @@ def _write_ordered_pdb(filename, sel, molid):
                                              a.chain[0],
                                              a.resid[0],
                                              ins if len(ins) else " ",
-                                             a.get('x')[0],
-                                             a.get('y')[0],
-                                             a.get('z')[0],
-                                             0.0, 0.0, a.get('segname')[0],
-                                             a.get('element')[0]))
+                                             a.x[0],
+                                             a.y[0],
+                                             a.z[0],
+                                             0.0, 0.0,
+                                             a.segname[0],
+                                             a.element[0]))
                 idx += 1
                 fileh.write(entry)
     fileh.write('END\n')
-    atomsel(sel).set('user', 0.0) # Mark as written
+    atomsel(sel).user = 0.0
     fileh.close()
     molecule.set_top(old_top)
 
@@ -904,7 +905,7 @@ def get_bonded_atoms(molid, index):
     asel = atomsel('index %d' % index, molid=molid)
     bound = []
     for atom in asel.bonds[0]:
-        bound.append(atomsel('index %d' % atom).get('element')[0])
+        bound.append(atomsel('index %d' % atom).element[0])
     return bound
 
 #==========================================================================
@@ -915,10 +916,12 @@ def check_atom_names(molid):
     found, they are removed and a warning is printed
     """
 
-    names = set(atomsel(molid=molid).get('name'))
+    names = set(atomsel(molid=molid).name)
     for name in names:
         if ' ' in name:
             print("\nWARNING: Found space character in name '%s'\n"
                   "         Incompatible with charmm formats, removing it"
                   % name)
-            atomsel("name '%s'", molid=molid).set('name', name.replace(' ', ''))
+            atomsel("name '%s'", molid=molid).name = name.replace(' ', '')
+
+#==========================================================================

@@ -138,7 +138,7 @@ class CharmmMatcher(MoleculeMatcher):
             (str, str, dict) resname matched, patch name applied,
               name translation dictionary
         """
-        resname = selection.get('resname')[0]
+        resname = selection.resname[0]
         rgraph = self.parse_vmd_graph(selection)[0]
 
         # Check this residue against all possible patches applied to the
@@ -209,16 +209,15 @@ class CharmmMatcher(MoleculeMatcher):
         # Now we know it's a cysteine in a disulfide bond
         # Identify which resid and fragment corresponds to the other cysteine
         partners = [n for n in externs if \
-                    atomsel("index %d" % n,
-                            molid=molid).get("element")[0] == "S"]
+                    atomsel("index %d" % n, molid=molid).element[0] == "S"]
         if not partners:
             raise DabbleError("3 bonded Cys %d isn't a valid disulfide!"
-                              % selection.get('resid')[0])
+                              % selection.resid[0])
         osel = atomsel("index %d" % partners[0], molid=molid)
 
         # Order so same DISU isn't listed twice
-        fr1 = osel.get("fragment")[0]
-        fr2 = selection.get("fragment")[0]
+        fr1 = osel.fragment[0]
+        fr2 = selection.fragment[0]
         if fr1 < fr2:
             first = osel
             second = selection
@@ -226,7 +225,7 @@ class CharmmMatcher(MoleculeMatcher):
             first = selection
             second = osel
         else:
-            if osel.get("resid")[0] < selection.get("resid")[0]:
+            if osel.resid[0] < selection.resid[0]:
                 first = osel
                 second = selection
             else:
@@ -234,10 +233,10 @@ class CharmmMatcher(MoleculeMatcher):
                 second = osel
 
         patch = Patch(name="DISU",
-                      segids=["P%d" % first.get("fragment")[0],
-                              "P%d" % second.get("fragment")[0]],
-                      resids=[first.get("resid")[0],
-                              second.get("resid")[0]])
+                      segids=["P%d" % first.fragment[0],
+                              "P%d" % second.fragment[0]],
+                      resids=[first.resid[0],
+                              second.resid[0]])
 
         return (matchname, patch, atomnames)
 
@@ -274,8 +273,8 @@ class CharmmMatcher(MoleculeMatcher):
                               "belonging to a single residue in CHARMM matching."
                               " Not sure how this happened; something is really "
                               "really wrong. Residue was: %s:%d" %
-                              (selection.get("resname")[0],
-                               selection.get("resid")[0]))
+                              (selection.resname[0],
+                               selection.resid[0]))
 
         return (resname.pop(), atomnames)
 

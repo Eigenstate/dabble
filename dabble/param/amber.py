@@ -567,7 +567,7 @@ class AmberWriter(object):
                           " your crystallographic waters in the input structure."
                           % (len(residues), len(batch)))
                     quit(1)
-                batch.set('user', 0.0)
+                batch.user = 0.0
                 batch.write('pdb', temp)
                 allw.update()
 

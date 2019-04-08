@@ -139,7 +139,7 @@ class MoleculeMatcher(object): # pylint: disable=too-few-public-methods
         Raises:
             KeyError: if no matching possible
         """
-        resname = selection.get('resname')[0]
+        resname = selection.resname[0]
         rgraph, _ = self.parse_vmd_graph(selection)
 
         # First check against matching residue names
@@ -294,7 +294,7 @@ class MoleculeMatcher(object): # pylint: disable=too-few-public-methods
         # Check selection is an entire resid by both definitions
         # Ignore VMD's residue definition since it messes up
         # capping groups
-        resid = set(selection.get('resid'))
+        resid = set(selection.resid)
         if len(resid) > 1:
             raise ValueError("Selection %s is more than one resid!" % selection)
         if not len(resid):
@@ -303,15 +303,15 @@ class MoleculeMatcher(object): # pylint: disable=too-few-public-methods
 
         # Name nodes by atom index so duplicate names aren't a problem
         rgraph = nx.Graph()
-        rgraph.add_nodes_from(selection.get('index'))
+        rgraph.add_nodes_from(selection.index)
 
         # Edges. This adds each bond twice but it's no big deal
         for i in range(len(selection)):
-            gen = product([selection.get('index')[i]], selection.bonds[i])
+            gen = product([selection.index[i]], selection.bonds[i])
             rgraph.add_edges_from([bnd for bnd in gen])
 
         # Dictionary translating index to element, set as known attribute
-        rdict = {selection.get('index')[i]: selection.get('element')[i] \
+        rdict = {selection.index[i]: selection.element[i] \
                 for i in range(len(selection))}
 
         # Set all atoms to belong to this residue by default
@@ -319,13 +319,13 @@ class MoleculeMatcher(object): # pylint: disable=too-few-public-methods
         # Loop through all nodes for indices that are not in this selection.
         # They were added to the graph from edges that go to other residues,
         # such as amino acid +N or -CA bonds. Mark these as special elements.
-        edict = {selection.get('index')[i]: "self" \
+        edict = {selection.index[i]: "self" \
                  for i in range(len(selection))}
-        others = set(rgraph.nodes()) - set(selection.get('index'))
+        others = set(rgraph.nodes()) - set(selection.index)
         is_covalent = bool(len(others))
         for oth in others:
             sel = atomsel('index %d' % oth, molid=selection.molid)
-            resido = sel.get('resid')[0]
+            resido = sel.resid[0]
             if resido > resid:
                 edict[oth] = "+"
             elif resido < resid:
@@ -335,15 +335,15 @@ class MoleculeMatcher(object): # pylint: disable=too-few-public-methods
             # as there isn't really a convention for it. Instead, just go
             # by atom index as the ordering here should be reliable.
             else:
-                if set(selection.get("insertion")) == set(sel.get("insertion"))\
-                        and set(selection.get("fragment")) == set(sel.get("fragment")):
+                if set(selection.insertion) == set(sel.insertion)\
+                        and set(selection.fragment) == set(sel.fragment):
                     raise ValueError("Probable VMD parser bug!"
                                      "Resid %d has multiple residues" % resid)
 
-                ins = selection.get("index")[0]
+                ins = selection.index[0]
                 edict[oth] = "-" if oth < ins else "+"
 
-            rdict[oth] = sel.get('element')[0]
+            rdict[oth] = sel.element[0]
 
         # Set node attributes
         nx.set_node_attributes(rgraph, name='element', values=rdict)
