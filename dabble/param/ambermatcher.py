@@ -456,7 +456,8 @@ class AmberMatcher(MoleculeMatcher):
                               (resname, selection.resid[0]))
 
         taildicts = []
-        for tgraph in nx.connected_component_subgraphs(rgraph, copy=True):
+        for t in nx.connected_components(rgraph):
+            tgraph = rgraph.subgraph(t)
             matched = False
             for matchname in (_ for _ in self.lipid_tails if \
                               self.known_res.get(_)):
