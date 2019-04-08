@@ -2,11 +2,12 @@
 Tests absolute box size with ignored selection
 """
 import os
+import pytest
 
 dir = os.path.dirname(__file__) + "/"
 
 #==============================================================================
-
+@pytest.mark.skip(reason="Missing input file")
 def test_absolute_box(tmpdir):
     """
     Tests the absolute box size for a system with ligands far from

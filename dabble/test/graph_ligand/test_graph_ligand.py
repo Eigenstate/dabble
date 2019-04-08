@@ -41,16 +41,18 @@ def test_compare_mol():
     molid = molecule.load("mae", dir+"lsd_prot.mae")
     g = CharmmMatcher([dir+"lsd_prot_trunc.str", dir+"masses.rtf"])
     (resdict, mdict) = g.get_names(atomsel("all", molid=molid))
-    assert mdict == {0: 'C13', 1: 'N20', 2: 'C12', 3: 'C11', 4: 'C15', 5: 'C7',
-                     6: 'C3', 7: 'C8', 8: 'N1', 9: 'C1', 10: 'C4', 11: 'C5',
-                     12: 'C2', 13: 'C6', 14: 'C9', 15: 'C10', 16: 'C14', 17:
-                     'C16', 18: 'O1', 19: 'N3', 20: 'C17', 21: 'C18', 22:
-                     'C19', 23: 'C20', 24: 'H131', 25: 'H132', 26: 'H121', 27:
-                     'H122', 28: 'H123', 29: 'H11', 30: 'H151', 31: 'H8', 32:
-                     'H4', 33: 'H5', 34: 'H2', 35: 'H10', 36: 'H14', 37:
-                     'H171', 38: 'H172', 39: 'H181', 40: 'H182', 41: 'H183',
-                     42: 'H191', 43: 'H192', 44: 'H201', 45: 'H202', 46:
-                     'H203', 47: 'H152', 48: 'HN1', 49: 'HN2'}
+
+    # Don't check diethyls as they're interchangeable
+    correct = {0: 'C13', 1: 'N20', 2: 'C12', 3: 'C11', 4: 'C15', 5: 'C7',
+               6: 'C3', 7: 'C8', 8: 'N1', 9: 'C1', 10: 'C4', 11: 'C5', 12: 'C2',
+               13: 'C6', 14: 'C9', 15: 'C10', 16: 'C14', 17: 'C16', 18: 'O1',
+               19: 'N3', 24: 'H131', 25: 'H132', 26: 'H121', 27: 'H122',
+               28: 'H123', 29: 'H11', 30: 'H151', 31: 'H8', 32: 'H4',
+               33: 'H5', 34: 'H2', 35: 'H10', 36: 'H14', 47: 'H152',
+               48: 'HN1', 49: 'HN2'}
+    for i, n in correct.items():
+        assert mdict[i] == n
+
     assert "LSD" == resdict
 
 #==============================================================================
@@ -64,9 +66,18 @@ def test_patches():
     (name, patch, mdict) = g.get_patches(atomsel("resname SEP", molid=molid))
     assert name == "SER"
     assert patch == "PSEP"
-    assert mdict == {5: '-C', 16: 'N', 17: 'CA', 18: 'CB', 19: 'OG', 20: 'C',
-                     21: 'O', 22: 'P', 23: 'O1P', 24: 'O2P', 25: 'OT', 26:
-                     'HN', 27: 'HA', 28: 'HB1', 29: 'HB2', 30: '+N'}
+
+    # Oxygens are interchangeable so don't compare them
+    correct = {5: '-C', 16: 'N', 17: 'CA', 18: 'CB', 19: 'OG', 20: 'C', 21:
+               'O', 22: 'P', 26: 'HN', 27: 'HA', 28: 'HB1', 29: 'HB2', 30:
+               '+N'}
+    for i, n in correct.items():
+        assert mdict[i] == n
+
+    # Interchangeable oxygens
+    assert "O" in mdict[23]
+    assert "O" in mdict[24]
+    assert "O" in mdict[25]
 
 #==============================================================================
 
