@@ -128,7 +128,7 @@ def write_ct_blocks(molid, sel, output_filename, tmp_dir):
     Returns:
       length (int): the number of CT blocks written
     """
-    users = sorted(set(atomsel(sel, molid=molid).get('user')))
+    users = sorted(set(atomsel(sel, molid=molid).user))
     filenames = [(tempfile.mkstemp(suffix='.mae',
                                    prefix='dabble_tmp_user',
                                    dir=tmp_dir))[1] for _ in users]
@@ -137,9 +137,9 @@ def write_ct_blocks(molid, sel, output_filename, tmp_dir):
     for i, filen in zip(users, filenames):
         tempsel = atomsel('user %f and (%s)' % (i, sel), molid=molid)
         sel2 = atomsel('index ' + \
-                       ' '.join([str(s) for s in set(tempsel.get('index'))]),
+                       ' '.join([str(s) for s in set(tempsel.index)]),
                        molid=molid)
-        sel2.set('user', 0.0)
+        sel2.user = 0.0
         sel2.write('mae', filen)
 
     # Option lets us specify if we should write a pdb/psf or just a mae file

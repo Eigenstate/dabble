@@ -53,7 +53,7 @@ def get_net_charge(sel, molid):
       ValueError: If charge does not round to an integer value
     """
 
-    charge = np.array(atomsel(sel, molid=molid).get('charge'))
+    charge = np.array(atomsel(sel, molid=molid).charge)
     if charge.size == 0:
         return 0
     print("Calculating charge on %d atoms" % charge.size)
@@ -138,7 +138,7 @@ def solute_xy_diameter(solute_sel, molid):
     """
 
     sol = atomsel(solute_sel, molid=molid)
-    return diameter(np.transpose([sol.get('x'), sol.get('y')]))
+    return diameter(np.transpose([sol.x, sol.y]))
 
 #==========================================================================
 
@@ -177,7 +177,7 @@ def get_num_salt_ions_needed(molid,
     except ValueError:
         # Check for bonded cations
         # Minimize the number of calls to atomsel
-        nonbonded_cation_index = [cations.get('index')[i] \
+        nonbonded_cation_index = [cations.index[i] \
                                   for i in range(len(cations)) \
                                   if len(cations.bonds[i]) == 0]
 
@@ -193,12 +193,9 @@ def get_num_salt_ions_needed(molid,
         abs(get_net_charge(str(anions), molid)+len(anions)) > 0.01
     except ValueError:
         # Check for bonded anions
-        nonbonded_anion_index = [anions.get('index')[i] \
+        nonbonded_anion_index = [anions.index[i] \
                                  for i in range(len(anions)) \
                                  if len(anions.bonds[i]) == 0]
-        #nonbonded_anion_index = [atomsel('index %d' % x).get('index')[0] \
-        #  for x in np.nonzero(np.array(map(len, \
-        #  atomsel_remaining(molid, 'element %s'%anion).bonds)) == 0)[0]]
         if len(nonbonded_anion_index) == 0:
             anions = atomsel('none')
         else:
@@ -267,10 +264,10 @@ def lipid_composition(lipid_sel, molid):
         """
         sel = atomsel_remaining(molid, 'not element H C and (%s) and (%s)'
                                 % (lipid_sel, leaflet_sel))
-        resnames = set(sel.get('resname'))
+        resnames = set(sel.resname)
         dct = dict([(s, len(set(atomsel_remaining(molid, "not element H C and " \
              "resname '%s' and (%s) and (%s)" % (s, lipid_sel, leaflet_sel) \
-             ).get('fragment')))) for s in resnames])
+             ).fragment))) for s in resnames])
         return dct
 
     inner, outer = leaflet('z < 0'), leaflet('not (z < 0)')
@@ -379,13 +376,13 @@ def set_ion(molid, atom_id, element):
     name = dict(Na='NA', K='K', Cl='CL')[element]
     attype = dict(Na='NA', K='K', Cl='CL')[element]
     charge = dict(Na=1, K=1, Cl=-1)[element]
-    sel.set('element', element)
-    sel.set('name', name)
-    sel.set('type', attype)
-    sel.set('resname', resname)
-    sel.set('chain', 'N')
-    sel.set('segid', 'ION')
-    sel.set('charge', charge)
+    sel.element = element
+    sel.name = name
+    sel.type = attype
+    sel.resname = resname
+    sel.chain = 'N'
+    sel.segid = 'ION'
+    sel.charge = charge
 
 #==========================================================================
 
@@ -428,9 +425,9 @@ def tile_system(input_id, times_x, times_y, times_z, tmp_dir):
     """
     # pylint: disable=invalid-name, too-many-locals
     # Read in the equilibrated bilayer file
-    new_resid = np.array(atomsel('all', molid=input_id).get('residue'))
+    new_resid = np.array(atomsel('all', molid=input_id).residue)
     num_residues = new_resid.max()
-    atomsel('all', molid=input_id).set('user', 2.)
+    atomsel('all', molid=input_id).user = 2.0
     wx, wy, wz = get_system_dimensions(molid=input_id)
 
     # Move the lipids over, save that file, move them back, repeat, then
@@ -442,9 +439,8 @@ def tile_system(input_id, times_x, times_y, times_z, tmp_dir):
         for ny in range(times_y):
             for nz in range(times_z):
                 tx = np.array([nx * wx, ny * wy, nz * wz])
-                atomsel('all', molid=input_id).moveby(tuple(tx))
-                atomsel('all', molid=input_id).set('resid',
-                                                   [int(_) for _ in new_resid])
+                atomsel('all', input_id).moveby(tuple(tx))
+                atomsel('all', input_id).resid = [int(_) for _ in new_resid]
                 new_resid += num_residues
                 tile_filename = tempfile.mkstemp(suffix='.mae',
                                                  prefix='dabble_tile_tmp',
@@ -497,7 +493,7 @@ def combine_molecules(input_ids, tmp_dir):
     molecule.set_top(output_id)
     for i in input_ids:
         molecule.delete(i)
-    atomsel('all', molid=output_id).set('beta', 1)
+    atomsel('all', molid=output_id).beta = 1
     return output_id
 
 #==========================================================================
@@ -590,7 +586,7 @@ def num_lipids_remaining(molid, lipid_sel):
     if not molecule.exists(molid):
         raise ValueError("Invalid molecule %d" % molid)
 
-    return np.unique(atomsel_remaining(molid, lipid_sel).get('fragment')).size
+    return np.unique(atomsel_remaining(molid, lipid_sel).fragment).size
 
 #++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
 

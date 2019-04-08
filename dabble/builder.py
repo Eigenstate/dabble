@@ -276,7 +276,7 @@ class DabbleBuilder(object):
 
         molid = fileutils.load_solute(filename, tmp_dir=self.tmp_dir)
         self.molids[desc] = molid
-        atomsel('all', molid=molid).set('beta', 1)
+        atomsel('all', molid=molid).beta = 1
         return True
 
     #==========================================================================
@@ -392,18 +392,18 @@ class DabbleBuilder(object):
 
         # Some options different for water-only systems (no lipid)
         if self.water_only:
-            solute_z = atomsel(self.solute_sel, molid=molid).get('z')
+            solute_z = atomsel(self.solute_sel, molid=molid).z
             dx_tm = 0.0
             dy_tm = 0.0
             sol_solute = atomsel(self.solute_sel, molid)
         else:
-            solute_z = atomsel(self.solute_sel, molid=molid).get('z')
+            solute_z = atomsel(self.solute_sel, molid=molid).z
             tm_solute = atomsel('(%s) and z > %f and z < %f' % (self.solute_sel,
                                                                 -zh_mem_hyd,
                                                                 zh_mem_hyd), molid)
             if len(tm_solute):
-                dx_tm = max(tm_solute.get('x')) - min(tm_solute.get('x'))
-                dy_tm = max(tm_solute.get('y')) - min(tm_solute.get('y'))
+                dx_tm = max(tm_solute.x)- min(tm_solute.x)
+                dy_tm = max(tm_solute.y) - min(tm_solute.y)
             else:
                 dx_tm = dy_tm = 0
 
@@ -412,8 +412,8 @@ class DabbleBuilder(object):
                                                                   zh_mem_hyd), molid)
 
         # Solvent invariant options
-        dx_sol = max(sol_solute.get('x')) - min(sol_solute.get('x'))
-        dy_sol = max(sol_solute.get('y')) - min(sol_solute.get('y'))
+        dx_sol = max(sol_solute.x) - min(sol_solute.x)
+        dy_sol = max(sol_solute.y) - min(sol_solute.y)
 
         if self.opts.get('user_x'):
             self.size[0] = self.opts['user_x']
@@ -475,14 +475,14 @@ class DabbleBuilder(object):
         # Temporary fix for chain W in input file
         if len(atomsel('chain W')):
             print("WARNING: Renaming crystal water chain to X, temporary bugfix")
-            atomsel('chain W').set('chain', 'X')
-        chains = set(atomsel('all', molid=molid).get('chain'))
+            atomsel('chain W').chain = 'X';
+        chains = set(atomsel('all', molid=molid).chain)
         sel = ""
         while len(chains):
             chn = chains.pop() # have to handle first separately because of or
             sel += "(chain %s and resid " % (chn) + \
                    " ".join(["'%d'" % i for i in \
-                       set(atomsel('chain %s' % chn, molid=molid).get('resid'))]) + \
+                       set(atomsel('chain %s' % chn, molid=molid).resid)]) + \
                    ")"
             if len(chains):
                 sel += " or "
@@ -547,12 +547,12 @@ class DabbleBuilder(object):
 
         # Check the +Z direction
         zup = self.opts['wat_buffer'] + \
-              max(atomsel(self.solute_sel).get('z')) - \
-              max(atomsel("not (%s or %s)" % (self.solute_sel, self.opts['lipid_sel'])).get('z'))
+              max(atomsel(self.solute_sel).z) - \
+              max(atomsel("not (%s or %s)" % (self.solute_sel, self.opts['lipid_sel'])).z)
         # Check the -Z direction
         zdo = self.opts['wat_buffer'] + \
-              min(atomsel("not (%s or %s)" % (self.solute_sel, self.opts['lipid_sel'])).get('z')) \
-              - min(atomsel(self.solute_sel).get('z'))
+              min(atomsel("not (%s or %s)" % (self.solute_sel, self.opts['lipid_sel'])).z) \
+              - min(atomsel(self.solute_sel).z)
 
         # Load water
         wat_path = self.opts['membrane_system'] = resource_filename(__name__, \
@@ -567,8 +567,8 @@ class DabbleBuilder(object):
             self.molids['wtmp'], tiletimes = tile_membrane_patch(self.molids['water'],
                                                                  [self.size[0], self.size[1], zup],
                                                                  self.tmp_dir, allow_z_tile=True)
-            move = max(atomsel("not (%s)" % self.solute_sel, molid=molid).get('z')) - \
-                    min(atomsel(molid=self.molids['wtmp']).get('z')) - 0.5
+            move = max(atomsel("not (%s)" % self.solute_sel, molid=molid).z) - \
+                    min(atomsel(molid=self.molids['wtmp']).z) - 0.5
             atomsel(molid=self.molids['wtmp']).moveby((0, 0, move))
             self.molids['wats_up'] = molutils.center_system(molid=self.molids['wtmp'],
                                                             tmp_dir=self.tmp_dir,
@@ -583,8 +583,8 @@ class DabbleBuilder(object):
             self.molids['wtmp'], tiletimes = \
                     tile_membrane_patch(self.molids['water'], [self.size[0], self.size[1], zdo],
                                         self.tmp_dir, allow_z_tile=True)
-            move = min(atomsel("not (%s)" % self.solute_sel, molid=molid).get('z')) - \
-                    max(atomsel(molid=self.molids['wtmp']).get('z')) + 0.5
+            move = min(atomsel("not (%s)" % self.solute_sel, molid=molid).z) - \
+                    max(atomsel(molid=self.molids['wtmp']).z) + 0.5
             atomsel(molid=self.molids['wtmp']).moveby((0, 0, move))
             self.molids['wats_down'] = molutils.center_system(molid=self.molids['wtmp'],
                                                               tmp_dir=self.tmp_dir,
@@ -633,7 +633,7 @@ class DabbleBuilder(object):
         # lipid trimming is done in trim_xy_residues and takes into account
         # lipid center, etc.
         if self.water_only:
-            xcoord = atomsel(self.solute_sel).get('x')
+            xcoord = atomsel(self.solute_sel).x
             buf = (self.size[0] - max(xcoord) + min(xcoord))/2.
             total += _remove_residues('(not (%s)) and noh and x > %f' %
                                       (self.solute_sel,
@@ -644,7 +644,7 @@ class DabbleBuilder(object):
                                        min(xcoord) - buf),
                                       molid=molid)
 
-            ycoord = atomsel(self.solute_sel).get('y')
+            ycoord = atomsel(self.solute_sel).y
             buf = (self.size[1] - max(ycoord) + min(ycoord))/2.
             total += _remove_residues('(not (%s)) and noh and y > %f' %
                                       (self.solute_sel,
@@ -681,7 +681,7 @@ class DabbleBuilder(object):
 
         # Identify lipids that have some part outside of the box
         suspicious_lipid_residues = list(set(atomsel('(%s) and (%s)' % \
-               (self.opts['lipid_sel'], box_sel_str), molid=molid).get('residue')))
+               (self.opts['lipid_sel'], box_sel_str), molid=molid).residue))
         bad_lipids = []
 
         # Delete lipids whose center is too far out of the box, keep others
@@ -923,8 +923,8 @@ class DabbleBuilder(object):
         molid = molutils.center_system(molid=molid, tmp_dir=self.opts.get('tmp_dir'),
                                        center_z=self.water_only)
         system = atomsel('all', molid=molid)
-        tx = (-max(system.get('x')) - min(system.get('x')))/2.
-        ty = (-max(system.get('y')) - min(system.get('y')))/2.
+        tx = (-max(system.x) - min(system.x))/2.
+        ty = (-max(system.y) - min(system.y))/2.
         temp_mae = tempfile.mkstemp(suffix='.mae',
                                     prefix='dabble_centered',
                                     dir=self.opts.get('tmp_dir'))[1]
@@ -959,7 +959,7 @@ def _find_convertible_water_molecule(molid, # pylint: disable=invalid-name
     inclusion_sel = 'beta 1 and noh and (%s)' % water_sel
     exclusion_sel = 'beta 1 and not (%s)' % water_sel
     sel = atomsel('(%s) and not pbwithin %f of (%s)' \
-                  % (inclusion_sel, min_ion_dist, exclusion_sel), molid).get("index")
+                  % (inclusion_sel, min_ion_dist, exclusion_sel), molid).index
     if not len(sel):
         raise DabbleError("No convertible water molecules found in %s" % sel)
 
@@ -985,8 +985,8 @@ def _convert_water_molecule_to_ion(molid, atom_id, element):
     if element not in ['Na', 'K', 'Cl']:
         raise ValueError("Ion must be Na, K, or Cl. Was '%s'" % element)
 
-    element_received = atomsel('index %d' % atom_id).get('element')[0]
-    if element_received is not 'O':
+    element_received = atomsel('index %d' % atom_id).element[0]
+    if element_received != 'O':
         raise ValueError("Received non-water oxygen to convert, id %d element %s"
                          % (atom_id, element_received))
 
@@ -1009,7 +1009,7 @@ def _remove_atoms(sel, molid):
     """
 
     marked = atomsel('beta 1 and (%s)' % sel, molid=molid)
-    marked.set('beta', 0)
+    marked.beta = 0
     return len(marked)
 
 #==========================================================================
