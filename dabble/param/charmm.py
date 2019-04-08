@@ -30,20 +30,20 @@ from psfgen import PsfGen
 from vmd import atomsel, molecule
 
 from dabble import DabbleError
-from dabble.param import CharmmMatcher, Patch
+from dabble.param import CharmmMatcher, MoleculeWriter, Patch
 
 #++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
 #                                CONSTANTS                                    #
 #++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
 
-_acids = ('ACE ALA ARG ASN ASP CYS CYX GLN GLU GLY HIE HIS HSP HSE '
-          'HSD ILE LEU LYS MET NMA PHE PRO SER THR TRP TYR VAL')
+patchable_acids = ('ACE ALA ARG ASN ASP CYS CYX GLN GLU GLY HIE HIS HSP HSE '
+                   'HSD ILE LEU LYS MET NMA PHE PRO SER THR TRP TYR VAL')
 
 #++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
 #                                   CLASSES                                   #
 #++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
 
-class CharmmWriter(object):
+class CharmmWriter(MoleculeWriter):
     """
     An object that handles all the conversions to a psf file
     by interfacing with psfgen.
@@ -54,36 +54,32 @@ class CharmmWriter(object):
     Prompts the user for additional topology files and helps with
     matching atom names that cannot be automatically translated to the
     charmm naming conventions.
-
-    Attributes:
-      file (file handle): Temporary file to write TCL script that invokes
-          psfgen
-      tmp_dir (string): Directory where temporary files are stored
-      psf_name (str): Prefix for the pdb/psf output files, extension will
-          be appended
-      molid (str,optional): the VMD molecule id to write. Defaults to 0.
-      lipid_sel (str,optional): atomselect string describing what should count
-          as "lipid".  Defaults to "lipid"
-      topologies (list of str): Topology files that were used in creating the
-          psf
-      prompt_topos (bool): Whether to ask for more topology files
-      matcher (CharmmMatcher): Molecular graph matcher object
-
     """
 
     #==========================================================================
 
-    def __init__(self, tmp_dir, molid, lipid_sel="lipid", **kwargs):
+    def __init__(self, molid, **kwargs):
+        """
+        Creates a CHARMM writer
 
-        # Create a temporary directory for segment files, etc
-        self.tmp_dir = tmp_dir
-        self.lipid_sel = lipid_sel
+        Args:
+            molid (int): VMD molecule ID of system to write
+            tmp_dir (str): Directory for temporary files. Defaults to "."
+            lipid_sel (str): Lipid selection string. Defaults to "lipid"
+            extra_topos (list of str): Additional topology (.str, .off, .lib) to
+                include.
+            extra_params (list of str): Additional parameter sets (.str, .frcmod)
+            override_defaults (bool): If set, omits default amber ff14 parameters.
+            debug_verbose (bool): Prints additional output, like from tleap.
+        """
+
+        # Initialize default options
+        super(CharmmWriter, self).__init__(molid, **kwargs)
 
         # Create a psf generator object
         self.psfgen = PsfGen()
-
-        self.molid = molid
         self.psf_name = ""
+
         # Default parameter sets
         if kwargs.get("override_defaults", False):
             self.topologies = []
@@ -161,12 +157,12 @@ class CharmmWriter(object):
 
         # Now handle the protein
         # Save and reload the protein so residue looping is correct
-        if len(atomsel("resname %s" % _acids, molid=self.molid)):
+        if len(atomsel("resname %s" % patchable_acids, molid=self.molid)):
             extpatches = set()
-            for frag in sorted(set(atomsel("resname %s" % _acids,
+            for frag in sorted(set(atomsel("resname %s" % patchable_acids,
                                     molid=self.molid).fragment)):
                 extpatches.update(self._write_protein_blocks(self.molid, frag))
-            atomsel("same fragment as resname %s" % _acids,
+            atomsel("same fragment as resname %s" % patchable_acids,
                     molid=self.molid).user = 0.0
 
             # List all patches applied to the protein
@@ -302,20 +298,8 @@ class CharmmWriter(object):
 
             for i in res.index:
                 a = atomsel('index %d' % i, molid) # pylint: disable=invalid-name
-                entry = ('%-6s%5d %-5s%-4s%c%4d    %8.3f%8.3f%8.3f%6.2f%6.2f'
-                         '     %-4s%2s\n' % ('ATOM', idx,
-                                             a.name[0],
-                                             a.resname[0],
-                                             a.chain[0],
-                                             ridx+1,
-                                             a.x[0],
-                                             a.y[0],
-                                             a.z[0],
-                                             0.0, 0.0,
-                                             a.segname[0],
-                                             a.element[0]))
+                fileh.write(self.get_pdb_line(a, idx, ridx+1))
                 idx += 1
-                fileh.write(entry)
 
         fileh.write('END\n')
         fileh.close()
@@ -837,22 +821,8 @@ def _write_ordered_pdb(filename, sel, molid):
         for rid in residues:
             for i in atomsel('residue %d' % rid).index:
                 a = atomsel('index %d' % i) # pylint: disable=invalid-name
-                ins = a.insertion[0]
-                entry = ('%-6s%5d %-5s%-4s%c%4d%c   %8.3f%8.3f%8.3f%6.2f%6.2f'
-                         '     %-4s%2s\n' % ('ATOM', idx,
-                                             a.name[0],
-                                             a.resname[0],
-                                             a.chain[0],
-                                             a.resid[0],
-                                             ins if len(ins) else " ",
-                                             a.x[0],
-                                             a.y[0],
-                                             a.z[0],
-                                             0.0, 0.0,
-                                             a.segname[0],
-                                             a.element[0]))
+                fileh.write(MoleculeWriter.get_pdb_line(a, idx, a.resid[0]))
                 idx += 1
-                fileh.write(entry)
     fileh.write('END\n')
     atomsel(sel).user = 0.0
     fileh.close()

@@ -8,6 +8,7 @@ __author__ = 'Robin Betz'
 from dabble.param.moleculematcher import MoleculeMatcher
 from dabble.param.charmmmatcher import CharmmMatcher, Patch
 from dabble.param.ambermatcher import AmberMatcher
+from dabble.param.writer import MoleculeWriter
 from dabble.param.charmm import CharmmWriter
 from dabble.param.amber import AmberWriter
 

@@ -37,11 +37,11 @@ from parmed.tools import chamber, parmout, HMassRepartition, checkValidity
 from parmed.amber import AmberParm
 from parmed.exceptions import ParameterWarning
 from dabble import DabbleError
-from dabble.param import CharmmWriter, AmberMatcher
+from dabble.param import MoleculeWriter, CharmmWriter, AmberMatcher
 
 #++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
 
-class AmberWriter(object):
+class AmberWriter(MoleculeWriter):
     """
     Creates AMBER-format input files, using either CHARMM or AMBER parameters.
 
@@ -71,43 +71,43 @@ class AmberWriter(object):
             debug_verbose (bool): Prints additional output, like from tleap.
 
         """
+        # Initialize standard MoleculeWriter items
+        super(AmberWriter, self).__init__(molid, **kwargs)
 
-        self.molid = molid
         self.prmtop_name = ""
 
-        self.tmp_dir = kwargs.get("tmp_dir", ".")
-        self.lipid_sel = kwargs.get("lipid_sel", "lipid")
         self.hmr = kwargs.get("hmr", False)
         self.extra_topos = kwargs.get("extra_topos", None)
         self.override = kwargs.get("override_defaults", False)
-        self.debug_verbose = kwargs.get("debug_verbose", False)
 
         forcefield = kwargs.get("forcefield", "charmm36m")
         if forcefield not in ["amber", "charmm36m", "charmm", "charmm36"]:
             raise DabbleError("Unsupported forcefield: %s" % forcefield)
         self.forcefield = forcefield
-        if self.forcefield == "charmm36m":
-            self.parameters = [
-                resource_filename(__name__, "charmm_parameters/toppar_water_ions.str"),
-                resource_filename(__name__, "charmm_parameters/par_all36_cgenff.prm"),
-                resource_filename(__name__, "charmm_parameters/par_all36m_prot.prm"),
-                resource_filename(__name__, "charmm_parameters/par_all36_lipid.prm"),
-                resource_filename(__name__, "charmm_parameters/par_all36_carb.prm"),
-                resource_filename(__name__, "charmm_parameters/par_all36_na.prm"),
-                resource_filename(__name__, "charmm_parameters/toppar_all36_prot_na_combined.str")
-                ]
+        if "charmm" in self.forcefield:
+
+            # Topologies used will be found and returned by CharmmWriter
             self.topologies = []
-        elif self.forcefield in ["charmm36", "charmm"]:
+
             self.parameters = [
-                resource_filename(__name__, "charmm_parameters/toppar_water_ions.str"),
-                resource_filename(__name__, "charmm_parameters/par_all36_cgenff.prm"),
-                resource_filename(__name__, "charmm_parameters/par_all36_prot.prm"),
-                resource_filename(__name__, "charmm_parameters/par_all36_lipid.prm"),
-                resource_filename(__name__, "charmm_parameters/par_all36_carb.prm"),
-                resource_filename(__name__, "charmm_parameters/par_all36_na.prm"),
-                resource_filename(__name__, "charmm_parameters/toppar_all36_prot_na_combined.str")
+                "toppar_water_ions.str",
+                "par_all36_cgenff.prm",
+                "par_all36_lipid.prm",
+                "par_all36_carb.prm",
+                "par_all36_na.prm",
+                "toppar_all36_prot_na_combined.str"
                 ]
-            self.topologies = []
+
+            if self.forcefield == "charmm36m":
+                self.parameters.append("par_all36m_prot.prm")
+            else:
+                self.parameters.append("par_all36_prot.prm")
+
+            # Get resource filename path for all parameter files
+            for i, par in enumerate(self.parameters):
+                self.parameters[i] = resource_filename(__name__,
+                                         os.path.join("charmm_parameters", par))
+
         elif self.forcefield == 'amber':
             if not os.environ.get("AMBERHOME"):
                 raise DabbleError("AMBERHOME must be set to use AMBER forcefield!")
@@ -433,7 +433,7 @@ class AmberWriter(object):
 
     #==========================================================================
 
-    def _write_residue(self, ressel, fileh, idx, hetatm=False):
+    def _write_residue(self, ressel, fileh, idx, hetatom=False):
         """
         Writes a residue to a pdb file
 
@@ -441,29 +441,11 @@ class AmberWriter(object):
             ressel (VMD atomsel): Atom selection to write
             fileh (file handle): The file to write to
             idx (int): Current atom index
-            hetatm (bool): Whether or not this is a heteroatom
+            hetatom (bool): Whether or not this is a heteroatom
         """
-        if hetatm:
-            atm = "HETATM"
-        else:
-            atm = "ATOM"
         for i in ressel.index:
             a = atomsel('index %d' % i) # pylint: disable=invalid-name
-            assert len(a) == 1
-            entry = ('%-6s%5d %-5s%-4s%c%4d    %8.3f%8.3f%8.3f%6.2f%6.2f'
-                     '     %-4s%2s\n' % (atm,
-                                         idx,
-                                         a.name[0],
-                                         a.resname[0],
-                                         a.chain[0],
-                                         a.resid[0],
-                                         a.x[0],
-                                         a.y[0],
-                                         a.z[0],
-                                         0.0, 0.0,
-                                         a.segname[0],
-                                         a.element[0]))
-            fileh.write(entry)
+            fileh.write(self.get_pdb_line(a, idx, a.resid[0], hetatom=True))
             idx += 1
         return idx
 
@@ -603,21 +585,8 @@ class AmberWriter(object):
 
             for i in res.index:
                 a = atomsel('index %d' % i) # pylint: disable=invalid-name
-                entry = ('%-6s%5d %-5s%-4s%c%4d    %8.3f%8.3f%8.3f%6.2f%6.2f'
-                         '     %-4s%2s\n' % ('ATOM',
-                                             idx,
-                                             a.name[0],
-                                             a.resname[0],
-                                             a.chain[0],
-                                             residx + 1,
-                                             a.x[0],
-                                             a.y[0],
-                                             a.z[0],
-                                             0.0, 0.0,
-                                             a.segname[0],
-                                             a.element[0]))
+                fileh.write(self.get_pdb_line(a, idx, residx+1))
                 idx += 1
-                fileh.write(entry)
 
         fileh.write('END\n')
         fileh.close()
@@ -661,7 +630,7 @@ class AmberWriter(object):
                         sel.resid = fragres
                         sel.segname = str(i)
                         sel.user = 0.0
-                        idx = self._write_residue(sel, fileh, idx, hetatm=False)
+                        idx = self._write_residue(sel, fileh, idx, hetatom=False)
                         resseq.append(sel.resname[0])
                         fragres += 1
                 fileh.write("END\n")
