@@ -24,6 +24,7 @@ Copyright (C) 2019 Robin Betz
 
 
 from __future__ import print_function
+import abc
 import logging
 
 from networkx.algorithms import isomorphism
@@ -68,6 +69,14 @@ class MoleculeWriter(object):
         self.debug_verbose = kwargs.get("debug_verbose", False)
 
     #==========================================================================
+
+    __metaclass__ = abc.ABCMeta
+    @abc.abstractmethod
+    def write(self, filename):
+        """
+        Writes the output
+        """
+        pass
 
     #++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
     #                            STATIC FUNCTIONS                             #
