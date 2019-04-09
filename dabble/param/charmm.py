@@ -81,25 +81,8 @@ class CharmmWriter(MoleculeWriter):
         self.psf_name = ""
 
         # Default parameter sets
-        if kwargs.get("override_defaults", False):
-            self.topologies = []
-        else:
-            self.topologies = [
-                "top_all36_caps.rtf",
-                "top_all36_cgenff.rtf",
-                "top_all36_prot.rtf",
-                "top_all36_lipid.rtf",
-                "top_all36_carb.rtf",
-                "top_all36_na.rtf",
-                "toppar_water_ions.str",
-                "toppar_all36_prot_na_combined.str",
-                "toppar_all36_prot_fluoro_alkanes.str",
-            ]
-            for i, top in enumerate(self.topologies):
-                self.topologies[i] = resource_filename(__name__,
-                                                       os.path.join("charmm_parameters",
-                                                                    top))
-
+        self.topologies = [] if kwargs.get("override_defaults") \
+                             else self.get_charmm_topologies()
         if kwargs.get("extra_topos"):
             self.topologies.extend(kwargs.get("extra_topos"))
 
@@ -115,10 +98,6 @@ class CharmmWriter(MoleculeWriter):
         Args:
           psf_name (str): Prefix for the pdb/psf output files, extension
             will be appended
-
-        Returns:
-          topologies (list of str): Topology files that were used in creating
-              the psf
         """
         # Clean up all temp files from previous runs if present
         # An earlier check will exit if it's not okay to overwrite here
@@ -196,7 +175,28 @@ class CharmmWriter(MoleculeWriter):
         # Reset top molecule
         molecule.set_top(old_top)
 
-        return self.topologies
+
+    #=========================================================================
+    #                           Static methods                               #
+    #=========================================================================
+
+    @staticmethod
+    def get_charmm_topologies():
+        default_topologies = [
+            "top_all36_caps.rtf",
+            "top_all36_cgenff.rtf",
+            "top_all36_prot.rtf",
+            "top_all36_lipid.rtf",
+            "top_all36_carb.rtf",
+            "top_all36_na.rtf",
+            "toppar_water_ions.str",
+            "toppar_all36_prot_na_combined.str",
+            "toppar_all36_prot_fluoro_alkanes.str"
+        ]
+
+        return [resource_filename(__name__,
+                                  os.path.join("charmm_parameters", top))
+                for top in default_topologies]
 
     #=========================================================================
     #                           Private methods                              #

@@ -11,4 +11,5 @@ from dabble.param.ambermatcher import AmberMatcher
 from dabble.param.writer import MoleculeWriter
 from dabble.param.charmm import CharmmWriter
 from dabble.param.amber import AmberWriter
+from dabble.param.gromacs import GromacsWriter
 

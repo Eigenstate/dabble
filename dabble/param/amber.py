@@ -80,14 +80,14 @@ class AmberWriter(MoleculeWriter):
         self.extra_topos = kwargs.get("extra_topos", None)
         self.override = kwargs.get("override_defaults", False)
 
-        forcefield = kwargs.get("forcefield", "charmm36m")
+        forcefield = kwargs.get("forcefield", "amber")
         if forcefield not in ["amber", "charmm36m", "charmm", "charmm36"]:
             raise DabbleError("Unsupported forcefield: %s" % forcefield)
         self.forcefield = forcefield
         if "charmm" in self.forcefield:
 
             # Topologies used will be found and returned by CharmmWriter
-            self.topologies = []
+            self.topologies = CharmmWriter.get_charmm_topologies()
 
             self.parameters = [
                 "toppar_water_ions.str",
