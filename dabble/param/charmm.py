@@ -199,6 +199,28 @@ class CharmmWriter(MoleculeWriter):
                 for top in default_topologies]
 
     #=========================================================================
+
+    @staticmethod
+    def get_charmm_parameters(forcefield):
+        default_parameters = [
+            "toppar_water_ions.str",
+            "par_all36_cgenff.prm",
+            "par_all36_lipid.prm",
+            "par_all36_carb.prm",
+            "par_all36_na.prm",
+            "toppar_all36_prot_na_combined.str"
+        ]
+
+        if forcefield == "charmm36m":
+            default_parameters.append("par_all36m_prot.prm")
+        else:
+            default_parameters.append("par_all36_prot.prm")
+
+        return [resource_filename(__name__,
+                                  os.path.join("charmm_parameters", par))
+                for par in default_parameters]
+
+    #=========================================================================
     #                           Private methods                              #
     #=========================================================================
 

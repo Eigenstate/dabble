@@ -88,20 +88,7 @@ class AmberWriter(MoleculeWriter):
 
             # Topologies used will be found and returned by CharmmWriter
             self.topologies = CharmmWriter.get_charmm_topologies()
-
-            self.parameters = [
-                "toppar_water_ions.str",
-                "par_all36_cgenff.prm",
-                "par_all36_lipid.prm",
-                "par_all36_carb.prm",
-                "par_all36_na.prm",
-                "toppar_all36_prot_na_combined.str"
-                ]
-
-            if self.forcefield == "charmm36m":
-                self.parameters.append("par_all36m_prot.prm")
-            else:
-                self.parameters.append("par_all36_prot.prm")
+            self.parameters = CharmmWriter.get_charmm_parameters(self.forcefield)
 
             # Get resource filename path for all parameter files
             for i, par in enumerate(self.parameters):

@@ -1,10 +1,10 @@
 # Tests covalently bonded ligand
 import os
+import pytest
 
 dir = os.path.dirname(__file__)
 
 #==============================================================================
-
 def test_covalent_ligand_patches(tmpdir):
     """
     Tests covalently bound ligand parameterization with the graph. One
@@ -142,5 +142,53 @@ def test_covalent_ligand_amber(tmpdir):
 
     # Check for disulfide bonds
     assert all(len(x)==2 for x in atomsel("resname CYX and element S").bonds)
+
+#==============================================================================
+
+def test_covalent_ligand_gromacs_charmm(tmpdir):
+    from vmd import atomsel, molecule
+    from dabble.param import GromacsWriter
+
+    # Parameterize with charmm parameters
+    p = str(tmpdir.mkdir("multiligand_gromacs"))
+    molid = molecule.load("mae",
+                          os.path.join(dir,
+                                       "rho_arr_CYP_prepped_aligned_dowsered.mae"))
+
+    w = GromacsWriter(tmp_dir=p, molid=molid, forcefield="charmm36",
+                      extra_topos=[os.path.join(dir, "CYP_v1.str")])
+    w.write(os.path.join(p, "test"))
+
+    # Load the result
+    m2 = molecule.load("gro", os.path.join(p, "test.gro"))
+    molecule.set_top(m2)
+
+    # Sanity check the system was built completely
+    assert len(set(atomsel("protein or resname ACE NMA").residue)) == 697
+    assert len(atomsel("name N C O CA")) == 2784
+    assert len(set(atomsel("resname ACE NMA").resid)) == 4
+    assert len(atomsel("water")) == 654
+
+    # Check for palmitoylation
+    assert len(atomsel("resname CYP")) == 116
+    assert set(atomsel("resname CYP").resid) == set([322, 323])
+
+    # Check for protonation on Asp83
+    assert len(atomsel("resid 83 and resname ASP")) == 13
+    assert len(atomsel("resid 331 and resname ASP")) == 12
+
+    # Check for protonation on Glu134A
+    assert len(atomsel("resid 134 and resname GLU")) == 16
+    assert len(atomsel("resid 247 and resname GLU")) == 15
+
+    # Check that Ser98 is normal
+    assert len(atomsel("resid 98 and resname SER")) == 11
+
+    # Check for phosphorylation on Ser334
+    assert len(atomsel("resid 334 and resname SER")) == 14
+
+    # Check for phosphorylation on Ser338
+    assert len(atomsel("resid 338 and resname SER")) == 14
+
 
 #==============================================================================

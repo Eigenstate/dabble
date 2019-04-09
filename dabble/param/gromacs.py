@@ -24,13 +24,15 @@ Copyright (C) 2019 Robin Betz
 
 
 from __future__ import print_function
+import os
 import logging
+import tempfile
 
 from dabble import DabbleError
 from dabble.param import AmberWriter, CharmmWriter
-
 from parmed.formats.registry import load_file
 from parmed.gromacs import GromacsGroFile, GromacsTopologyFile
+from vmd import atomsel, evaltcl, molecule
 
 logger = logging.getLogger(__name__) # pylint: disable=invalid-name
 
@@ -62,6 +64,7 @@ class GromacsWriter(object):
             extra_topos (list of str): Additional topology (.str, .off, .lib) to
                 include.
             extra_params (list of str): Additional parameter sets (.str, .frcmod)
+            override_defaults (bool): If set, omits default charmm36m parameters
             debug_verbose (bool): Prints additional output, like from tleap.
         """
         self.molid = molid
@@ -74,6 +77,7 @@ class GromacsWriter(object):
         self.extra_topos = kwargs.get("extra_topos", [])
         self.extra_params = kwargs.get("extra_params", [])
         self.debug_verbose = kwargs.get("debug_verbose", False)
+        self.override_defaults = kwargs.get("override_defaults", False)
         self.outprefix = ""
 
     #==========================================================================
@@ -91,12 +95,13 @@ class GromacsWriter(object):
         if "charmm" in self.forcefield:
             # Topologies used will be found and returned by CharmmWriter
             self.topologies = CharmmWriter.get_charmm_topologies()
+            self.parameters = CharmmWriter.get_charmm_parameters(self.forcefield)
 
             psfgen = CharmmWriter(molid=self.molid,
                                   tmp_dir=self.tmp_dir,
                                   lipid_sel=self.lipid_sel,
                                   extra_topos=self.extra_topos,
-                                  override_defaults=self.override)
+                                  override_defaults=self.override_defaults)
             psfgen.write(self.outprefix)
             self._psf_to_gromacs()
 
@@ -132,7 +137,25 @@ class GromacsWriter(object):
     #==========================================================================
 
     def _psf_to_gromacs(self):
-        print("Not implemented")
-        pass
+
+        # Save the .gro coordinate file with VMD
+        mid = molecule.load("psf", self.outprefix + ".psf",
+                            "pdb", self.outprefix + ".pdb")
+        atomsel("all", mid).write("gro", self.outprefix + ".gro")
+        molecule.delete(mid)
+
+        # Write a temporary file for a topotools tcl script
+        f, temp = tempfile.mkstemp(prefix="topo", suffix=".tcl",
+                                    dir=self.tmp_dir, text=True)
+        with os.fdopen(f, 'w') as fh:
+            fh.write("package require topotools 1.6\n")
+            fh.write("mol load psf %s.psf pdb %s.pdb\n"
+                     % (self.outprefix, self.outprefix))
+            fh.write("topo writegmxtop %s.top [list %s ]\n"
+                     % (self.outprefix, " ".join(self.parameters)))
+
+        # Run the pbctools tcl script
+        output = evaltcl("play %s" % temp)
+        print(output)
 
 #++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
