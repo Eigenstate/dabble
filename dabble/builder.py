@@ -95,9 +95,12 @@ class DabbleBuilder(object):
 
 
         # Check the file output format is supported
-        self.out_fmt = fileutils.check_out_type(self.opts.get('output_filename'),
-                                                self.opts.get('forcefield'),
-                                                self.opts.get('hmassrepartition'))
+        self.out_fmt = fileutils.check_out_type(
+            self.opts.get('output_filename'),
+            format=self.opts.get('format'),
+            forcefield=self.opts.get('forcefield'),
+            hmr=self.opts.get('hmassrepartition')
+        )
 
     #==========================================================================
 

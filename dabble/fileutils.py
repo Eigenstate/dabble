@@ -26,7 +26,7 @@ import tempfile
 
 from vmd import molecule, atomsel
 from dabble import DabbleError
-from dabble.param import AmberWriter, CharmmWriter
+from dabble.param import AmberWriter, CharmmWriter, GromacsWriter
 
 #++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
 
@@ -188,49 +188,29 @@ def write_final_system(out_fmt, out_name, molid, **kwargs):
     mae_name = '.'.join(out_name.rsplit('.')[:-1]) + '.mae'
     write_ct_blocks(molid=molid, sel='beta 1', output_filename=mae_name,
                     tmp_dir=kwargs['tmp_dir'])
+    temp_mol = molecule.load('mae', mae_name)
 
-    # If a converted output format (pdb or dms) desired, write that here
-    # and the mae is a temp file that can be deleted
-    if out_fmt == 'dms':
-        temp_mol = molecule.load('mae', mae_name)
-        atomsel('all', molid=temp_mol).write(out_fmt, out_name)
-        molecule.delete(temp_mol)
-        os.remove(mae_name)
+    if out_fmt == "desmond":
+        atomsel('all', molid=temp_mol).write("dms", out_name)
 
     # For pdb, write an AMBER leap compatible pdb, don't trust the VMD
     # pdb writing routine
-    if out_fmt == 'pdb':
-        temp_mol = molecule.load('mae', mae_name)
-        atomsel('all', molid=temp_mol).write(out_fmt, out_name)
-        #dabbleparam.write_amber_pdb(opts.output_filename, molid=temp_mol)
-        molecule.delete(temp_mol)
+    elif out_fmt == "pdb":
+        atomsel("all", molid=temp_mol).write("pdb", out_name)
 
     # If we want a parameterized format like amber or charmm, a psf must
     # first be written which does the atom typing, etc
-
-    tops = []; pars = []
-    if kwargs.get('extra_topos'):
-        tops.extend(kwargs.get('extra_topos'))
-    if kwargs.get('extra_params'):
-        pars.extend(kwargs.get('extra_params'))
-    if kwargs.get('extra_streams'):
-        tops.extend(kwargs.get('extra_streams'))
-        pars.extend(kwargs.get('extra_streams'))
-
-
-    if out_fmt == 'charmm':
-        temp_mol = molecule.load('mae', mae_name)
-        write_psf_name = mae_name.replace('.mae', '')
+    elif out_fmt == "charmm" or out_fmt == "namd":
         writer = CharmmWriter(molid=temp_mol,
                               tmp_dir=kwargs['tmp_dir'],
                               forcefield=kwargs['forcefield'],
                               lipid_sel=kwargs.get('lipid_sel'),
-                              extra_topos=tops,
+                              extra_topos=kwargs.get('extra_topos', []),
                               debug_verbose=kwargs.get('debug_verbose'))
-        writer.write(write_psf_name)
+        writer.write(mae_name.replace(".mae", ""))
 
     # For amber format files, invoke the parmed chamber routine
-    if out_fmt == 'amber':
+    elif out_fmt == "amber":
         if "charmm" in kwargs.get('forcefield'):
             print("Writing AMBER format files with CHARMM parameters. "
                   "This may take a moment...\n")
@@ -238,18 +218,32 @@ def write_final_system(out_fmt, out_name, molid, **kwargs):
             print("Writing AMBER format files with Amber parameters. "
                   "This may take a moment...\n")
 
-        temp_mol = molecule.load('mae', mae_name)
-        write_psf_name = mae_name.replace('.mae', '')
         writeit = AmberWriter(molid=temp_mol,
                               tmp_dir=kwargs['tmp_dir'],
                               forcefield=kwargs['forcefield'],
                               lipid_sel=kwargs.get('lipid_sel'),
                               hmr=kwargs.get('hmassrepartition'),
-                              extra_topos=tops,
-                              extra_params=pars,
+                              extra_topos=kwargs.get('extra_topos', []),
+                              extra_params=kwargs.get('extra_params', []),
                               debug_verbose=kwargs.get('debug_verbose'))
-        writeit.write(write_psf_name)
+        writeit.write(mae_name.replace(".mae", ""))
 
+    # For gromacs files, use either topotools or parmed depending on
+    # forcefield. GromacsWriter handles this for us
+    elif out_fmt == 'gromacs':
+        if "charmm" in kwargs.get('forcefield'):
+            print("Writing Gromacs format files with CHARMM parameters. "
+                  "This may take a moment...\n")
+        else:
+            print("Writing Gromacs format files with Amber parameters. "
+                  "This may take a moment...\n")
+
+        writeit = GromacsWriter(molid=temp_mol,
+                                tmp_dir=kwargs['tmp_dir'],
+                                forcefield=kwargs['forcefield'])
+        writeit.write(mae_name.replace(".mae", ""))
+
+    molecule.delete(temp_mol)
     return out_name
 
 #==========================================================================
@@ -277,14 +271,16 @@ def check_write_ok(filename, out_fmt, overwrite=False):
     # Generate file suffixes to search for
     prefix = '.'.join(filename.split('.')[:-1])
     suffixes = ['mae']
-    if out_fmt == 'dms':
+    if out_fmt == 'desmond':
         suffixes.append('dms')
     elif out_fmt == 'pdb':
         suffixes.append('pdb')
-    elif out_fmt == 'charmm':
+    elif out_fmt == 'charmm' or out_fmt == 'namd':
         suffixes.extend(['psf', 'pdb'])
     elif out_fmt == 'amber':
         suffixes.extend(['psf', 'pdb', 'prmtop', 'inpcrd'])
+    elif out_fmt == 'gromacs':
+        suffixes.extend(['.gro', '.top'])
 
     exists = []
     for sfx in suffixes:
@@ -302,13 +298,14 @@ def check_write_ok(filename, out_fmt, overwrite=False):
 
 #==========================================================================
 
-def check_out_type(value, forcefield, hmr=False):
+def check_out_type(value, format, forcefield, hmr=False):
     """
     Checks the file format of the requiested output is supported, and sets
     internal variables as necessary.
 
     Args:
       value (str): Filename requested
+      format (str): Format requested, or None to infer from filename
       forcefield (str): Force field requested
       hmr (bool): If hydrogen mass repartitioning is requested
 
@@ -320,6 +317,13 @@ def check_out_type(value, forcefield, hmr=False):
       NotImplementedError: if hydrogen mass repartitioning is requested
                            for amber files
     """
+    if format is not None:
+        print("Will output files in %s format" % format)
+        if format == "namd":
+            return 'charmm' # Charmm and namd are the same thing
+        return format
+    else:
+        print("Inferring output format from file extension")
 
     ext = value.rsplit('.')[-1]
     if ext == 'mae':

@@ -103,6 +103,12 @@ def main():
                        help='Name of output file, format will be inferred by '
                        'extension. Currently supported: pdb, mae, psf (charmm), '
                        'prmtop (amber or charmm)')
+    group.add_argument('-format', '--format', dest='format',
+                       type=str, metavar='<output format>', default=None,
+                       choices=['amber', 'charmm', 'desmond', 'gromacs', 'namd',
+                                'pdb'],
+                       help='Format of output file. Supported: amber, charmm, '
+                       'desmond, gromacs, namd, pdb')
     group.add_argument('-M', '--membrane-system', dest='membrane_system',
                        type=str, metavar='<solvent>',
                        default="DEFAULT",
@@ -122,16 +128,12 @@ def main():
                        'to allow up to 4fs time steps. Currently prmtop output only')
     group.add_argument('-top', '--topology', default=None, action='append',
                        type=str, metavar='<topologies>', dest='extra_topos',
-                       help='Additional topology (rtf, off, lib) file to '
-                       'include in parameterization')
+                       help='Additional topology (rtf, off, lib, leaprc) file '
+                       'to include in parameterization')
     group.add_argument('-par', '--parameters', default=None, action='append',
                        type=str, metavar='<parameters>', dest='extra_params',
                        help='Additional parameter (prm, lib, frcmod) file to '
                        'include in parameterization')
-    group.add_argument('-str', '--stream', default=None, action='append',
-                       type=str, metavar='<streams>', dest='extra_streams',
-                       help='Additional stream (str, leaprc) file to include in '
-                       'parameterization')
 
     group = parser.add_argument_group('Lipid Membrane Options')
     group.add_argument('-L', '--lipid-selection', dest='lipid_sel',
