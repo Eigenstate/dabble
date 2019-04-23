@@ -15,14 +15,12 @@ requirements:
         - vmd-python >=2.0.4
         - networkx >=1.11
         - parmed
-        - pydot
     run:
         - python
         - vmd-python >=2.0.4
         - parmed
         - networkx >=1.11
         - psfgen
-        - pydot
 
 about:
     home: dabble.robinbetz.com
