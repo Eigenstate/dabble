@@ -105,10 +105,9 @@ def main(argv=None):
                        'prmtop (amber or charmm)')
     group.add_argument('-format', '--format', dest='format',
                        type=str, metavar='<output format>', default=None,
-                       choices=['amber', 'charmm', 'desmond', 'gromacs', 'namd',
-                                'pdb'],
+                       choices=['amber', 'charmm', 'desmond', 'gromacs', 'pdb'],
                        help='Format of output file. Supported: amber, charmm, '
-                       'desmond, gromacs, namd, pdb')
+                       'desmond, gromacs, pdb')
     group.add_argument('-M', '--membrane-system', dest='membrane_system',
                        type=str, metavar='<solvent>',
                        default="DEFAULT",

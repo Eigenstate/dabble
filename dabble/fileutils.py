@@ -200,7 +200,7 @@ def write_final_system(out_fmt, out_name, molid, **kwargs):
 
     # If we want a parameterized format like amber or charmm, a psf must
     # first be written which does the atom typing, etc
-    elif out_fmt == "charmm" or out_fmt == "namd":
+    elif out_fmt == "charmm":
         writer = CharmmWriter(molid=temp_mol,
                               tmp_dir=kwargs['tmp_dir'],
                               forcefield=kwargs['forcefield'],
@@ -275,7 +275,7 @@ def check_write_ok(filename, out_fmt, overwrite=False):
         suffixes.append('dms')
     elif out_fmt == 'pdb':
         suffixes.append('pdb')
-    elif out_fmt == 'charmm' or out_fmt == 'namd':
+    elif out_fmt == 'charmm':
         suffixes.extend(['psf', 'pdb'])
     elif out_fmt == 'amber':
         suffixes.extend(['psf', 'pdb', 'prmtop', 'inpcrd'])
@@ -319,8 +319,6 @@ def check_out_type(value, format, forcefield, hmr=False):
     """
     if format is not None:
         print("Will output files in %s format" % format)
-        if format == "namd":
-            return 'charmm' # Charmm and namd are the same thing
         return format
     else:
         print("Inferring output format from file extension")
