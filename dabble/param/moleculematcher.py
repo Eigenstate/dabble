@@ -202,6 +202,41 @@ class MoleculeMatcher(object): # pylint: disable=too-few-public-methods
         return externs
 
     #=========================================================================
+
+    def write_dot(self, graph, output):
+        """
+        Writes the residue as a dot file that can be rendered as a SVG
+        to aid in debugging.
+
+        Args:
+            graph (networkx Graph): Graph to draw
+            output (str): Filename to write to
+        """
+        colors = {"C": "#40e0d0",
+                  "O": "#ff0000",
+                  "H": "#cecece",
+                  "N": "#4268f4"}
+        default = "#b27c00"
+
+        with open(output, 'w') as fn:
+            fn.write("strict graph {\n")
+            for nodename in graph.nodes():
+                node = graph.node[nodename]
+                ele = node.get("element")
+                fn.write("%s [shape=record style=\"filled,rounded\" "
+                         "fillcolor=\"%s\" "
+                         "label=\"%s|{%s|%s}\"];\n"
+                         % (nodename, colors.get(ele, default),
+                            ele, node.get("atomname"), node.get("type", "")))
+
+            for e1, e2 in graph.edges():
+                fn.write("%s -- %s;\n" % (e1, e2))
+
+            fn.write("packMode=\"graph\";\n")
+            fn.write("}\n")
+
+
+    #=========================================================================
     #                           Private methods                              #
     #=========================================================================
 
@@ -311,8 +346,12 @@ class MoleculeMatcher(object): # pylint: disable=too-few-public-methods
             rgraph.add_edges_from([bnd for bnd in gen])
 
         # Dictionary translating index to element, set as known attribute
-        rdict = {selection.index[i]: selection.element[i] \
+        rdict = {selection.index[i]: selection.element[i]
                 for i in range(len(selection))}
+
+        # Atom name dictionary
+        adict = {selection.index[i]: selection.name[i]
+                 for i in range(len(selection))}
 
         # Set all atoms to belong to this residue by default
 
@@ -344,10 +383,12 @@ class MoleculeMatcher(object): # pylint: disable=too-few-public-methods
                 edict[oth] = "-" if oth < ins else "+"
 
             rdict[oth] = sel.element[0]
+            adict[oth] = sel.atomname[0]
 
-        # Set node attributes
+        # Set node attributes only after extraresidue nodes have been found
         nx.set_node_attributes(rgraph, name='element', values=rdict)
         nx.set_node_attributes(rgraph, name='residue', values=edict)
+        nx.set_node_attributes(rgraph, name='atomname', values=adict)
 
         return (rgraph, is_covalent)
 

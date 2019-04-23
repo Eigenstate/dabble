@@ -69,7 +69,7 @@ class DabbleTempDir(object): # pylint: disable=too-few-public-methods
 
 #++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
 
-def main():
+def main(argv=None):
 
     WELCOME_SCREEN = '''
      ===============================================
@@ -215,7 +215,8 @@ def main():
 
     print(WELCOME_SCREEN)
     print("\nCommand was:\n  %s\n" % " ".join([i for i in sys.argv]))
-    opts = parser.parse_args(sys.argv[1:])
+    #opts = parser.parse_args(sys.argv[1:])
+    opts = parser.parse_args(argv)
 
 # Make the temporary directory. Needs to be done now so there is somewhere
 # to save the vmd output

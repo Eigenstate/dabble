@@ -25,7 +25,6 @@
 from __future__ import print_function
 import logging
 import networkx as nx
-from networkx.drawing.nx_pydot import write_dot
 from networkx.algorithms import isomorphism
 from vmd import atomsel
 
@@ -152,7 +151,7 @@ class CharmmMatcher(MoleculeMatcher):
 
         logger.error("Couldn't find a patch for resname '%s'."
                      "Dumping as 'rgraph.dot'", resname)
-        write_dot(rgraph, "rgraph.dot")
+        self.write_dot(rgraph, "rgraph.dot")
         return (None, None, None)
 
     #=========================================================================
@@ -412,7 +411,10 @@ class CharmmMatcher(MoleculeMatcher):
                 if tokens[1] in graph.nodes():
                     graph.node[tokens[1]]["type"] = tokens[2]
                 else:
-                    graph.add_node(tokens[1], type=tokens[2], residue="self", patched=bool(patch))
+                    graph.add_node(tokens[1], type=tokens[2],
+                                   atomname=tokens[1],
+                                   residue="self",
+                                   patched=bool(patch))
 
             # Bond or double means add edge to residue graph
             elif tokens[0] == "BOND" or tokens[0] == "DOUBLE":

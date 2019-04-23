@@ -32,7 +32,6 @@ from subprocess import check_output
 from pkg_resources import resource_filename
 from vmd import molecule, atomsel
 
-from networkx.drawing.nx_pydot import write_dot
 from parmed.tools import chamber, parmout, HMassRepartition, checkValidity
 from parmed.amber import AmberParm
 from parmed.exceptions import ParameterWarning
@@ -94,6 +93,7 @@ class AmberWriter(MoleculeWriter):
             for i, par in enumerate(self.parameters):
                 self.parameters[i] = resource_filename(__name__,
                                          os.path.join("charmm_parameters", par))
+            self.matcher = None
 
         elif self.forcefield == 'amber':
             if not os.environ.get("AMBERHOME"):
@@ -117,7 +117,6 @@ class AmberWriter(MoleculeWriter):
                                       "Dabble requires >= AmberTools16!")
 
             self.parameters = []
-            self.matcher = None
 
         if self.override:
             self.topologies = []
@@ -128,6 +127,12 @@ class AmberWriter(MoleculeWriter):
 
         if kwargs.get("extra_params") is not None:
             self.parameters.extend(kwargs.get("extra_params"))
+
+        # Initialize matcher only now that all topologies have been set
+        if "charmm" in self.forcefield:
+            self.matcher = None
+        elif self.forcefield == "amber":
+            self.matcher = AmberMatcher(self.topologies)
 
         self.prompt_params = False
 
@@ -152,8 +157,7 @@ class AmberWriter(MoleculeWriter):
         # Amber forcefield
         elif "amber" in self.forcefield:
 
-            # Initialize the matcher
-            self.matcher = AmberMatcher(self.topologies)
+            # Print info about topologies
             print("Using the following topologies:")
             for top in self.topologies:
                 print("  - %s" % top.split("/")[-1])
@@ -237,7 +241,7 @@ class AmberWriter(MoleculeWriter):
                 resnames, atomnames, other = self.matcher.get_linkage(sel, self.molid)
                 if not resnames:
                     rgraph = self.matcher.parse_vmd_graph(sel)[0]
-                    write_dot(rgraph, "rgraph.dot")
+                    self.matcher.write_dot(rgraph, "rgraph.dot")
                     raise DabbleError("ERROR: Could not find a residue definition "
                                       "for %s:%s" % (sel.resname[0],
                                                      sel.resid[0]))
