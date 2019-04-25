@@ -383,7 +383,7 @@ class MoleculeMatcher(object): # pylint: disable=too-few-public-methods
                 edict[oth] = "-" if oth < ins else "+"
 
             rdict[oth] = sel.element[0]
-            adict[oth] = sel.atomname[0]
+            adict[oth] = sel.name[0]
 
         # Set node attributes only after extraresidue nodes have been found
         nx.set_node_attributes(rgraph, name='element', values=rdict)
