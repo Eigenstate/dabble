@@ -66,6 +66,7 @@ class CharmmWriter(MoleculeWriter):
             molid (int): VMD molecule ID of system to write
             tmp_dir (str): Directory for temporary files. Defaults to "."
             lipid_sel (str): Lipid selection string. Defaults to "lipid"
+            forcefield (str): Forcefield to use, either "charmm" or "amber"
             extra_topos (list of str): Additional topology (.str, .off, .lib) to
                 include.
             extra_params (list of str): Additional parameter sets (.str, .frcmod)
@@ -80,9 +81,14 @@ class CharmmWriter(MoleculeWriter):
         self.psfgen = PsfGen()
         self.psf_name = ""
 
+        forcefield = kwargs.get("forcefield", "amber")
+        if forcefield not in ["amber", "charmm36m", "charmm", "charmm36"]:
+            raise DabbleError("Unsupported forcefield: %s" % forcefield)
+        self.forcefield = forcefield
+
         # Default parameter sets
         self.topologies = [] if kwargs.get("override_defaults") \
-                             else self.get_charmm_topologies()
+                             else self.get_charmm_topologies(self.forcefield)
         if kwargs.get("extra_topos"):
             self.topologies.extend(kwargs.get("extra_topos"))
 
@@ -202,6 +208,8 @@ class CharmmWriter(MoleculeWriter):
 
     @staticmethod
     def get_charmm_parameters(forcefield):
+
+        if "charmm" in forcefield:
         default_parameters = [
             "toppar_water_ions.str",
             "par_all36_cgenff.prm",
