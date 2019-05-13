@@ -92,7 +92,7 @@ class MoleculeMatcher(object): # pylint: disable=too-few-public-methods
                 nodenames from CharmmMatcher, then write amber off files with it
 
         """
-        if kwargs.get("topologies"):
+        if kwargs.get("topologies") is not None:
             self.topologies = kwargs.get("topologies")
             self.nodenames = {}
             self.known_res = {}
@@ -223,14 +223,14 @@ class MoleculeMatcher(object): # pylint: disable=too-few-public-methods
             for nodename in graph.nodes():
                 node = graph.node[nodename]
                 ele = node.get("element")
-                fn.write("%s [shape=record style=\"filled,rounded\" "
+                fn.write("\"%s\" [shape=record style=\"filled,rounded\" "
                          "fillcolor=\"%s\" "
                          "label=\"%s|{%s|%s}\"];\n"
                          % (nodename, colors.get(ele, default),
                             ele, node.get("atomname"), node.get("type", "")))
 
             for e1, e2 in graph.edges():
-                fn.write("%s -- %s;\n" % (e1, e2))
+                fn.write("\"%s\" -- \"%s\";\n" % (e1, e2))
 
             fn.write("packMode=\"graph\";\n")
             fn.write("}\n")
@@ -358,10 +358,10 @@ class MoleculeMatcher(object): # pylint: disable=too-few-public-methods
         # Loop through all nodes for indices that are not in this selection.
         # They were added to the graph from edges that go to other residues,
         # such as amino acid +N or -CA bonds. Mark these as special elements.
-        edict = {selection.index[i]: "self" \
-                 for i in range(len(selection))}
+        edict = {selection.index[i]: "self" for i in range(len(selection))}
         others = set(rgraph.nodes()) - set(selection.index)
         is_covalent = bool(len(others))
+
         for oth in others:
             sel = atomsel('index %d' % oth, molid=selection.molid)
             resido = sel.resid[0]
@@ -373,6 +373,7 @@ class MoleculeMatcher(object): # pylint: disable=too-few-public-methods
             # Don't actually use this code to determine which one is first
             # as there isn't really a convention for it. Instead, just go
             # by atom index as the ordering here should be reliable.
+            # TODO: atom index NOT reliable. +- shouldn't matter.
             else:
                 if set(selection.insertion) == set(sel.insertion)\
                         and set(selection.fragment) == set(sel.fragment):

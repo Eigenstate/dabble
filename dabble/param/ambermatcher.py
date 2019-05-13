@@ -135,6 +135,7 @@ class AmberMatcher(MoleculeMatcher):
                                                    node_match=self._check_atom_match)
                 if matcher.is_isomorphic():
                     matched = True
+                    # TODO : check only one match
                     match = next(matcher.match())
                     break
 
@@ -333,6 +334,7 @@ class AmberMatcher(MoleculeMatcher):
         matcher = isomorphism.GraphMatcher(rgraph, graph, \
                                            node_match=self._check_atom_match)
         if matcher.subgraph_is_isomorphic():
+            # TODO: Check there's only one match
             match = next(matcher.match())
         else:
             return (None, None, None)

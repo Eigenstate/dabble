@@ -533,7 +533,8 @@ class CharmmMatcher(MoleculeMatcher):
         # Now that all atom and mass lines are read, get the element for each atom
         for node, data in graph.nodes(data=True):
             if data.get('residue') != "self":
-                typestr = ''.join([i for i in node if not i.isdigit() and i != "+" and i != "-"])
+                typestr = ''.join([i for i in node if not i.isdigit()
+                                   and i != "+" and i != "-"])
             else:
                 typestr = data.get('type')
 
@@ -569,17 +570,17 @@ def _define_bond(graph, node1, node2, patch):
 
     # Sanity check and process first atom name
     if "+" in node1:
-        graph.add_node(node1, type="", residue="+", patched=patch)
+        graph.add_node(node1, atomname="+", type="", residue="+", patched=patch)
     elif "-" in node1:
-        graph.add_node(node1, type="", residue="-", patched=patch)
+        graph.add_node(node1, atomname="-", type="", residue="-", patched=patch)
     elif node1 not in graph.nodes():
         return False
 
     # Now sanity check and process second atom name
     if "+" in node2:
-        graph.add_node(node2, type="", residue="+", patched=patch)
+        graph.add_node(node2, atomname="+", type="", residue="+", patched=patch)
     elif "-" in node2:
-        graph.add_node(node2, type="", residue="-", patched=patch)
+        graph.add_node(node2, atomname="-", type="", residue="-", patched=patch)
     elif node2 not in graph.nodes():
         return False
 

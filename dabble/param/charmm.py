@@ -81,7 +81,7 @@ class CharmmWriter(MoleculeWriter):
         self.psfgen = PsfGen()
         self.psf_name = ""
 
-        forcefield = kwargs.get("forcefield", "amber")
+        forcefield = kwargs.get("forcefield", "charmm36m")
         if forcefield not in ["amber", "charmm36m", "charmm", "charmm36"]:
             raise DabbleError("Unsupported forcefield: %s" % forcefield)
         self.forcefield = forcefield
@@ -187,18 +187,26 @@ class CharmmWriter(MoleculeWriter):
     #=========================================================================
 
     @staticmethod
-    def get_charmm_topologies():
-        default_topologies = [
-            "top_all36_caps.rtf",
-            "top_all36_cgenff.rtf",
-            "top_all36_prot.rtf",
-            "top_all36_lipid.rtf",
-            "top_all36_carb.rtf",
-            "top_all36_na.rtf",
-            "toppar_water_ions.str",
-            "toppar_all36_prot_na_combined.str",
-            "toppar_all36_prot_fluoro_alkanes.str"
-        ]
+    def get_charmm_topologies(forcefield):
+        if "charmm" in forcefield:
+            default_topologies = [
+                "top_all36_caps.rtf",
+                "top_all36_cgenff.rtf",
+                "top_all36_prot.rtf",
+                "top_all36_lipid.rtf",
+                "top_all36_carb.rtf",
+                "top_all36_na.rtf",
+                "toppar_water_ions.str",
+                "toppar_all36_prot_na_combined.str",
+                "toppar_all36_prot_fluoro_alkanes.str"
+            ]
+        elif "amber" in forcefield:
+            default_topologies = [
+                "parm14sb_all.rtf",
+                "toppar_water_ions.str" # TODO amber ions?
+            ]
+        else:
+            raise ValueError("Invalid forcefield: '%s'" % forcefield)
 
         return [resource_filename(__name__,
                                   os.path.join("charmm_parameters", top))
@@ -210,14 +218,21 @@ class CharmmWriter(MoleculeWriter):
     def get_charmm_parameters(forcefield):
 
         if "charmm" in forcefield:
-        default_parameters = [
-            "toppar_water_ions.str",
-            "par_all36_cgenff.prm",
-            "par_all36_lipid.prm",
-            "par_all36_carb.prm",
-            "par_all36_na.prm",
-            "toppar_all36_prot_na_combined.str"
-        ]
+            default_parameters = [
+                "toppar_water_ions.str",
+                "par_all36_cgenff.prm",
+                "par_all36_lipid.prm",
+                "par_all36_carb.prm",
+                "par_all36_na.prm",
+                "toppar_all36_prot_na_combined.str"
+            ]
+        elif "amber" in forcefield:
+            default_parameters = [
+                "parm14sb_all.prm",
+                "toppar_water_ions.str" # TODO amber ions?
+            ]
+        else:
+            raise ValueError("Invalid forcefield: '%s'" % forcefield)
 
         if forcefield == "charmm36m":
             default_parameters.append("par_all36m_prot.prm")

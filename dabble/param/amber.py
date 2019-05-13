@@ -132,7 +132,7 @@ class AmberWriter(MoleculeWriter):
         if "charmm" in self.forcefield:
             self.matcher = None
         elif self.forcefield == "amber":
-            self.matcher = AmberMatcher(self.topologies)
+            self.matcher = AmberMatcher(topologies=self.topologies)
 
         self.prompt_params = False
 
@@ -216,7 +216,8 @@ class AmberWriter(MoleculeWriter):
         to track which things have been written.
 
         Returns:
-            (set of tuples (int,int)): Residue #s of disulfide bonded residues
+            (set of tuples (int,int)): Residue #s of disulfide or otherwise
+                noncanonically linked residues
 
         Raises:
             ValueError if a residue definition could not be found
@@ -234,11 +235,13 @@ class AmberWriter(MoleculeWriter):
 
             residue = nonlips.pop()
             sel = atomsel("residue %s" % residue)
-            resnames, atomnames = self.matcher.get_names(sel, print_warning=False)
+            resnames, atomnames = self.matcher.get_names(sel,
+                                                         print_warning=False)
 
             # Check if it's a linkage to another amino acid
             if not resnames:
-                resnames, atomnames, other = self.matcher.get_linkage(sel, self.molid)
+                resnames, atomnames, other = self.matcher.get_linkage(sel,
+                                                                      self.molid)
                 if not resnames:
                     rgraph = self.matcher.parse_vmd_graph(sel)[0]
                     self.matcher.write_dot(rgraph, "rgraph.dot")
