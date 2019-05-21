@@ -95,7 +95,7 @@ def test_check_resname():
 #    from dabble.param import CharmmMatcher
 #    from pkg_resources import resource_filename
 #
-#    g = CharmmMatcher([resource_filename("Dabble.param", "charmm_parameters/top_all36_prot.rtf")])
+#    g = CharmmMatcher([resource_filename("Dabble.param", "parameters/top_all36_prot.rtf")])
 #    g.write_dot(g.known_res["TYR"], str(tmpdir)+"/tyr.dot")
 #    subprocess.check_call(["diff", "-q", dir+"correct_tyr.dot", str(tmpdir)+"/tyr.dot"])
 

@@ -62,7 +62,7 @@ class AmberMatcher(MoleculeMatcher):
         super(AmberMatcher, self).__init__(topologies=topologies)
 
         # Add the water without TIP3 bond
-        self._load_off(resource_filename(__name__, "charmm_parameters/hoh.lib"))
+        self._load_off(resource_filename(__name__, "parameters/hoh.lib"))
 
 
     #++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++

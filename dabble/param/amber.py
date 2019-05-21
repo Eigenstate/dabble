@@ -86,13 +86,13 @@ class AmberWriter(MoleculeWriter):
         if "charmm" in self.forcefield:
 
             # Topologies used will be found and returned by CharmmWriter
-            self.topologies = CharmmWriter.get_charmm_topologies(self.forcefield)
-            self.parameters = CharmmWriter.get_charmm_parameters(self.forcefield)
+            self.topologies = CharmmWriter.get_topologies(self.forcefield)
+            self.parameters = CharmmWriter.get_parameters(self.forcefield)
 
             # Get resource filename path for all parameter files
             for i, par in enumerate(self.parameters):
                 self.parameters[i] = resource_filename(__name__,
-                                         os.path.join("charmm_parameters", par))
+                                         os.path.join("parameters", par))
             self.matcher = None
 
         elif self.forcefield == 'amber':

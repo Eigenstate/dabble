@@ -94,8 +94,8 @@ class GromacsWriter(object):
         # Charmm forcefield
         if "charmm" in self.forcefield:
             # Topologies used will be found and returned by CharmmWriter
-            self.topologies = CharmmWriter.get_charmm_topologies(self.forcefield)
-            self.parameters = CharmmWriter.get_charmm_parameters(self.forcefield)
+            self.topologies = CharmmWriter.get_topologies(self.forcefield)
+            self.parameters = CharmmWriter.get_parameters(self.forcefield)
 
             psfgen = CharmmWriter(molid=self.molid,
                                   tmp_dir=self.tmp_dir,

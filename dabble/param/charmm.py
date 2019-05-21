@@ -88,7 +88,7 @@ class CharmmWriter(MoleculeWriter):
 
         # Default parameter sets
         self.topologies = [] if kwargs.get("override_defaults") \
-                             else self.get_charmm_topologies(self.forcefield)
+                             else self.get_topologies(self.forcefield)
         if kwargs.get("extra_topos"):
             self.topologies.extend(kwargs.get("extra_topos"))
 
@@ -188,7 +188,7 @@ class CharmmWriter(MoleculeWriter):
     #=========================================================================
 
     @staticmethod
-    def get_charmm_topologies(forcefield):
+    def get_topologies(forcefield):
         if "charmm" in forcefield:
             default_topologies = [
                 "top_all36_caps.rtf",
@@ -209,14 +209,13 @@ class CharmmWriter(MoleculeWriter):
         else:
             raise ValueError("Invalid forcefield: '%s'" % forcefield)
 
-        return [resource_filename(__name__,
-                                  os.path.join("charmm_parameters", top))
+        return [resource_filename(__name__, os.path.join("parameters", top))
                 for top in default_topologies]
 
     #=========================================================================
 
     @staticmethod
-    def get_charmm_parameters(forcefield):
+    def get_parameters(forcefield):
 
         if "charmm" in forcefield:
             default_parameters = [
@@ -241,7 +240,7 @@ class CharmmWriter(MoleculeWriter):
             default_parameters.append("par_all36_prot.prm")
 
         return [resource_filename(__name__,
-                                  os.path.join("charmm_parameters", par))
+                                  os.path.join("parameters", par))
                 for par in default_parameters]
 
     #=========================================================================
