@@ -137,6 +137,7 @@ class CharmmWriter(MoleculeWriter):
             self._write_water_blocks()
 
         # Now lipid
+        # TODO: lipid names aren't matched with topologies?
         if len(atomsel(self.lipid_sel)):
             self._write_lipid_blocks()
 
@@ -372,6 +373,11 @@ class CharmmWriter(MoleculeWriter):
         alll = atomsel('(%s) and user 1.0' % self.lipid_sel)
         residues = list(set(alll.residue))
         residues.sort()
+
+        # Lipids not compatible with AMBER parameters, CHARMM format
+        if len(residues) and "amber" in self.forcefield:
+            raise ValueError("AMBER parameters not supported for lipids in "
+                             "CHARMM output format")
 
         # Sanity check for < 10k lipids
         if len(residues) >= 10000:

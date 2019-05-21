@@ -86,7 +86,7 @@ class AmberWriter(MoleculeWriter):
         if "charmm" in self.forcefield:
 
             # Topologies used will be found and returned by CharmmWriter
-            self.topologies = CharmmWriter.get_charmm_topologies()
+            self.topologies = CharmmWriter.get_charmm_topologies(self.forcefield)
             self.parameters = CharmmWriter.get_charmm_parameters(self.forcefield)
 
             # Get resource filename path for all parameter files

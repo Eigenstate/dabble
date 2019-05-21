@@ -94,7 +94,7 @@ class GromacsWriter(object):
         # Charmm forcefield
         if "charmm" in self.forcefield:
             # Topologies used will be found and returned by CharmmWriter
-            self.topologies = CharmmWriter.get_charmm_topologies()
+            self.topologies = CharmmWriter.get_charmm_topologies(self.forcefield)
             self.parameters = CharmmWriter.get_charmm_parameters(self.forcefield)
 
             psfgen = CharmmWriter(molid=self.molid,
@@ -142,6 +142,7 @@ class GromacsWriter(object):
         mid = molecule.load("psf", self.outprefix + ".psf",
                             "pdb", self.outprefix + ".pdb")
         atomsel("all", mid).write("gro", self.outprefix + ".gro")
+        # TODO I think this doesn't write bonds!!!
         molecule.delete(mid)
 
         # Write a temporary file for a topotools tcl script
