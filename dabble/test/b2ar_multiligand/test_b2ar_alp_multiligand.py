@@ -7,6 +7,27 @@ dir = os.path.dirname(__file__) + "/"
 
 #==============================================================================
 
+def check_gro(filename):
+    import re
+
+    with open(filename, 'r') as fn:
+        lines = fn.read()
+
+    # Discard lines before "[ molecules ]" section
+    lines = lines[lines.index("[ molecules ]"):]
+
+    # Check there are 91 POPC molecules
+    # Look for moleculename    91
+    # General because molecule can have any name
+    popc_mol = re.findall(r'\b\S+\s+91\b', lines)
+    assert len(popc_mol) == 1
+
+    # Check there are 10 DALP molecules
+    lig_mol = re.findall(r'\b\S+\s+10\b', lines)
+    assert len(lig_mol) == 1
+
+#==============================================================================
+
 def check_result(format, outdir):
     if format == "prmtop":
         m2 = molecule.load("parm7", os.path.join(outdir, "test.prmtop"),
@@ -14,8 +35,10 @@ def check_result(format, outdir):
     elif format == "psf":
         m2 = molecule.load("psf", os.path.join(outdir, "test.psf"),
                            "pdb", os.path.join(outdir, "test.pdb"))
+    # Check by reading .top file, as VMD won't parse it and .gro doesn't
+    # have bond information
     elif format == "gro":
-        m2 = molecule.load("gro", os.path.join(outdir, "test.gro"))
+        return check_gro(os.path.join(outdir, "test.top"))
 
     molecule.set_top(m2)
 
@@ -39,7 +62,6 @@ def check_result(format, outdir):
 
 #==============================================================================
 
-@pytest.mark.skip(reason="debug")
 def test_multiligand_building(tmpdir):
     """
     Solvates and membranes a system with multiple ligands """
@@ -73,7 +95,6 @@ def test_multiligand_building(tmpdir):
 
 #==============================================================================
 
-@pytest.mark.skip(reason="debug")
 def test_multiligand_psf_charmm(tmpdir):
     """
     Checks the parameterization of a system with multiple ligands
@@ -92,7 +113,6 @@ def test_multiligand_psf_charmm(tmpdir):
 
 #==============================================================================
 
-@pytest.mark.skip(reason="debug")
 def test_multiligand_prmtop_amber(tmpdir):
     """
     Checks that multiple ligands work with AMBER.
@@ -113,7 +133,6 @@ def test_multiligand_prmtop_amber(tmpdir):
 
 #==============================================================================
 
-@pytest.mark.skip(reason="debug")
 def test_multiligand_prmtop_charmm(tmpdir):
     """
     Checks that multiple ligands work with AMBER.
@@ -134,13 +153,10 @@ def test_multiligand_prmtop_charmm(tmpdir):
 
 #==============================================================================
 
-@pytest.mark.skip(reason="broken")
 def test_multiligand_psf_amber(tmpdir):
     """
     Checks multiple ligands, AMBER parameters, CHARMM format
     """
-    # TODO: lipids don't work with this. How am I matching them?
-    # TODO: lipid names aren't actually being checked...
     from dabble.param import CharmmWriter
     p = str(tmpdir)
 
@@ -149,22 +165,12 @@ def test_multiligand_psf_amber(tmpdir):
     w = CharmmWriter(tmp_dir=p, molid=molid, forcefield="amber",
                      extra_topos=[os.path.join(dir, "alp.off")],
                      extra_params=[os.path.join(dir, "alp.frcmod")])
-    with pytest.raises(ValueError):
-        w.write(os.path.join(p, "test"))
-
-    # This fails because linkages not being parsed?
-    molecule.delete(molid)
-    molid = molecule.load("mae", os.path.join(dir, "B2AR_10ALPs.mae"))
-    w = CharmmWriter(tmp_dir=p, molid=molid, forcefield="amber",
-                     extra_topos=[os.path.join(dir, "alp.off")],
-                     extra_params=[os.path.join(dir, "alp.frcmod")])
     w.write(os.path.join(p, "test"))
 
-    check_result("prmtop", p)
+    check_result("psf", p)
 
 #==============================================================================
 
-@pytest.mark.skip(reason="augh")
 def test_multiligand_gro_amber(tmpdir):
     """
     AMBER parameters, GROMACS format
@@ -193,8 +199,7 @@ def test_multiligand_gro_charmm(tmpdir):
     w = GromacsWriter(tmp_dir=p, molid=molid, forcefield="charmm",
                       extra_topos=[os.path.join(dir, "alprenolol.rtf")],
                       extra_params=[os.path.join(dir, "alprenolol.prm")])
-    # TODO: this is bonding the lipid to the protein
-    # probably some kind of distance based constraint?
+
     w.write(os.path.join(p, "test"))
 
     check_result("gro", p)
