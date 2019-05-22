@@ -24,18 +24,16 @@ Copyright (C) 2019 Robin Betz
 
 
 from __future__ import print_function
-import abc
 import logging
 
-from networkx.algorithms import isomorphism
-from vmd import atomsel
+from abc import ABC, abstractmethod
 
 logger = logging.getLogger(__name__) # pylint: disable=invalid-name
 
 #++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
 #                                   CLASSES                                   #
 #++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
-class MoleculeWriter(object):
+class MoleculeWriter(ABC):
     """
     Represents a writer that will parameterize built systems into input files
     for some simulation program.
@@ -70,12 +68,16 @@ class MoleculeWriter(object):
 
     #==========================================================================
 
-    __metaclass__ = abc.ABCMeta
-    @abc.abstractmethod
+    @abstractmethod
     def write(self, filename):
-        """
-        Writes the output
-        """
+        pass
+
+    @abstractmethod
+    def get_topologies(forcefield):
+        pass
+
+    @abstractmethod
+    def get_parameters(forcefield):
         pass
 
     #++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++

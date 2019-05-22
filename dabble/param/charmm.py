@@ -25,6 +25,7 @@ Copyright (C) 2015 Robin Betz
 from __future__ import print_function
 import os
 import tempfile
+from parmed.formats.registry import load_file
 from pkg_resources import resource_filename
 from psfgen import PsfGen
 from vmd import atomsel, molecule
@@ -79,104 +80,136 @@ class CharmmWriter(MoleculeWriter):
 
         # Create a psf generator object
         self.psfgen = PsfGen()
-        self.psf_name = ""
+        self.outprefix = ""
 
-        forcefield = kwargs.get("forcefield", "charmm36m")
-        if forcefield not in ["amber", "charmm36m", "charmm", "charmm36"]:
-            raise DabbleError("Unsupported forcefield: %s" % forcefield)
-        self.forcefield = forcefield
+        self.override = kwargs.get("override_defaults", False)
+        self.debug = kwargs.get("debug_verbose", False)
 
-        # Default parameter sets
-        self.topologies = [] if kwargs.get("override_defaults") \
-                             else self.get_topologies(self.forcefield)
-        if kwargs.get("extra_topos"):
-            self.topologies.extend(kwargs.get("extra_topos"))
+        # Set forcefield default topologies and parameters
+        self.forcefield = kwargs.get("forcefield", "charmm36m")
 
-        # Initialize graph matcher with topologies we know about
-        self.matcher = CharmmMatcher(self.topologies)
+        if "charmm" in self.forcefield:
+            self.topologies = self.get_topologies(self.forcefield)
+            self.parameters = self.get_parameters(self.forcefield)
+
+        elif "amber" in self.forcefield:
+            from dabble.param import AmberWriter # avoid circular dependnecy
+            self.topologies = AmberWriter.get_topologies(self.forcefield)
+            self.parameters = AmberWriter.get_parameters(self.forcefield)
+
+        else:
+            raise DabbleError("Unsupported forcefield: %s" % self.forcefield)
+
+        # Handle override and extra topologies
+        if self.override:
+            self.topologies = []
+            self.parameters = []
+
+        # Now extra topologies
+        self.extra_topos = kwargs.get("extra_topos", [])
+        self.extra_params = kwargs.get("extra_params", [])
+        self.topologies.extend(self.extra_topos)
+        self.parameters.extend(self.extra_params)
+
+        # Once all topologies defined, initialize matcher
+        self.matcher = None
+        if "charmm" in self.forcefield:
+            self.matcher = CharmmMatcher(self.topologies)
 
     #=========================================================================
 
-    def write(self, psf_name):
+    def write(self, filename):
         """
-        Writes the pdb/psf file.
+        Writes the parameter and topology files
 
         Args:
-          psf_name (str): Prefix for the pdb/psf output files, extension
-            will be appended
+            filename (str): File name to write. File type suffix will be added.
         """
-        # Clean up all temp files from previous runs if present
-        # An earlier check will exit if it's not okay to overwrite here
-        self.psf_name = psf_name
-        try:
-            os.remove('%s.pdb'% self.psf_name)
-            os.remove('%s.psf'% self.psf_name)
-        except OSError:
-            pass
+        self.outprefix = filename
 
         # Put our molecule on top
         old_top = molecule.get_top()
         molecule.set_top(self.molid)
 
-        # Print out topology files
-        print("Using the following topologies:")
-        for top in self.topologies:
-            print("  - %s" % top.split("/")[-1])
-            self.psfgen.read_topology(top)
+        # Amber forcefield done with AmberWriter then conversion
+        if "amber" in self.forcefield:
+            # Avoid circular import by doing it here
+            from dabble.param import AmberWriter
+            self.topologies = AmberWriter.get_topologies(self.forcefield)
+            prmtopgen = AmberWriter(molid=self.molid,
+                                    tmp_dir=self.tmp_dir,
+                                    forcefield=self.forcefield,
+                                    lipid_sel=self.lipid_sel,
+                                    extra_topos=self.extra_topos,
+                                    extra_params=self.extra_params,
+                                    override_defaults=self.override,
+                                    debug_verbose=self.debug)
+            prmtopgen.write(self.outprefix)
+            self._prmtop_to_charmm()
 
-        # Mark all atoms as unsaved with the user field
-        atomsel('all', molid=self.molid).user = 1.0
-        check_atom_names(molid=self.molid)
+        # Charmm forcefield
+        elif "charmm" in self.forcefield:
+            # Print out topology files
+            print("Using the following topologies:")
+            for top in self.topologies:
+                print("  - %s" % top.split("/")[-1])
+                self.psfgen.read_topology(top)
 
-        # Now ions if present, changing the atom names
-        if len(atomsel('ions', molid=self.molid)) > 0:
-            self._write_ion_blocks()
+            # Mark all atoms as unsaved with the user field
+            atomsel('all', molid=self.molid).user = 1.0
+            check_atom_names(molid=self.molid)
 
-        # Save water 10k molecules at a time
-        if len(atomsel('water', molid=self.molid)):
-            self._write_water_blocks()
+            # Now ions if present, changing the atom names
+            if len(atomsel('ions', molid=self.molid)) > 0:
+                self._write_ion_blocks()
 
-        # Now lipid
-        # TODO: lipid names aren't matched with topologies?
-        if len(atomsel(self.lipid_sel)):
-            self._write_lipid_blocks()
+            # Save water 10k molecules at a time
+            if len(atomsel('water', molid=self.molid)):
+                self._write_water_blocks()
 
-        # Now handle the protein
-        # Save and reload the protein so residue looping is correct
-        if len(atomsel("resname %s" % patchable_acids, molid=self.molid)):
-            extpatches = set()
-            for frag in sorted(set(atomsel("resname %s" % patchable_acids,
-                                    molid=self.molid).fragment)):
-                extpatches.update(self._write_protein_blocks(self.molid, frag))
-            atomsel("same fragment as resname %s" % patchable_acids,
-                    molid=self.molid).user = 0.0
+            # Now lipid
+            # TODO: lipid names aren't matched with topologies?
+            if len(atomsel(self.lipid_sel)):
+                self._write_lipid_blocks()
 
-            # List all patches applied to the protein
-            print("Applying the following patches:\n")
-            print("\t%s" % "\n\t".join(str(_) for _ in extpatches))
+            # Now handle the protein
+            # Save and reload the protein so residue looping is correct
+            if len(atomsel("resname %s" % patchable_acids, molid=self.molid)):
+                extpatches = set()
+                for frag in sorted(set(atomsel("resname %s" % patchable_acids,
+                                        molid=self.molid).fragment)):
+                    extpatches.update(self._write_protein_blocks(self.molid, frag))
+                atomsel("same fragment as resname %s" % patchable_acids,
+                        molid=self.molid).user = 0.0
 
-            # Apply all multi segment patches to the protein
-            for p in extpatches:
-                self.psfgen.patch(p.name, p.targets())
-        else:
-            print("\tDidn't find any protein. Continuing...\n")
+                # List all patches applied to the protein
+                print("Applying the following patches:\n")
+                print("\t%s" % "\n\t".join(str(_) for _ in extpatches))
 
-        # Regenerate angles and dihedrals after applying patches
-        # Angles must be regenerated FIRST!
-        # See http://www.ks.uiuc.edu/Research/namd/mailing_list/namd-l.2009-2010/4137.html
-        self.psfgen.regenerate_angles()
-        self.psfgen.regenerate_dihedrals()
+                # Apply all multi segment patches to the protein
+                for p in extpatches:
+                    self.psfgen.patch(p.name, p.targets())
+            else:
+                print("\tDidn't find any protein. Continuing...\n")
 
-        # Check if there is anything else and let the user know about it
-        leftovers = atomsel('user 1.0', molid=self.molid)
-        for lig in set(leftovers.resname):
-            residues = self._find_single_residue_names(resname=lig,
-                                                       molid=self.molid)
-            self._write_generic_block(residues)
+            # Regenerate angles and dihedrals after applying patches
+            # Angles must be regenerated FIRST!
+            # See http://www.ks.uiuc.edu/Research/namd/mailing_list/namd-l.2009-2010/4137.html
+            self.psfgen.regenerate_angles()
+            self.psfgen.regenerate_dihedrals()
 
-        # Write the output files and run
-        self.psfgen.write_psf(filename="%s.psf" % self.psf_name, type="x-plor")
-        self.psfgen.write_pdb(filename="%s.pdb" % self.psf_name)
+            # Check if there is anything else and let the user know about it
+            leftovers = atomsel('user 1.0', molid=self.molid)
+            for lig in set(leftovers.resname):
+                residues = self._find_single_residue_names(resname=lig,
+                                                           molid=self.molid)
+                self._write_generic_block(residues)
+
+            # Write the output files and run
+            self.psfgen.write_psf(filename="%s.psf" % self.outprefix, type="x-plor")
+            self.psfgen.write_pdb(filename="%s.pdb" % self.outprefix)
+
+        # Check output and finish up
         self._check_psf_output()
 
         # Reset top molecule
@@ -202,10 +235,7 @@ class CharmmWriter(MoleculeWriter):
                 "toppar_all36_prot_fluoro_alkanes.str"
             ]
         elif "amber" in forcefield:
-            default_topologies = [
-                "parm14sb_all.rtf",
-                "toppar_water_ions.str" # TODO amber ions?
-            ]
+            return []
         else:
             raise ValueError("Invalid forcefield: '%s'" % forcefield)
 
@@ -227,10 +257,7 @@ class CharmmWriter(MoleculeWriter):
                 "toppar_all36_prot_na_combined.str"
             ]
         elif "amber" in forcefield:
-            default_parameters = [
-                "parm14sb_all.prm",
-                "toppar_water_ions.str" # TODO amber ions?
-            ]
+            return []
         else:
             raise ValueError("Invalid forcefield: '%s'" % forcefield)
 
@@ -644,19 +671,19 @@ class CharmmWriter(MoleculeWriter):
     def _check_psf_output(self):
         """
         Scans the output psf from psfgen for atoms where the coordinate
-        could not be set, indicating an unmatched atom. This checek is necessary
+        could not be set, indicating an unmatched atom. This check is necessary
         because sometimes psfgen will run with no errors or warnings but will
         have unmatched atoms that are all at (0,0,0).
         """
 
         # Check file was written at all
-        if not os.path.isfile('%s.pdb'% self.psf_name):
+        if not os.path.isfile('%s.pdb'% self.outprefix):
             print("\nERROR: psf file failed to write.\n"
                   "       Please see log above.\n")
             quit(1)
 
         # Open the pdb file in VMD and check for atoms with no occupancy
-        fileh = molecule.load('pdb', '%s.pdb' % self.psf_name)
+        fileh = molecule.load('pdb', '%s.pdb' % self.outprefix)
         errors = atomsel("occupancy=-1", molid=fileh)
 
         # Print out error messages
@@ -832,6 +859,24 @@ class CharmmWriter(MoleculeWriter):
                     avail_patches[tokens[1]] = comment
         return avail_patches
 
+    #==========================================================================
+
+    def _prmtop_to_charmm(self):
+        """
+        Converts an AMBER prmtop with AMBER parameters to a psf file,
+        using ParmEd.
+        """
+        # Save PSF topology and parameter file
+        parmstruct = load_file(self.outprefix + ".prmtop",
+                               xyz=self.outprefix + ".inpcrd",
+                               structure=True)
+        parmstruct.save(self.outprefix + ".psf", format="psf")
+
+        # Save PDB file with coordinates
+        m = molecule.load("parm7", self.outprefix + ".prmtop",
+                          "rst7", self.outprefix + ".inpcrd")
+        atomsel("all", m).write("pdb", self.outprefix + ".pdb")
+        molecule.delete(m)
 
 #++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
 #                                 FUNCTIONS                                   #

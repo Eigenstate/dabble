@@ -76,7 +76,7 @@ class GromacsWriter(object):
         self.lipid_sel = kwargs.get("lipid_sel", "lipid")
         self.extra_topos = kwargs.get("extra_topos", [])
         self.extra_params = kwargs.get("extra_params", [])
-        self.debug_verbose = kwargs.get("debug_verbose", False)
+        self.debug = kwargs.get("debug_verbose", False)
         self.override_defaults = kwargs.get("override_defaults", False)
         self.outprefix = ""
 
@@ -158,5 +158,15 @@ class GromacsWriter(object):
         # Run the pbctools tcl script
         output = evaltcl("play %s" % temp)
         print(output)
+
+    #==========================================================================
+
+    # Satisfy inheritance requirement for these methods
+    # I don't natively handle gromacs parameters so this doesn't do much
+    def get_topologies(self, forcefield):
+        return self.topologies
+
+    def get_parameters(self, forcefield):
+        return self.parameters
 
 #++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++

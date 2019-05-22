@@ -29,14 +29,13 @@ import sys
 import tempfile
 import warnings
 from subprocess import check_output
-from pkg_resources import resource_filename
 from vmd import molecule, atomsel
 
 from parmed.tools import chamber, parmout, HMassRepartition, checkValidity
 from parmed.amber import AmberParm
 from parmed.exceptions import ParameterWarning
 from dabble import DabbleError
-from dabble.param import MoleculeWriter, CharmmWriter, AmberMatcher
+from dabble.param import MoleculeWriter, AmberMatcher
 
 #++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
 
@@ -78,60 +77,42 @@ class AmberWriter(MoleculeWriter):
         self.hmr = kwargs.get("hmr", False)
         self.extra_topos = kwargs.get("extra_topos", None)
         self.override = kwargs.get("override_defaults", False)
+        self.debug = kwargs.get("debug_verbose", False)
 
-        forcefield = kwargs.get("forcefield", "amber")
-        if forcefield not in ["amber", "charmm36m", "charmm", "charmm36"]:
-            raise DabbleError("Unsupported forcefield: %s" % forcefield)
-        self.forcefield = forcefield
+        # Set forcefield default topologies and parameters
+        self.forcefield = kwargs.get("forcefield", "amber")
         if "charmm" in self.forcefield:
+            # Import CharmmWriter as needed to avoid circular imports
+            from dabble.param import CharmmWriter
 
             # Topologies used will be found and returned by CharmmWriter
             self.topologies = CharmmWriter.get_topologies(self.forcefield)
             self.parameters = CharmmWriter.get_parameters(self.forcefield)
-
-            # Get resource filename path for all parameter files
-            for i, par in enumerate(self.parameters):
-                self.parameters[i] = resource_filename(__name__,
-                                         os.path.join("parameters", par))
             self.matcher = None
 
         elif self.forcefield == 'amber':
-            if not os.environ.get("AMBERHOME"):
-                raise DabbleError("AMBERHOME must be set to use AMBER forcefield!")
-            if not os.path.isfile(os.path.join(os.environ.get("AMBERHOME"),
-                                               "bin", "tleap")):
-                raise DabbleError("tleap is not present in $AMBERHOME/bin!")
-
-            # Check amber version and set topologies accordingly
-            self.topologies = [
-                "leaprc.protein.ff14SB",
-                "leaprc.lipid14",
-                "leaprc.water.tip3p",
-                "leaprc.gaff2",
-            ]
-            for i, top in enumerate(self.topologies):
-                self.topologies[i] = os.path.join(os.environ["AMBERHOME"],
-                                                  "dat", "leap", "cmd", top)
-                if not os.path.isfile(self.topologies[i]):
-                    raise DabbleError("AMBER version too old! "
-                                      "Dabble requires >= AmberTools16!")
-
+            self.topologies = self.get_topologies(self.forcefield)
+            self.parameters = self.get_parameters(self.forcefield)
             self.parameters = []
 
+        else:
+            raise DabbleError("Unsupported forcefield: %s" % self.forcefield)
+
+        # Handle override
         if self.override:
             self.topologies = []
             self.parameters = []
 
-        if kwargs.get("extra_topos") is not None:
-            self.topologies.extend(kwargs.get("extra_topos"))
+        # Now extra topologies
+        self.extra_topos = kwargs.get("extra_topos", [])
+        self.topologies.extend(self.extra_topos)
 
-        if kwargs.get("extra_params") is not None:
-            self.parameters.extend(kwargs.get("extra_params"))
+        self.extra_params = kwargs.get("extra_params", [])
+        self.parameters.extend(self.extra_params)
 
         # Initialize matcher only now that all topologies have been set
-        if "charmm" in self.forcefield:
-            self.matcher = None
-        elif self.forcefield == "amber":
+        self.matcher = None
+        if self.forcefield == "amber":
             self.matcher = AmberMatcher(topologies=self.topologies)
 
         self.prompt_params = False
@@ -146,12 +127,15 @@ class AmberWriter(MoleculeWriter):
 
         # Charmm forcefield
         if "charmm" in self.forcefield:
+            from Dabble.param import CharmmWriter
             psfgen = CharmmWriter(molid=self.molid,
                                   tmp_dir=self.tmp_dir,
                                   lipid_sel=self.lipid_sel,
                                   extra_topos=self.extra_topos,
-                                  override_defaults=self.override)
-            self.topologies = psfgen.write(self.prmtop_name)
+                                  extra_params=self.extra_params,
+                                  override_defaults=self.override,
+                                  debug_verbose=self.debug)
+            psfgen.write(self.prmtop_name)
             self._psf_to_charmm_amber()
 
         # Amber forcefield
@@ -757,7 +741,7 @@ class AmberWriter(MoleculeWriter):
                 out,
                 "\n=================END TLEAP OUTPUT=================\n")
 
-            if self.debug_verbose:
+            if self.debug:
                 print(out)
             if "not saved" in out:
                 raise DabbleError("Tleap call failed")
@@ -813,6 +797,39 @@ class AmberWriter(MoleculeWriter):
             new_topos.append(temp)
 
         self.topologies = new_topos
+
+    #========================================================================#
+    #                            Static methods                              #
+    #========================================================================#
+
+    @staticmethod
+    def get_topologies(forcefield):
+        if not os.environ.get("AMBERHOME"):
+            raise DabbleError("AMBERHOME must be set to use AMBER forcefield!")
+        if not os.path.isfile(os.path.join(os.environ.get("AMBERHOME"),
+                                           "bin", "tleap")):
+            raise DabbleError("tleap is not present in $AMBERHOME/bin!")
+
+        # Check amber version and set topologies accordingly
+        ambpath = os.path.join(os.environ["AMBERHOME"], "dat", "leap", "cmd")
+        topologies = [
+            "leaprc.protein.ff14SB",
+            "leaprc.lipid14",
+            "leaprc.water.tip3p",
+            "leaprc.gaff2",
+        ]
+
+        for i, top in enumerate(topologies):
+            topologies[i] = os.path.join(ambpath, top)
+            if not os.path.isfile(topologies[i]):
+                raise DabbleError("AMBER forcefield files '%s' not found\n"
+                                  "Dabble requires >= AmberTools16" % top)
+        return topologies
+
+    @staticmethod
+    def get_parameters(forcefield):
+        # AMBER default leaprcs all go in topologies
+        return []
 
 #++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
 
