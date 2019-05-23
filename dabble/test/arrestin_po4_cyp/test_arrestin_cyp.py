@@ -155,7 +155,7 @@ def test_covalent_ligand_gromacs_charmm(tmpdir):
                           os.path.join(dir,
                                        "rho_arr_CYP_prepped_aligned_dowsered.mae"))
 
-    w = GromacsWriter(tmp_dir=p, molid=molid, forcefield="charmm36",
+    w = GromacsWriter(tmp_dir=p, molid=molid, forcefield="charmm",
                       extra_topos=[os.path.join(dir, "CYP_v1.str")])
     w.write(os.path.join(p, "test"))
 
