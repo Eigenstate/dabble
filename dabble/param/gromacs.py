@@ -64,12 +64,12 @@ class GromacsWriter(object):
             extra_topos (list of str): Additional topology (.str, .off, .lib) to
                 include.
             extra_params (list of str): Additional parameter sets (.str, .frcmod)
-            override_defaults (bool): If set, omits default charmm36m parameters
+            override_defaults (bool): If set, omits default charmm parameters
             debug_verbose (bool): Prints additional output, like from tleap.
         """
         self.molid = molid
-        self.forcefield = kwargs.get("forcefield", "charmm36m")
-        if self.forcefield not in ["amber", "charmm36m", "charmm", "charmm36"]:
+        self.forcefield = kwargs.get("forcefield", "charmm")
+        if self.forcefield not in ["amber", "charmm"]:
             raise DabbleError("Unsupported forcefield: %s" % self.forcefield)
 
         self.tmp_dir = kwargs.get("tmp_dir", ".")

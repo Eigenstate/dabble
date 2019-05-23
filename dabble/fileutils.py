@@ -182,7 +182,7 @@ def write_final_system(out_fmt, out_name, molid, **kwargs):
     if not kwargs.get('lipid_sel'):
         kwargs['lipid_sel'] = "lipid or resname POPS POPG"
     if not kwargs.get('forcefield'):
-        kwargs['forcefield'] = "charmm36m"
+        kwargs['forcefield'] = "charmm"
 
     # Write a mae file always, removing the prefix from the output file
     mae_name = '.'.join(out_name.rsplit('.')[:-1]) + '.mae'
@@ -262,8 +262,7 @@ def check_write_ok(filename, out_fmt, overwrite=False):
       overwrite (bool): True if overwriting is allowed
 
     Returns:
-      True if it okay to overwrite
-      Quits the program otherwise
+      True if it okay to overwrite, False otherwise
     """
     if overwrite is True:
         return True
@@ -278,7 +277,7 @@ def check_write_ok(filename, out_fmt, overwrite=False):
     elif out_fmt == 'charmm':
         suffixes.extend(['psf', 'pdb'])
     elif out_fmt == 'amber':
-        suffixes.extend(['psf', 'pdb', 'prmtop', 'inpcrd'])
+        suffixes.extend(['prmtop', 'inpcrd'])
     elif out_fmt == 'gromacs':
         suffixes.extend(['.gro', '.top'])
 
@@ -330,10 +329,9 @@ def check_out_type(value, format, forcefield, hmr=False):
         out_fmt = 'pdb'
     elif ext == 'dms':
         out_fmt = 'dms'
-    elif ext == 'psf' and "charmm" in forcefield:
+    elif ext == 'psf' and forcefield in ["amber", "charmm", "opls"]:
         out_fmt = 'charmm'
-    elif ext == 'prmtop' and forcefield in ["amber", "charmm",
-                                            "charmm36", "charmm36m"]:
+    elif ext == 'prmtop' and forcefield in ["amber", "charmm", "opls"]:
         out_fmt = 'amber'
     else:
         raise DabbleError("%s is an unsupported format with %s forcefield"

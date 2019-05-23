@@ -86,7 +86,7 @@ class CharmmWriter(MoleculeWriter):
         self.debug = kwargs.get("debug_verbose", False)
 
         # Set forcefield default topologies and parameters
-        self.forcefield = kwargs.get("forcefield", "charmm36m")
+        self.forcefield = kwargs.get("forcefield", "charmm")
 
         if "charmm" in self.forcefield:
             self.topologies = self.get_topologies(self.forcefield)
@@ -250,6 +250,7 @@ class CharmmWriter(MoleculeWriter):
         if "charmm" in forcefield:
             default_parameters = [
                 "toppar_water_ions.str",
+                "par_all36m_prot.prm",
                 "par_all36_cgenff.prm",
                 "par_all36_lipid.prm",
                 "par_all36_carb.prm",
@@ -260,11 +261,6 @@ class CharmmWriter(MoleculeWriter):
             return []
         else:
             raise ValueError("Invalid forcefield: '%s'" % forcefield)
-
-        if forcefield == "charmm36m":
-            default_parameters.append("par_all36m_prot.prm")
-        else:
-            default_parameters.append("par_all36_prot.prm")
 
         return [resource_filename(__name__,
                                   os.path.join("parameters", par))

@@ -118,10 +118,11 @@ def main(argv=None):
 
     group = parser.add_argument_group('Parameterization Options')
     group.add_argument('-ff', '--forcefield', dest='forcefield',
-                       type=str, metavar='<forcefield>', default="charmm36m",
-                       choices=['amber', 'charmm', 'charmm36m'], action='store',
+                       type=str, metavar='<forcefield>', default="charmm",
+                       choices=['amber', 'charmm', 'opls'],
+                       required=True, action="store",
                        help="Force field to use for parameterization. Currently "
-                            "supported: amber/charmm(36)/charmm36m")
+                            "supported: amber/charmm/opls")
     group.add_argument('--hmr', dest='hmassrepartition', default=False,
                        action='store_true', help='Repartition Hydrogen masses'
                        'to allow up to 4fs time steps. Currently prmtop output only')

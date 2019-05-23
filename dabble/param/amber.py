@@ -58,7 +58,7 @@ class AmberWriter(MoleculeWriter):
         Args:
             molid (int): VMD molecule ID of system to write
             tmp_dir (str): Directory for temporary files. Defaults to "."
-            forcefield (str): charmm36mm, charmm36, or amber
+            forcefield (str): charmm, or amber
             lipid_sel (str): Lipid selection string. Defaults to "lipid"
             hmr (bool): If hydrogen masses should be repartitioned. Defaults
                 to False.
@@ -127,7 +127,7 @@ class AmberWriter(MoleculeWriter):
 
         # Charmm forcefield
         if "charmm" in self.forcefield:
-            from Dabble.param import CharmmWriter
+            from dabble.param import CharmmWriter
             psfgen = CharmmWriter(molid=self.molid,
                                   tmp_dir=self.tmp_dir,
                                   lipid_sel=self.lipid_sel,
