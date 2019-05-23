@@ -29,7 +29,7 @@ import logging
 import tempfile
 
 from dabble import DabbleError
-from dabble.param import AmberWriter, CharmmWriter
+from dabble.param import AmberWriter, CharmmWriter, MoleculeWriter
 from parmed.formats.registry import load_file
 from parmed.gromacs import GromacsGroFile, GromacsTopologyFile
 from vmd import atomsel, evaltcl, molecule
@@ -39,10 +39,10 @@ logger = logging.getLogger(__name__) # pylint: disable=invalid-name
 #++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
 #                                   CLASSES                                   #
 #++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
-class GromacsWriter(object):
+class GromacsWriter(MoleculeWriter):
     """
     Represents a writer that will parameterize built systems into input files
-    for some simulation program.
+    for input to GROMACS.
 
     Attributes:
         molid (int): VMD molecule ID to write
@@ -67,18 +67,22 @@ class GromacsWriter(object):
             override_defaults (bool): If set, omits default charmm parameters
             debug_verbose (bool): Prints additional output, like from tleap.
         """
-        self.molid = molid
-        self.forcefield = kwargs.get("forcefield", "charmm")
-        if self.forcefield not in ["amber", "charmm"]:
-            raise DabbleError("Unsupported forcefield: %s" % self.forcefield)
+        super(GromacsWriter, self).__init__(molid, **kwargs)
 
-        self.tmp_dir = kwargs.get("tmp_dir", ".")
-        self.lipid_sel = kwargs.get("lipid_sel", "lipid")
-        self.extra_topos = kwargs.get("extra_topos", [])
-        self.extra_params = kwargs.get("extra_params", [])
-        self.debug = kwargs.get("debug_verbose", False)
-        self.override_defaults = kwargs.get("override_defaults", False)
-        self.outprefix = ""
+        self.forcefield = kwargs.get("forcefield", "charmm")
+
+        if "charmm" in self.forcefield:
+            # Topologies used will be found and returned by CharmmWriter
+            self.topologies = CharmmWriter.get_topologies(self.forcefield)
+            self.parameters = CharmmWriter.get_parameters(self.forcefield)
+
+        elif "amber" in self.forcefield:
+            # Topologies used will be found and returned by AmberWriter
+            self.topologies = AmberWriter.get_topologies(self.forcefield)
+            self.parameters = AmberWriter.get_topologies(self.forcefield)
+
+        else:
+            raise DabbleError("Unsupported forcefield: %s" % self.forcefield)
 
     #==========================================================================
 
@@ -93,15 +97,13 @@ class GromacsWriter(object):
 
         # Charmm forcefield
         if "charmm" in self.forcefield:
-            # Topologies used will be found and returned by CharmmWriter
-            self.topologies = CharmmWriter.get_topologies(self.forcefield)
-            self.parameters = CharmmWriter.get_parameters(self.forcefield)
-
             psfgen = CharmmWriter(molid=self.molid,
                                   tmp_dir=self.tmp_dir,
                                   lipid_sel=self.lipid_sel,
                                   extra_topos=self.extra_topos,
-                                  override_defaults=self.override_defaults)
+                                  extra_params=self.extra_params,
+                                  override_defaults=self.override)
+            print("Writing intermediate psf")
             psfgen.write(self.outprefix)
             self._psf_to_gromacs()
 
@@ -111,7 +113,8 @@ class GromacsWriter(object):
                                  forcefield=self.forcefield,
                                  lipid_sel=self.lipid_sel,
                                  extra_topos=self.extra_topos,
-                                 extra_params=self.extra_params)
+                                 extra_params=self.extra_params,
+                                 override_defaults=self.override)
             print("Writing intermediate prmtop")
             prmgen.write(self.outprefix)
             self._amber_to_gromacs()

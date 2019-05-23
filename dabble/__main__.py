@@ -29,6 +29,7 @@ import signal
 import sys
 import tempfile
 from dabble import VmdSilencer, DabbleBuilder
+from dabble.param import supported_forcefields
 
 __version__ = '2.7.9'
 __author__ = 'Robin Betz'
@@ -119,7 +120,7 @@ def main(argv=None):
     group = parser.add_argument_group('Parameterization Options')
     group.add_argument('-ff', '--forcefield', dest='forcefield',
                        type=str, metavar='<forcefield>', default="charmm",
-                       choices=['amber', 'charmm', 'opls'],
+                       choices=supported_forcefields,
                        required=True, action="store",
                        help="Force field to use for parameterization. Currently "
                             "supported: amber/charmm/opls")

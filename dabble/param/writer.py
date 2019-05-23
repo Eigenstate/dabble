@@ -24,6 +24,7 @@ Copyright (C) 2019 Robin Betz
 
 
 from __future__ import print_function
+import os
 import logging
 
 from abc import ABC, abstractmethod
@@ -58,13 +59,21 @@ class MoleculeWriter(ABC):
             extra_topos (list of str): Additional topology (.str, .off, .lib) to
                 include.
             extra_params (list of str): Additional parameter sets (.str, .frcmod)
+            override_defaults (bool): If set, omits default forcefield parameters
             debug_verbose (bool): Prints additional output, like from tleap.
         """
         self.molid = molid
+        self.outprefix = ""
+        self.matcher = None
 
-        self.tmp_dir = kwargs.get("tmp_dir", ".")
+        # Set default options
+        self.tmp_dir = kwargs.get("tmp_dir", os.getcwd())
         self.lipid_sel = kwargs.get("lipid_sel", "lipid")
-        self.debug_verbose = kwargs.get("debug_verbose", False)
+        self.debug = kwargs.get("debug_verbose", False)
+        self.override = kwargs.get("override_defaults", False)
+
+        self.extra_topos = kwargs.get("extra_topos", [])
+        self.extra_params = kwargs.get("extra_params", [])
 
     #==========================================================================
 

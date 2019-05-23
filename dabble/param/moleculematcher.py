@@ -23,8 +23,8 @@ Copyright (C) 2015 Robin Betz
 # Boston, MA 02111-1307, USA.
 
 from __future__ import print_function
-import abc
 import logging
+from abc import ABC, abstractmethod
 from itertools import product
 
 import networkx as nx
@@ -39,7 +39,7 @@ logger = logging.getLogger(__name__) # pylint: disable=invalid-name
 #                                   CLASSES                                   #
 #++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
 
-class MoleculeMatcher(object): # pylint: disable=too-few-public-methods
+class MoleculeMatcher(ABC): # pylint: disable=too-few-public-methods
     """
     Represents a collection of graphs of all residues defined in the
     topology files. Can pass in VMD molecules to be checked and atom
@@ -240,8 +240,7 @@ class MoleculeMatcher(object): # pylint: disable=too-few-public-methods
     #                           Private methods                              #
     #=========================================================================
 
-    __metaclass__ = abc.ABCMeta
-    @abc.abstractmethod
+    @abstractmethod
     def _parse_topology(self, filename):
         """
         This method needs to be overridden in each subclass to parse

@@ -177,17 +177,20 @@ def write_final_system(out_fmt, out_name, molid, **kwargs):
     """
 
     # Set defaults for extra keyword options
-    if not kwargs.get('tmp_dir'):
-        kwargs['tmp_dir'] = "."
-    if not kwargs.get('lipid_sel'):
+    # Do this explicitly here
+    if kwargs.get('tmp_dir') is None:
+        kwargs['tmp_dir'] = os.getcwd()
+    if kwargs.get('lipid_sel') is None:
         kwargs['lipid_sel'] = "lipid or resname POPS POPG"
-    if not kwargs.get('forcefield'):
+    if kwargs.get('forcefield') is None:
         kwargs['forcefield'] = "charmm"
+    if kwargs.get('debug_verbose') is None:
+        kwargs['debug_verbose'] = False
 
     # Write a mae file always, removing the prefix from the output file
     mae_name = '.'.join(out_name.rsplit('.')[:-1]) + '.mae'
     write_ct_blocks(molid=molid, sel='beta 1', output_filename=mae_name,
-                    tmp_dir=kwargs['tmp_dir'])
+                    tmp_dir=kwargs.get('tmp_dir', os.getcwd()))
     temp_mol = molecule.load('mae', mae_name)
 
     if out_fmt == "desmond":
@@ -204,19 +207,15 @@ def write_final_system(out_fmt, out_name, molid, **kwargs):
         writer = CharmmWriter(molid=temp_mol,
                               tmp_dir=kwargs['tmp_dir'],
                               forcefield=kwargs['forcefield'],
-                              lipid_sel=kwargs.get('lipid_sel'),
+                              lipid_sel=kwargs['lipid_sel'],
                               extra_topos=kwargs.get('extra_topos', []),
-                              debug_verbose=kwargs.get('debug_verbose'))
+                              debug_verbose=kwargs.get('debug_verbose', False))
         writer.write(mae_name.replace(".mae", ""))
 
     # For amber format files, invoke the parmed chamber routine
     elif out_fmt == "amber":
-        if "charmm" in kwargs.get('forcefield'):
-            print("Writing AMBER format files with CHARMM parameters. "
-                  "This may take a moment...\n")
-        else:
-            print("Writing AMBER format files with Amber parameters. "
-                  "This may take a moment...\n")
+        print("Writing AMBER format files with %s parameters. "
+              "This may take a moment...\n" % kwargs.get("forcefield"))
 
         writeit = AmberWriter(molid=temp_mol,
                               tmp_dir=kwargs['tmp_dir'],

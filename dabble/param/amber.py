@@ -71,13 +71,8 @@ class AmberWriter(MoleculeWriter):
         """
         # Initialize standard MoleculeWriter items
         super(AmberWriter, self).__init__(molid, **kwargs)
-
-        self.prmtop_name = ""
-
         self.hmr = kwargs.get("hmr", False)
-        self.extra_topos = kwargs.get("extra_topos", None)
-        self.override = kwargs.get("override_defaults", False)
-        self.debug = kwargs.get("debug_verbose", False)
+        self.prompt_params = False
 
         # Set forcefield default topologies and parameters
         self.forcefield = kwargs.get("forcefield", "amber")
@@ -88,7 +83,6 @@ class AmberWriter(MoleculeWriter):
             # Topologies used will be found and returned by CharmmWriter
             self.topologies = CharmmWriter.get_topologies(self.forcefield)
             self.parameters = CharmmWriter.get_parameters(self.forcefield)
-            self.matcher = None
 
         elif self.forcefield == 'amber':
             self.topologies = self.get_topologies(self.forcefield)
@@ -103,39 +97,36 @@ class AmberWriter(MoleculeWriter):
             self.topologies = []
             self.parameters = []
 
-        # Now extra topologies
-        self.extra_topos = kwargs.get("extra_topos", [])
+        # Now extra topologies and parameters
         self.topologies.extend(self.extra_topos)
-
-        self.extra_params = kwargs.get("extra_params", [])
         self.parameters.extend(self.extra_params)
 
         # Initialize matcher only now that all topologies have been set
-        self.matcher = None
         if self.forcefield == "amber":
             self.matcher = AmberMatcher(topologies=self.topologies)
 
-        self.prompt_params = False
-
     #==========================================================================
 
-    def write(self, prmtop_name):
+    def write(self, filename):
         """
-        Creates a prmtop with either AMBER or CHARMM parameters.
+        Writes the parameter and topology files
+
+        Args:
+            filename (str): File name to write. File type suffix will be added.
         """
-        self.prmtop_name = prmtop_name
+        self.outprefix = filename
 
         # Charmm forcefield
         if "charmm" in self.forcefield:
             from dabble.param import CharmmWriter
-            psfgen = CharmmWriter(molid=self.molid,
+            charmmw = CharmmWriter(molid=self.molid,
                                   tmp_dir=self.tmp_dir,
                                   lipid_sel=self.lipid_sel,
                                   extra_topos=self.extra_topos,
                                   extra_params=self.extra_params,
                                   override_defaults=self.override,
                                   debug_verbose=self.debug)
-            psfgen.write(self.prmtop_name)
+            charmmw.write(self.outprefix)
             self._psf_to_charmm_amber()
 
         # Amber forcefield
@@ -172,14 +163,13 @@ class AmberWriter(MoleculeWriter):
                                  xyz=outfile+".inpcrd")
                 action = HMassRepartition(parm, "dowater")
                 action.execute()
-                write = parmout(action.parm, "%s.prmtop" % self.prmtop_name)
-                                                                      #self.prmtop_name))
+                write = parmout(action.parm, "%s.prmtop" % self.outprefix)
                 write.execute()
                 parm = write.parm
 
             # Check validity of output prmtop using parmed
-            parm = AmberParm(prm_name=self.prmtop_name+".prmtop",
-                             xyz=self.prmtop_name+".inpcrd")
+            parm = AmberParm(prm_name=self.outprefix + ".prmtop",
+                             xyz=self.outprefix + ".inpcrd")
             print("\nChecking for problems with the prmtop...")
             print("        Verify all warnings!")
             action = checkValidity(parm)
@@ -277,8 +267,8 @@ class AmberWriter(MoleculeWriter):
             print("\n")
 
         # Begin assembling chamber input string
-        args = ["-psf", "%s.psf" % self.prmtop_name,
-                "-crd", "%s.pdb" % self.prmtop_name]
+        args = ["-psf", self.outprefix + ".psf",
+                "-crd", self.outprefix + ".pdb"]
 
         # Add topology and parameter arguments
         for inp in set(self.topologies + self.parameters):
@@ -306,8 +296,9 @@ class AmberWriter(MoleculeWriter):
             action.execute()
 
         print("\tRan chamber")
-        write = parmout(action.parm, "%s.prmtop" % self.prmtop_name,
-                        "%s.inpcrd" % self.prmtop_name)
+        write = parmout(action.parm,
+                        self.outprefix + ".prmtop",
+                        self.outprefix + ".inpcrd")
         write.execute()
         print("\nWrote output prmtop and inpcrd")
         return True
@@ -726,7 +717,7 @@ class AmberWriter(MoleculeWriter):
                             % ' '.join(["l%d"%i for i in range(len(ligfiles))]))
             fileh.write("setbox p centers 0.0\n")
             fileh.write("saveamberparm p %s.prmtop %s.inpcrd\n"
-                        % (self.prmtop_name, self.prmtop_name))
+                        % (self.outprefix, self.outprefix))
             fileh.write("quit\n")
             fileh.close()
 
@@ -751,8 +742,8 @@ class AmberWriter(MoleculeWriter):
             quit(1)
 
         # Do a quick sanity check that all the protein is present.
-        mademol = molecule.load("parm7", "%s.prmtop" % self.prmtop_name,
-                                "rst7", "%s.inpcrd" % self.prmtop_name)
+        mademol = molecule.load("parm7", self.outprefix+ ".prmtop",
+                                "rst7", self.outprefix+ ".inpcrd")
         if len(atomsel("resname %s" % " ".join(self.matcher._acids), mademol)) \
                 != len(atomsel("resname %s" % " ".join(self.matcher._acids), self.molid)):
            print(out)
@@ -761,7 +752,7 @@ class AmberWriter(MoleculeWriter):
                              "above output, especially for covalent ligands. "
                              "Is naming consistent in all .off files?")
 
-        return self.prmtop_name
+        return self.outprefix
 
     #==========================================================================
 
