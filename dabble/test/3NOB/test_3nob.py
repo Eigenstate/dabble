@@ -30,7 +30,6 @@ def verify_amber(molid):
 
 #==============================================================================
 
-@pytest.mark.skip(reason="DEBUG")
 def test_amber_custom_residues(tmpdir):
     from dabble.param import AmberWriter
 
@@ -54,7 +53,6 @@ def test_amber_custom_residues(tmpdir):
 
 #==============================================================================
 
-@pytest.mark.skip(reason="DEBUG")
 def test_pdb_amber_custom_residues(tmpdir):
     from dabble.param import AmberWriter
 
@@ -76,6 +74,7 @@ def test_pdb_amber_custom_residues(tmpdir):
 
 #==============================================================================
 
+@pytest.mark.skip(reason="PDB needs charges defined")
 def test_pdb_commandline(tmpdir):
     """
     Tests command line invocation of dabble with a pdb as input
@@ -84,7 +83,8 @@ def test_pdb_commandline(tmpdir):
     from dabble.__main__ import main
     p = str(tmpdir)
 
-    main(["-i", "prepped.pdb", "-o", os.path.join(p, "test.prmtop"),
+    main(["-i", os.path.join(dir, "prepped.pdb"),
+          "-o", os.path.join(p, "test.prmtop"),
           "-w", "5.0", "-M", "TIP3", "-ff", "amber",
           "-top", os.path.join(dir, "glx.off"),
           "-top", os.path.join(dir, "lyx.off"),
@@ -100,7 +100,6 @@ def test_pdb_commandline(tmpdir):
 
 #==============================================================================
 
-@pytest.mark.skip(reason="DEBUG")
 def test_gromacs_amber(tmpdir):
     from dabble.param import GromacsWriter
 

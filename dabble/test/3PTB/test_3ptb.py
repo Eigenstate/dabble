@@ -12,7 +12,7 @@ def test_multiple_insertion_codes(tmpdir):
     # Generate the file
     p = str(tmpdir.mkdir("3ptb"))
     molid = molecule.load("mae", os.path.join(dir, "3PTB_1lig_prepped.mae"))
-    w = CharmmWriter(molid=molid, tmp_dir=p, forcefield="amber", hmr=False,
+    w = CharmmWriter(molid=molid, tmp_dir=p, forcefield="charmm", hmr=False,
                      override_defaults=False)
     w.write(os.path.join(p, "test"))
 
@@ -26,7 +26,7 @@ def test_multiple_insertion_codes(tmpdir):
     assert len(set(atomsel("protein or resname ACE NMA NME").fragment)) == 1
 
     # Check the calcium ion is present
-    assert atomsel("element Ca").element == ["CAL"]
+    assert atomsel("element Ca").resname == ["CAL"]
 
     # Check residues with insertion codes
     assert set(atomsel("resid 184").resname) == set(["GLY", "TYR"])
