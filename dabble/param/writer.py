@@ -75,6 +75,10 @@ class MoleculeWriter(ABC):
         self.extra_topos = kwargs.get("extra_topos", [])
         self.extra_params = kwargs.get("extra_params", [])
 
+        # Handle None from argparse in command line invocation
+        if self.extra_topos is None: self.extra_topos = []
+        if self.extra_params is None: self.extra_params = []
+
     #==========================================================================
 
     @abstractmethod
