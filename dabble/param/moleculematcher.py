@@ -148,10 +148,7 @@ class MoleculeMatcher(ABC): # pylint: disable=too-few-public-methods
             matcher = isomorphism.GraphMatcher(rgraph, graph,
                                                node_match=self._check_atom_match)
             if matcher.is_isomorphic():
-                match = next(matcher.match())
-                resmatch = dict((i, graph.node[match[i]].get("resname")) \
-                                for i in match.keys())
-                return (resmatch, match)
+                return self._get_names_from_match(graph, next(matcher.match()))
 
         # If that didn't work, loop through all known residues
         for matchname in self.known_res.keys():
@@ -160,14 +157,12 @@ class MoleculeMatcher(ABC): # pylint: disable=too-few-public-methods
                                                node_match=self._check_atom_match)
 
             if matcher.is_isomorphic():
-                match = next(matcher.match())
-                resmatch = dict((i, graph.node[match[i]].get("resname")) \
-                                for i in match.keys())
-                return (resmatch, match)
+                return self._get_names_from_match(graph, next(matcher.match()))
 
         # Try to print out a helpful error message here if matching failed
         if print_warning:
-            print("\nERROR: Couldn't find a topological match for resname '%s'" % resname)
+            print("\nERROR: Couldn't find a topological match for resname '%s'"
+                  % resname)
             if self.known_res.get(resname):
                 print("      I found a residue definition with the same name, but "
                       "it didn't match up")
@@ -261,7 +256,6 @@ class MoleculeMatcher(ABC): # pylint: disable=too-few-public-methods
             ValueError if topology file is malformed in various ways
         """
         pass
-
 
     #++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
     #                            STATIC FUNCTIONS                             #
@@ -393,5 +387,22 @@ class MoleculeMatcher(ABC): # pylint: disable=too-few-public-methods
         nx.set_node_attributes(rgraph, name='atomname', values=adict)
 
         return (rgraph, is_covalent)
+
+    #=========================================================================
+
+    @staticmethod
+    def _get_names_from_match(graph, match):
+        """
+        Gets a dictionary from VMD index -> atom name / resname
+        """
+        atommatch = {i: graph.node[match[i]].get("atomname")
+                     for i in match.keys()
+                     if graph.node[match[i]].get("residue") == "self"}
+        resmatch = {i: graph.node[match[i]].get("resname")
+                    for i in match.keys()
+                    if graph.node[match[i]].get("residue") == "self"}
+        return (resmatch, atommatch)
+
+    #=========================================================================
 
 #++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++

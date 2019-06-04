@@ -5,7 +5,7 @@
 
  Author: Robin Betz
 
- Copyright (C) 2015 Robin Betz
+ Copyright (C) 2019 Robin Betz
 
 """
 # This program is free software; you can redistribute it and/or modify it under
@@ -568,21 +568,14 @@ def _define_bond(graph, node1, node2, patch):
           line dictionary
     """
 
-    # Sanity check and process first atom name
-    if "+" in node1:
-        graph.add_node(node1, atomname="+", type="", residue="+", patched=patch)
-    elif "-" in node1:
-        graph.add_node(node1, atomname="-", type="", residue="-", patched=patch)
-    elif node1 not in graph.nodes():
-        return False
-
-    # Now sanity check and process second atom name
-    if "+" in node2:
-        graph.add_node(node2, atomname="+", type="", residue="+", patched=patch)
-    elif "-" in node2:
-        graph.add_node(node2, atomname="-", type="", residue="-", patched=patch)
-    elif node2 not in graph.nodes():
-        return False
+    # Sanity check and process atom names
+    for n in [node1, node2]:
+        if "+" in n:
+            graph.add_node(n, atomname="+", type="", residue="+", patched=patch)
+        elif "-" in n:
+            graph.add_node(n, atomname="-", type="", residue="-", patched=patch)
+        elif n not in graph.nodes():
+            return False
 
     # If we are applying a patch and there are _join atoms attached
     # to the atom we are applying a bond to, delete the _join atom.

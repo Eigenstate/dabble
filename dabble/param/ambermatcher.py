@@ -141,14 +141,7 @@ class AmberMatcher(MoleculeMatcher):
 
         # Only return within-residue atom naming dictionary (no _join)
         if matched:
-            nammatch = {i: graph.node[match[i]].get("atomname")
-                        for i in match.keys()
-                        if graph.node[match[i]].get("residue") == "self"}
-            resmatch = {i: graph.node[match[i]].get("resname")
-                        for i in match.keys()
-                        if graph.node[match[i]].get("residue") == "self"}
-
-            return (resmatch, nammatch)
+            return self._get_names_from_match(graph, match)
 
         # Try to print out a helpful error message here if matching failed
         if print_warning:
@@ -339,13 +332,8 @@ class AmberMatcher(MoleculeMatcher):
         else:
             return (None, None, None)
 
-        # Generate naming dictionaries to return
-        nammatch = {i: graph.node[match[i]].get("atomname")
-                    for i in match.keys()
-                    if graph.node[match[i]].get("residue") == "self"}
-        resmatch = {i: graph.node[match[i]].get("resname")
-                    for i in match.keys()
-                    if graph.node[match[i]].get("residue") == "self"}
+        # Get naming dictionaries to return
+        resmatch, nammatch = self._get_names_from_match(graph, match)
 
         # Now we know it's a cysteine in a disulfide bond
         # Identify which resid and fragment corresponds to the other cysteine
@@ -402,13 +390,8 @@ class AmberMatcher(MoleculeMatcher):
         match = matches[matchname]
         graph = self.known_res.get(matchname)
 
-        # Generate naming dictionaries to return
-        nammatch = {i: graph.node[match[i]].get("atomname")
-                    for i in match.keys()
-                    if graph.node[match[i]].get("residue") == "self"}
-        resmatch = {i: graph.node[match[i]].get("resname")
-                    for i in match.keys()
-                    if graph.node[match[i]].get("residue") == "self"}
+        # Get naming dictionaries to return
+        resmatch, nammatch = self._get_names_from_match(graph, match)
 
         # Find atom index on non-truncated graph that corresponds to the
         # - direction join atom. Necessary to figure out the order in which
@@ -472,12 +455,7 @@ class AmberMatcher(MoleculeMatcher):
                 if matcher.is_isomorphic():
                     matched = True
                     match = next(matcher.match())
-                    nammatch = {i: graph.node[match[i]].get("atomname")
-                                for i in match.keys()
-                                if graph.node[match[i]].get("residue") == "self"}
-                    resmatch = {i: graph.node[match[i]].get("resname")
-                                for i in match.keys()
-                                if graph.node[match[i]].get("residue") == "self"}
+                    resmatch, nammatch = self._get_names_from_match(graph, match)
                     taildicts.append((resmatch, nammatch))
                     break
             if not matched:
