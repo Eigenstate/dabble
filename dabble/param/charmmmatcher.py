@@ -25,7 +25,6 @@
 from __future__ import print_function
 import logging
 import networkx as nx
-from networkx.drawing.nx_pydot import write_dot
 from networkx.algorithms import isomorphism
 from vmd import atomsel
 
@@ -152,7 +151,7 @@ class CharmmMatcher(MoleculeMatcher):
 
         logger.error("Couldn't find a patch for resname '%s'."
                      "Dumping as 'rgraph.dot'", resname)
-        write_dot(rgraph, "rgraph.dot")
+        self.write_dot(rgraph, "rgraph.dot")
         return (None, None, None)
 
     #=========================================================================
@@ -412,7 +411,10 @@ class CharmmMatcher(MoleculeMatcher):
                 if tokens[1] in graph.nodes():
                     graph.node[tokens[1]]["type"] = tokens[2]
                 else:
-                    graph.add_node(tokens[1], type=tokens[2], residue="self", patched=bool(patch))
+                    graph.add_node(tokens[1], type=tokens[2],
+                                   atomname=tokens[1],
+                                   residue="self",
+                                   patched=bool(patch))
 
             # Bond or double means add edge to residue graph
             elif tokens[0] == "BOND" or tokens[0] == "DOUBLE":
@@ -531,7 +533,8 @@ class CharmmMatcher(MoleculeMatcher):
         # Now that all atom and mass lines are read, get the element for each atom
         for node, data in graph.nodes(data=True):
             if data.get('residue') != "self":
-                typestr = ''.join([i for i in node if not i.isdigit() and i != "+" and i != "-"])
+                typestr = ''.join([i for i in node if not i.isdigit()
+                                   and i != "+" and i != "-"])
             else:
                 typestr = data.get('type')
 
@@ -567,17 +570,17 @@ def _define_bond(graph, node1, node2, patch):
 
     # Sanity check and process first atom name
     if "+" in node1:
-        graph.add_node(node1, type="", residue="+", patched=patch)
+        graph.add_node(node1, atomname="+", type="", residue="+", patched=patch)
     elif "-" in node1:
-        graph.add_node(node1, type="", residue="-", patched=patch)
+        graph.add_node(node1, atomname="-", type="", residue="-", patched=patch)
     elif node1 not in graph.nodes():
         return False
 
     # Now sanity check and process second atom name
     if "+" in node2:
-        graph.add_node(node2, type="", residue="+", patched=patch)
+        graph.add_node(node2, atomname="+", type="", residue="+", patched=patch)
     elif "-" in node2:
-        graph.add_node(node2, type="", residue="-", patched=patch)
+        graph.add_node(node2, atomname="-", type="", residue="-", patched=patch)
     elif node2 not in graph.nodes():
         return False
 

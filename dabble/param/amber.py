@@ -29,15 +29,13 @@ import sys
 import tempfile
 import warnings
 from subprocess import check_output
-from pkg_resources import resource_filename
 from vmd import molecule, atomsel
 
-from networkx.drawing.nx_pydot import write_dot
 from parmed.tools import chamber, parmout, HMassRepartition, checkValidity
 from parmed.amber import AmberParm
 from parmed.exceptions import ParameterWarning
 from dabble import DabbleError
-from dabble.param import MoleculeWriter, CharmmWriter, AmberMatcher
+from dabble.param import MoleculeWriter, AmberMatcher
 
 #++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
 
@@ -60,7 +58,7 @@ class AmberWriter(MoleculeWriter):
         Args:
             molid (int): VMD molecule ID of system to write
             tmp_dir (str): Directory for temporary files. Defaults to "."
-            forcefield (str): charmm36mm, charmm36, or amber
+            forcefield (str): charmm, or amber
             lipid_sel (str): Lipid selection string. Defaults to "lipid"
             hmr (bool): If hydrogen masses should be repartitioned. Defaults
                 to False.
@@ -73,87 +71,68 @@ class AmberWriter(MoleculeWriter):
         """
         # Initialize standard MoleculeWriter items
         super(AmberWriter, self).__init__(molid, **kwargs)
-
-        self.prmtop_name = ""
-
         self.hmr = kwargs.get("hmr", False)
-        self.extra_topos = kwargs.get("extra_topos", None)
-        self.override = kwargs.get("override_defaults", False)
+        self.prompt_params = False
 
-        forcefield = kwargs.get("forcefield", "amber")
-        if forcefield not in ["amber", "charmm36m", "charmm", "charmm36"]:
-            raise DabbleError("Unsupported forcefield: %s" % forcefield)
-        self.forcefield = forcefield
+        # Set forcefield default topologies and parameters
+        self.forcefield = kwargs.get("forcefield", "amber")
         if "charmm" in self.forcefield:
+            # Import CharmmWriter as needed to avoid circular imports
+            from dabble.param import CharmmWriter
 
             # Topologies used will be found and returned by CharmmWriter
-            self.topologies = CharmmWriter.get_charmm_topologies()
-            self.parameters = CharmmWriter.get_charmm_parameters(self.forcefield)
-
-            # Get resource filename path for all parameter files
-            for i, par in enumerate(self.parameters):
-                self.parameters[i] = resource_filename(__name__,
-                                         os.path.join("charmm_parameters", par))
+            self.topologies = CharmmWriter.get_topologies(self.forcefield)
+            self.parameters = CharmmWriter.get_parameters(self.forcefield)
 
         elif self.forcefield == 'amber':
-            if not os.environ.get("AMBERHOME"):
-                raise DabbleError("AMBERHOME must be set to use AMBER forcefield!")
-            if not os.path.isfile(os.path.join(os.environ.get("AMBERHOME"),
-                                               "bin", "tleap")):
-                raise DabbleError("tleap is not present in $AMBERHOME/bin!")
-
-            # Check amber version and set topologies accordingly
-            self.topologies = [
-                "leaprc.protein.ff14SB",
-                "leaprc.lipid14",
-                "leaprc.water.tip3p",
-                "leaprc.gaff2",
-            ]
-            for i, top in enumerate(self.topologies):
-                self.topologies[i] = os.path.join(os.environ["AMBERHOME"],
-                                                  "dat", "leap", "cmd", top)
-                if not os.path.isfile(self.topologies[i]):
-                    raise DabbleError("AMBER version too old! "
-                                      "Dabble requires >= AmberTools16!")
-
+            self.topologies = self.get_topologies(self.forcefield)
+            self.parameters = self.get_parameters(self.forcefield)
             self.parameters = []
-            self.matcher = None
 
+        else:
+            raise DabbleError("Unsupported forcefield: %s" % self.forcefield)
+
+        # Handle override
         if self.override:
             self.topologies = []
             self.parameters = []
 
-        if kwargs.get("extra_topos") is not None:
-            self.topologies.extend(kwargs.get("extra_topos"))
+        # Now extra topologies and parameters
+        self.topologies.extend(self.extra_topos)
+        self.parameters.extend(self.extra_params)
 
-        if kwargs.get("extra_params") is not None:
-            self.parameters.extend(kwargs.get("extra_params"))
-
-        self.prompt_params = False
+        # Initialize matcher only now that all topologies have been set
+        if self.forcefield == "amber":
+            self.matcher = AmberMatcher(topologies=self.topologies)
 
     #==========================================================================
 
-    def write(self, prmtop_name):
+    def write(self, filename):
         """
-        Creates a prmtop with either AMBER or CHARMM parameters.
+        Writes the parameter and topology files
+
+        Args:
+            filename (str): File name to write. File type suffix will be added.
         """
-        self.prmtop_name = prmtop_name
+        self.outprefix = filename
 
         # Charmm forcefield
         if "charmm" in self.forcefield:
-            psfgen = CharmmWriter(molid=self.molid,
+            from dabble.param import CharmmWriter
+            charmmw = CharmmWriter(molid=self.molid,
                                   tmp_dir=self.tmp_dir,
                                   lipid_sel=self.lipid_sel,
                                   extra_topos=self.extra_topos,
-                                  override_defaults=self.override)
-            self.topologies = psfgen.write(self.prmtop_name)
+                                  extra_params=self.extra_params,
+                                  override_defaults=self.override,
+                                  debug_verbose=self.debug)
+            charmmw.write(self.outprefix)
             self._psf_to_charmm_amber()
 
         # Amber forcefield
         elif "amber" in self.forcefield:
 
-            # Initialize the matcher
-            self.matcher = AmberMatcher(self.topologies)
+            # Print info about topologies
             print("Using the following topologies:")
             for top in self.topologies:
                 print("  - %s" % top.split("/")[-1])
@@ -184,14 +163,13 @@ class AmberWriter(MoleculeWriter):
                                  xyz=outfile+".inpcrd")
                 action = HMassRepartition(parm, "dowater")
                 action.execute()
-                write = parmout(action.parm, "%s.prmtop" % self.prmtop_name)
-                                                                      #self.prmtop_name))
+                write = parmout(action.parm, "%s.prmtop" % self.outprefix)
                 write.execute()
                 parm = write.parm
 
             # Check validity of output prmtop using parmed
-            parm = AmberParm(prm_name=self.prmtop_name+".prmtop",
-                             xyz=self.prmtop_name+".inpcrd")
+            parm = AmberParm(prm_name=self.outprefix + ".prmtop",
+                             xyz=self.outprefix + ".inpcrd")
             print("\nChecking for problems with the prmtop...")
             print("        Verify all warnings!")
             action = checkValidity(parm)
@@ -212,7 +190,8 @@ class AmberWriter(MoleculeWriter):
         to track which things have been written.
 
         Returns:
-            (set of tuples (int,int)): Residue #s of disulfide bonded residues
+            (set of tuples (int,int)): Residue #s of disulfide or otherwise
+                noncanonically linked residues
 
         Raises:
             ValueError if a residue definition could not be found
@@ -230,14 +209,16 @@ class AmberWriter(MoleculeWriter):
 
             residue = nonlips.pop()
             sel = atomsel("residue %s" % residue)
-            resnames, atomnames = self.matcher.get_names(sel, print_warning=False)
+            resnames, atomnames = self.matcher.get_names(sel,
+                                                         print_warning=False)
 
             # Check if it's a linkage to another amino acid
             if not resnames:
-                resnames, atomnames, other = self.matcher.get_linkage(sel, self.molid)
+                resnames, atomnames, other = self.matcher.get_linkage(sel,
+                                                                      self.molid)
                 if not resnames:
                     rgraph = self.matcher.parse_vmd_graph(sel)[0]
-                    write_dot(rgraph, "rgraph.dot")
+                    self.matcher.write_dot(rgraph, "rgraph.dot")
                     raise DabbleError("ERROR: Could not find a residue definition "
                                       "for %s:%s" % (sel.resname[0],
                                                      sel.resid[0]))
@@ -286,8 +267,8 @@ class AmberWriter(MoleculeWriter):
             print("\n")
 
         # Begin assembling chamber input string
-        args = ["-psf", "%s.psf" % self.prmtop_name,
-                "-crd", "%s.pdb" % self.prmtop_name]
+        args = ["-psf", self.outprefix + ".psf",
+                "-crd", self.outprefix + ".pdb"]
 
         # Add topology and parameter arguments
         for inp in set(self.topologies + self.parameters):
@@ -315,8 +296,9 @@ class AmberWriter(MoleculeWriter):
             action.execute()
 
         print("\tRan chamber")
-        write = parmout(action.parm, "%s.prmtop" % self.prmtop_name,
-                        "%s.inpcrd" % self.prmtop_name)
+        write = parmout(action.parm,
+                        self.outprefix + ".prmtop",
+                        self.outprefix + ".inpcrd")
         write.execute()
         print("\nWrote output prmtop and inpcrd")
         return True
@@ -735,7 +717,7 @@ class AmberWriter(MoleculeWriter):
                             % ' '.join(["l%d"%i for i in range(len(ligfiles))]))
             fileh.write("setbox p centers 0.0\n")
             fileh.write("saveamberparm p %s.prmtop %s.inpcrd\n"
-                        % (self.prmtop_name, self.prmtop_name))
+                        % (self.outprefix, self.outprefix))
             fileh.write("quit\n")
             fileh.close()
 
@@ -750,7 +732,7 @@ class AmberWriter(MoleculeWriter):
                 out,
                 "\n=================END TLEAP OUTPUT=================\n")
 
-            if self.debug_verbose:
+            if self.debug:
                 print(out)
             if "not saved" in out:
                 raise DabbleError("Tleap call failed")
@@ -760,8 +742,8 @@ class AmberWriter(MoleculeWriter):
             quit(1)
 
         # Do a quick sanity check that all the protein is present.
-        mademol = molecule.load("parm7", "%s.prmtop" % self.prmtop_name,
-                                "rst7", "%s.inpcrd" % self.prmtop_name)
+        mademol = molecule.load("parm7", self.outprefix+ ".prmtop",
+                                "rst7", self.outprefix+ ".inpcrd")
         if len(atomsel("resname %s" % " ".join(self.matcher._acids), mademol)) \
                 != len(atomsel("resname %s" % " ".join(self.matcher._acids), self.molid)):
            print(out)
@@ -770,7 +752,7 @@ class AmberWriter(MoleculeWriter):
                              "above output, especially for covalent ligands. "
                              "Is naming consistent in all .off files?")
 
-        return self.prmtop_name
+        return self.outprefix
 
     #==========================================================================
 
@@ -806,6 +788,39 @@ class AmberWriter(MoleculeWriter):
             new_topos.append(temp)
 
         self.topologies = new_topos
+
+    #========================================================================#
+    #                            Static methods                              #
+    #========================================================================#
+
+    @staticmethod
+    def get_topologies(forcefield):
+        if not os.environ.get("AMBERHOME"):
+            raise DabbleError("AMBERHOME must be set to use AMBER forcefield!")
+        if not os.path.isfile(os.path.join(os.environ.get("AMBERHOME"),
+                                           "bin", "tleap")):
+            raise DabbleError("tleap is not present in $AMBERHOME/bin!")
+
+        # Check amber version and set topologies accordingly
+        ambpath = os.path.join(os.environ["AMBERHOME"], "dat", "leap", "cmd")
+        topologies = [
+            "leaprc.protein.ff14SB",
+            "leaprc.lipid14",
+            "leaprc.water.tip3p",
+            "leaprc.gaff2",
+        ]
+
+        for i, top in enumerate(topologies):
+            topologies[i] = os.path.join(ambpath, top)
+            if not os.path.isfile(topologies[i]):
+                raise DabbleError("AMBER forcefield files '%s' not found\n"
+                                  "Dabble requires >= AmberTools16" % top)
+        return topologies
+
+    @staticmethod
+    def get_parameters(forcefield):
+        # AMBER default leaprcs all go in topologies
+        return []
 
 #++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
 

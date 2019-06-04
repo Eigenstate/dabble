@@ -2,8 +2,6 @@
 from setuptools import setup, find_packages
 from setuptools.command.test import test as TestCommand
 
-import sys
-
 # Testing
 class PyTest(TestCommand):
     user_options = [("pytest-args=", "a", "Arguments to pass to pytest")]
@@ -33,7 +31,6 @@ setup(name='dabble',
       include_package_data=True,
       install_requires=["numpy",
                         "networkx>=1.11",
-                        "pydot",
                         "vmd-python>=2.0.4",
                         "parmed"],
       entry_points={

@@ -26,8 +26,8 @@ from __future__ import print_function
 import logging
 import networkx as nx
 import os
-from Dabble.param import MoleculeMatcher
-from Dabble import DabbleError
+from dabble.param import MoleculeMatcher
+from dabble import DabbleError
 
 #++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
 #                                   CLASSES                                   #

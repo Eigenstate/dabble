@@ -177,17 +177,20 @@ def write_final_system(out_fmt, out_name, molid, **kwargs):
     """
 
     # Set defaults for extra keyword options
-    if not kwargs.get('tmp_dir'):
-        kwargs['tmp_dir'] = "."
-    if not kwargs.get('lipid_sel'):
+    # Do this explicitly here
+    if kwargs.get('tmp_dir') is None:
+        kwargs['tmp_dir'] = os.getcwd()
+    if kwargs.get('lipid_sel') is None:
         kwargs['lipid_sel'] = "lipid or resname POPS POPG"
-    if not kwargs.get('forcefield'):
-        kwargs['forcefield'] = "charmm36m"
+    if kwargs.get('forcefield') is None:
+        kwargs['forcefield'] = "charmm"
+    if kwargs.get('debug_verbose') is None:
+        kwargs['debug_verbose'] = False
 
     # Write a mae file always, removing the prefix from the output file
     mae_name = '.'.join(out_name.rsplit('.')[:-1]) + '.mae'
     write_ct_blocks(molid=molid, sel='beta 1', output_filename=mae_name,
-                    tmp_dir=kwargs['tmp_dir'])
+                    tmp_dir=kwargs.get('tmp_dir', os.getcwd()))
     temp_mol = molecule.load('mae', mae_name)
 
     if out_fmt == "desmond":
@@ -200,23 +203,19 @@ def write_final_system(out_fmt, out_name, molid, **kwargs):
 
     # If we want a parameterized format like amber or charmm, a psf must
     # first be written which does the atom typing, etc
-    elif out_fmt == "charmm" or out_fmt == "namd":
+    elif out_fmt == "charmm":
         writer = CharmmWriter(molid=temp_mol,
                               tmp_dir=kwargs['tmp_dir'],
                               forcefield=kwargs['forcefield'],
-                              lipid_sel=kwargs.get('lipid_sel'),
+                              lipid_sel=kwargs['lipid_sel'],
                               extra_topos=kwargs.get('extra_topos', []),
-                              debug_verbose=kwargs.get('debug_verbose'))
+                              debug_verbose=kwargs.get('debug_verbose', False))
         writer.write(mae_name.replace(".mae", ""))
 
     # For amber format files, invoke the parmed chamber routine
     elif out_fmt == "amber":
-        if "charmm" in kwargs.get('forcefield'):
-            print("Writing AMBER format files with CHARMM parameters. "
-                  "This may take a moment...\n")
-        else:
-            print("Writing AMBER format files with Amber parameters. "
-                  "This may take a moment...\n")
+        print("Writing AMBER format files with %s parameters. "
+              "This may take a moment...\n" % kwargs.get("forcefield"))
 
         writeit = AmberWriter(molid=temp_mol,
                               tmp_dir=kwargs['tmp_dir'],
@@ -262,8 +261,7 @@ def check_write_ok(filename, out_fmt, overwrite=False):
       overwrite (bool): True if overwriting is allowed
 
     Returns:
-      True if it okay to overwrite
-      Quits the program otherwise
+      True if it okay to overwrite, False otherwise
     """
     if overwrite is True:
         return True
@@ -275,10 +273,10 @@ def check_write_ok(filename, out_fmt, overwrite=False):
         suffixes.append('dms')
     elif out_fmt == 'pdb':
         suffixes.append('pdb')
-    elif out_fmt == 'charmm' or out_fmt == 'namd':
+    elif out_fmt == 'charmm':
         suffixes.extend(['psf', 'pdb'])
     elif out_fmt == 'amber':
-        suffixes.extend(['psf', 'pdb', 'prmtop', 'inpcrd'])
+        suffixes.extend(['prmtop', 'inpcrd'])
     elif out_fmt == 'gromacs':
         suffixes.extend(['.gro', '.top'])
 
@@ -319,8 +317,6 @@ def check_out_type(value, format, forcefield, hmr=False):
     """
     if format is not None:
         print("Will output files in %s format" % format)
-        if format == "namd":
-            return 'charmm' # Charmm and namd are the same thing
         return format
     else:
         print("Inferring output format from file extension")
@@ -332,10 +328,9 @@ def check_out_type(value, format, forcefield, hmr=False):
         out_fmt = 'pdb'
     elif ext == 'dms':
         out_fmt = 'dms'
-    elif ext == 'psf' and "charmm" in forcefield:
+    elif ext == 'psf' and forcefield in ["amber", "charmm", "opls"]:
         out_fmt = 'charmm'
-    elif ext == 'prmtop' and forcefield in ["amber", "charmm",
-                                            "charmm36", "charmm36m"]:
+    elif ext == 'prmtop' and forcefield in ["amber", "charmm", "opls"]:
         out_fmt = 'amber'
     else:
         raise DabbleError("%s is an unsupported format with %s forcefield"

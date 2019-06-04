@@ -29,6 +29,7 @@ import signal
 import sys
 import tempfile
 from dabble import VmdSilencer, DabbleBuilder
+from dabble.param import supported_forcefields
 
 __version__ = '2.7.9'
 __author__ = 'Robin Betz'
@@ -69,7 +70,7 @@ class DabbleTempDir(object): # pylint: disable=too-few-public-methods
 
 #++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
 
-def main():
+def main(argv=None):
 
     WELCOME_SCREEN = '''
      ===============================================
@@ -105,10 +106,9 @@ def main():
                        'prmtop (amber or charmm)')
     group.add_argument('-format', '--format', dest='format',
                        type=str, metavar='<output format>', default=None,
-                       choices=['amber', 'charmm', 'desmond', 'gromacs', 'namd',
-                                'pdb'],
+                       choices=['amber', 'charmm', 'desmond', 'gromacs', 'pdb'],
                        help='Format of output file. Supported: amber, charmm, '
-                       'desmond, gromacs, namd, pdb')
+                       'desmond, gromacs, pdb')
     group.add_argument('-M', '--membrane-system', dest='membrane_system',
                        type=str, metavar='<solvent>',
                        default="DEFAULT",
@@ -119,10 +119,11 @@ def main():
 
     group = parser.add_argument_group('Parameterization Options')
     group.add_argument('-ff', '--forcefield', dest='forcefield',
-                       type=str, metavar='<forcefield>', default="charmm36m",
-                       choices=['amber', 'charmm', 'charmm36m'], action='store',
+                       type=str, metavar='<forcefield>', default="charmm",
+                       choices=supported_forcefields,
+                       required=True, action="store",
                        help="Force field to use for parameterization. Currently "
-                            "supported: amber/charmm(36)/charmm36m")
+                            "supported: amber/charmm/opls")
     group.add_argument('--hmr', dest='hmassrepartition', default=False,
                        action='store_true', help='Repartition Hydrogen masses'
                        'to allow up to 4fs time steps. Currently prmtop output only')
@@ -215,7 +216,8 @@ def main():
 
     print(WELCOME_SCREEN)
     print("\nCommand was:\n  %s\n" % " ".join([i for i in sys.argv]))
-    opts = parser.parse_args(sys.argv[1:])
+    #opts = parser.parse_args(sys.argv[1:])
+    opts = parser.parse_args(argv)
 
 # Make the temporary directory. Needs to be done now so there is somewhere
 # to save the vmd output

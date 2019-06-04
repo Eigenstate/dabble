@@ -23,8 +23,8 @@ Copyright (C) 2015 Robin Betz
 # Boston, MA 02111-1307, USA.
 
 from __future__ import print_function
-import abc
 import logging
+from abc import ABC, abstractmethod
 from itertools import product
 
 import networkx as nx
@@ -39,7 +39,7 @@ logger = logging.getLogger(__name__) # pylint: disable=invalid-name
 #                                   CLASSES                                   #
 #++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
 
-class MoleculeMatcher(object): # pylint: disable=too-few-public-methods
+class MoleculeMatcher(ABC): # pylint: disable=too-few-public-methods
     """
     Represents a collection of graphs of all residues defined in the
     topology files. Can pass in VMD molecules to be checked and atom
@@ -92,7 +92,7 @@ class MoleculeMatcher(object): # pylint: disable=too-few-public-methods
                 nodenames from CharmmMatcher, then write amber off files with it
 
         """
-        if kwargs.get("topologies"):
+        if kwargs.get("topologies") is not None:
             self.topologies = kwargs.get("topologies")
             self.nodenames = {}
             self.known_res = {}
@@ -202,11 +202,47 @@ class MoleculeMatcher(object): # pylint: disable=too-few-public-methods
         return externs
 
     #=========================================================================
+
+    def write_dot(self, graph, output):
+        """
+        Writes the residue as a dot file that can be rendered as a SVG
+        to aid in debugging.
+
+        Args:
+            graph (networkx Graph): Graph to draw
+            output (str): Filename to write to
+        """
+        colors = {"C": "#40e0d0",
+                  "O": "#ff0000",
+                  "H": "#cecece",
+                  "N": "#4268f4"}
+        default = "#b27c00"
+
+        with open(output, 'w') as fn:
+            fn.write("strict graph {\n")
+            for nodename in graph.nodes():
+                node = graph.node[nodename]
+                ele = node.get("element")
+                oth = "" if node.get("residue") == "self" else "+-"
+
+                fn.write("\"%s\" [shape=record style=\"filled,rounded\" "
+                         "fillcolor=\"%s\" "
+                         "label=\"%s%s|{%s|%s}\"];\n"
+                         % (nodename, colors.get(ele, default), oth, ele,
+                            node.get("atomname"), node.get("type", "")))
+
+            for e1, e2 in graph.edges():
+                fn.write("\"%s\" -- \"%s\";\n" % (e1, e2))
+
+            fn.write("packMode=\"graph\";\n")
+            fn.write("}\n")
+
+
+    #=========================================================================
     #                           Private methods                              #
     #=========================================================================
 
-    __metaclass__ = abc.ABCMeta
-    @abc.abstractmethod
+    @abstractmethod
     def _parse_topology(self, filename):
         """
         This method needs to be overridden in each subclass to parse
@@ -311,18 +347,22 @@ class MoleculeMatcher(object): # pylint: disable=too-few-public-methods
             rgraph.add_edges_from([bnd for bnd in gen])
 
         # Dictionary translating index to element, set as known attribute
-        rdict = {selection.index[i]: selection.element[i] \
+        rdict = {selection.index[i]: selection.element[i]
                 for i in range(len(selection))}
+
+        # Atom name dictionary
+        adict = {selection.index[i]: selection.name[i]
+                 for i in range(len(selection))}
 
         # Set all atoms to belong to this residue by default
 
         # Loop through all nodes for indices that are not in this selection.
         # They were added to the graph from edges that go to other residues,
         # such as amino acid +N or -CA bonds. Mark these as special elements.
-        edict = {selection.index[i]: "self" \
-                 for i in range(len(selection))}
+        edict = {selection.index[i]: "self" for i in range(len(selection))}
         others = set(rgraph.nodes()) - set(selection.index)
         is_covalent = bool(len(others))
+
         for oth in others:
             sel = atomsel('index %d' % oth, molid=selection.molid)
             resido = sel.resid[0]
@@ -334,6 +374,7 @@ class MoleculeMatcher(object): # pylint: disable=too-few-public-methods
             # Don't actually use this code to determine which one is first
             # as there isn't really a convention for it. Instead, just go
             # by atom index as the ordering here should be reliable.
+            # TODO: atom index NOT reliable. +- shouldn't matter.
             else:
                 if set(selection.insertion) == set(sel.insertion)\
                         and set(selection.fragment) == set(sel.fragment):
@@ -344,10 +385,12 @@ class MoleculeMatcher(object): # pylint: disable=too-few-public-methods
                 edict[oth] = "-" if oth < ins else "+"
 
             rdict[oth] = sel.element[0]
+            adict[oth] = sel.name[0]
 
-        # Set node attributes
+        # Set node attributes only after extraresidue nodes have been found
         nx.set_node_attributes(rgraph, name='element', values=rdict)
         nx.set_node_attributes(rgraph, name='residue', values=edict)
+        nx.set_node_attributes(rgraph, name='atomname', values=adict)
 
         return (rgraph, is_covalent)
 

@@ -91,7 +91,7 @@ def test_hmr_param(tmpdir):
     # Build the system with HMR
     p = str(tmpdir.mkdir("hmr_param"))
     molid = molecule.load("mae", os.path.join(dir, "rho_test.mae"))
-    w = AmberWriter(tmp_dir=p, molid=molid, hmr=True, forcefield="charmm36")
+    w = AmberWriter(tmp_dir=p, molid=molid, hmr=True, forcefield="charmm")
     w.write(os.path.join(p, "test"))
     check_built_system(p)
 

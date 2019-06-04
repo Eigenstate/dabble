@@ -28,7 +28,6 @@ import logging
 import networkx as nx
 
 from networkx.algorithms import isomorphism
-from networkx.drawing.nx_pydot import write_dot
 from pkg_resources import resource_filename
 from vmd import atomsel
 
@@ -63,7 +62,7 @@ class AmberMatcher(MoleculeMatcher):
         super(AmberMatcher, self).__init__(topologies=topologies)
 
         # Add the water without TIP3 bond
-        self._load_off(resource_filename(__name__, "charmm_parameters/hoh.lib"))
+        self._load_off(resource_filename(__name__, "parameters/hoh.lib"))
 
 
     #++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
@@ -136,6 +135,7 @@ class AmberMatcher(MoleculeMatcher):
                                                    node_match=self._check_atom_match)
                 if matcher.is_isomorphic():
                     matched = True
+                    # TODO : check only one match
                     match = next(matcher.match())
                     break
 
@@ -252,7 +252,7 @@ class AmberMatcher(MoleculeMatcher):
                 matches[names] = matcher.match()
 
         if not matches:
-            write_dot(noext, "noext.dot")
+            self.write_dot(noext, "noext.dot")
             return (None, None, None)
 
         # Want minimumally different thing, ie fewest _join atoms different
@@ -334,6 +334,7 @@ class AmberMatcher(MoleculeMatcher):
         matcher = isomorphism.GraphMatcher(rgraph, graph, \
                                            node_match=self._check_atom_match)
         if matcher.subgraph_is_isomorphic():
+            # TODO: Check there's only one match
             match = next(matcher.match())
         else:
             return (None, None, None)

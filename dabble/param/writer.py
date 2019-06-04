@@ -24,18 +24,17 @@ Copyright (C) 2019 Robin Betz
 
 
 from __future__ import print_function
-import abc
+import os
 import logging
 
-from networkx.algorithms import isomorphism
-from vmd import atomsel
+from abc import ABC, abstractmethod
 
 logger = logging.getLogger(__name__) # pylint: disable=invalid-name
 
 #++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
 #                                   CLASSES                                   #
 #++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
-class MoleculeWriter(object):
+class MoleculeWriter(ABC):
     """
     Represents a writer that will parameterize built systems into input files
     for some simulation program.
@@ -60,22 +59,38 @@ class MoleculeWriter(object):
             extra_topos (list of str): Additional topology (.str, .off, .lib) to
                 include.
             extra_params (list of str): Additional parameter sets (.str, .frcmod)
+            override_defaults (bool): If set, omits default forcefield parameters
             debug_verbose (bool): Prints additional output, like from tleap.
         """
         self.molid = molid
+        self.outprefix = ""
+        self.matcher = None
 
-        self.tmp_dir = kwargs.get("tmp_dir", ".")
+        # Set default options
+        self.tmp_dir = kwargs.get("tmp_dir", os.getcwd())
         self.lipid_sel = kwargs.get("lipid_sel", "lipid")
-        self.debug_verbose = kwargs.get("debug_verbose", False)
+        self.debug = kwargs.get("debug_verbose", False)
+        self.override = kwargs.get("override_defaults", False)
+
+        self.extra_topos = kwargs.get("extra_topos", [])
+        self.extra_params = kwargs.get("extra_params", [])
+
+        # Handle None from argparse in command line invocation
+        if self.extra_topos is None: self.extra_topos = []
+        if self.extra_params is None: self.extra_params = []
 
     #==========================================================================
 
-    __metaclass__ = abc.ABCMeta
-    @abc.abstractmethod
+    @abstractmethod
     def write(self, filename):
-        """
-        Writes the output
-        """
+        pass
+
+    @abstractmethod
+    def get_topologies(forcefield):
+        pass
+
+    @abstractmethod
+    def get_parameters(forcefield):
         pass
 
     #++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++

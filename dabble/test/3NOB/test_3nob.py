@@ -7,25 +7,9 @@ from vmd import atomsel, molecule
 dir = os.path.dirname(__file__)
 #==============================================================================
 
-def test_amber_custom_residues(tmpdir):
-    from dabble.param import AmberWriter
+def verify_amber(molid):
 
-    # Generate the file
-    p = str(tmpdir.mkdir("3nob_custom"))
-    molid = molecule.load("mae", os.path.join(dir, "prepped.mae"))
-    w = AmberWriter(molid, tmp_dir=p, forcefield="amber", hmr=False,
-                    extra_topos=[os.path.join(dir, "glx.off"),
-                                 os.path.join(dir, "lyx.off")],
-                    extra_params=[os.path.join(dir, "join.frcmod"),
-                                  os.path.join(dir, "analogies.frcmod")],
-                    override_defaults=False)
-    w.write(os.path.join(p, "test"))
-
-    # Load the output file and start checking it
-    m2 = molecule.load("parm7", os.path.join(p, "test.prmtop"),
-                       "rst7", os.path.join(p, "test.inpcrd"))
-    molecule.set_top(m2)
-
+    molecule.set_top(molid)
     # Check the two custom residues are present
     assert len(atomsel("resname GLX")) == 7
     assert len(atomsel("resname LYX")) == 20
@@ -43,6 +27,76 @@ def test_amber_custom_residues(tmpdir):
     for x in atomsel("resname LYX").bonds:
         lybonds.extend(x)
     assert any(x in lybonds for x in atomsel("resname GLX").index)
+
+#==============================================================================
+
+def test_amber_custom_residues(tmpdir):
+    from dabble.param import AmberWriter
+
+    # Generate the file
+    p = str(tmpdir.mkdir("3nob_custom"))
+    molid = molecule.load("mae", os.path.join(dir, "prepped.mae"))
+    w = AmberWriter(molid, tmp_dir=p, forcefield="amber", hmr=False,
+                    extra_topos=[os.path.join(dir, "glx.off"),
+                                 os.path.join(dir, "lyx.off")],
+                    extra_params=[os.path.join(dir, "join.frcmod"),
+                                  os.path.join(dir, "analogies.frcmod")],
+                    override_defaults=False)
+    w.write(os.path.join(p, "test"))
+
+    # Load the output file and start checking it
+    m2 = molecule.load("parm7", os.path.join(p, "test.prmtop"),
+                       "rst7", os.path.join(p, "test.inpcrd"))
+
+    verify_amber(m2)
+    molecule.delete(m2)
+
+#==============================================================================
+
+def test_pdb_amber_custom_residues(tmpdir):
+    from dabble.param import AmberWriter
+
+    p = str(tmpdir.mkdir("3nob_pdb"))
+    molid = molecule.load("pdb", os.path.join(dir, "prepped.pdb"))
+    w = AmberWriter(molid, tmp_dir=p, forcefield="amber", hmr=False,
+                    extra_topos=[os.path.join(dir, "glx.off"),
+                                 os.path.join(dir, "lyx.off")],
+                    extra_params=[os.path.join(dir, "join.frcmod"),
+                                  os.path.join(dir, "analogies.frcmod")],
+                    override_defaults=False)
+    w.write(os.path.join(p, "test"))
+
+    # Check for correctness
+    m2 = molecule.load("parm7", os.path.join(p, "test.prmtop"),
+                       "rst7", os.path.join(p, "test.inpcrd"))
+    verify_amber(m2)
+    molecule.delete(m2)
+
+#==============================================================================
+
+@pytest.mark.skip(reason="PDB needs charges defined")
+def test_pdb_commandline(tmpdir):
+    """
+    Tests command line invocation of dabble with a pdb as input
+    """
+
+    from dabble.__main__ import main
+    p = str(tmpdir)
+
+    main(["-i", os.path.join(dir, "prepped.pdb"),
+          "-o", os.path.join(p, "test.prmtop"),
+          "-w", "5.0", "-M", "TIP3", "-ff", "amber",
+          "-top", os.path.join(dir, "glx.off"),
+          "-top", os.path.join(dir, "lyx.off"),
+          "-par", os.path.join(dir, "join.frcmod"),
+          "-par", os.path.join(dir, "analogies.frcmod"),
+          "--tmp-dir", p])
+
+    # Check output
+    m2 = molecule.load("parm7", os.path.join(p, "test.prmtop"),
+                       "rst7", os.path.join(p, "test.inpcrd"))
+    verify_amber(m2)
+    molecule.delete(m2)
 
 #==============================================================================
 
