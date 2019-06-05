@@ -223,11 +223,13 @@ class MoleculeMatcher(ABC): # pylint: disable=too-few-public-methods
             for nodename in graph.nodes():
                 node = graph.node[nodename]
                 ele = node.get("element")
+                oth = "" if node.get("residue") == "self" else "+-"
+
                 fn.write("\"%s\" [shape=record style=\"filled,rounded\" "
                          "fillcolor=\"%s\" "
-                         "label=\"%s|{%s|%s}\"];\n"
-                         % (nodename, colors.get(ele, default),
-                            ele, node.get("atomname"), node.get("type", "")))
+                         "label=\"%s%s|{%s|%s}\"];\n"
+                         % (nodename, colors.get(ele, default), oth, ele,
+                            node.get("atomname"), node.get("type", "")))
 
             for e1, e2 in graph.edges():
                 fn.write("\"%s\" -- \"%s\";\n" % (e1, e2))

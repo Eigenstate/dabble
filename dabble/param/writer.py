@@ -78,6 +78,10 @@ class MoleculeWriter(ABC):
         if self.extra_topos is None: self.extra_topos = []
         if self.extra_params is None: self.extra_params = []
 
+        # Handle None from argparse in command line invocation
+        if self.extra_topos is None: self.extra_topos = []
+        if self.extra_params is None: self.extra_params = []
+
     #==========================================================================
 
     @abstractmethod
