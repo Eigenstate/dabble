@@ -86,10 +86,7 @@ class DabbleBuilder(object):
                     "lipid_membranes/popc.mae")
 
         # Process input arguments
-        if self.opts.get('membrane_system') == 'DEFAULT':
-            self.opts['membrane_system'] = resource_filename(__name__, \
-                    "lipid_membranes/popc.mae")
-        elif self.opts.get('membrane_system') == 'TIP3':
+        if self.opts.get('membrane_system') == 'TIP3':
             self.opts['membrane_system'] = resource_filename(__name__, \
                     "lipid_membranes/tip3pbox.mae")
 
