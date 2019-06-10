@@ -12,12 +12,12 @@ build:
 requirements:
     build:
         - python
-        - vmd-python >=2.0.4
+        - vmd-python >=3.0.0
         - networkx >=1.11
         - parmed
     run:
         - python
-        - vmd-python >=2.0.4
+        - vmd-python >=3.0.0
         - parmed
         - networkx >=1.11
         - psfgen
