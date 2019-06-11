@@ -28,8 +28,9 @@ import shutil
 import signal
 import sys
 import tempfile
-from dabble import VmdSilencer, DabbleBuilder
+from dabble import VmdSilencer, DabbleBuilder, supported_formats
 from dabble.param import supported_forcefields
+from pkg_resources import resource_filename
 
 __version__ = '2.7.9'
 __author__ = 'Robin Betz'
@@ -96,77 +97,115 @@ def main(argv=None):
     group.add_argument('-i', '--input', dest='solute_filename',
                        metavar='<input>', type=str,
                        required=True,
-                       help='Path to input protein or ligand file to build into '
-                       'the system')
+                       help="Path to input protein or ligand file"
+                      )
     group.add_argument('-o', '--output', dest='output_filename',
                        metavar='<output>', type=str,
                        required=True,
-                       help='Name of output file, format will be inferred by '
-                       'extension. Currently supported: pdb, mae, psf (charmm), '
-                       'prmtop (amber or charmm)')
+                       help="Name of output file. If -format argument is "
+                       "supplied, the appropriate extension will be added. If "
+                       "not, format will be inferred by the extension here. "
+                       "Currently supported extensions: .pdb, .mae, .psf, .dms,"
+                       " .prmtop"
+                      )
     group.add_argument('-format', '--format', dest='format',
-                       type=str, metavar='<output format>', default=None,
-                       choices=['amber', 'charmm', 'desmond', 'gromacs', 'pdb'],
-                       help='Format of output file. Supported: amber, charmm, '
-                       'desmond, gromacs, pdb')
+                       metavar='<format>', type=str,
+                       default=None,
+                       choices=supported_formats.keys(),
+                       help="Format of output file. Supported: %s"
+                       % ", ".join(supported_formats.keys())
+                      )
     group.add_argument('-M', '--membrane-system', dest='membrane_system',
                        type=str, metavar='<solvent>',
-                       default="DEFAULT",
-                       help='Path to solvent system (must be a mae file). Defaults '
-                       'to a POPC membrane')
-    group.add_argument('-O', '--overwrite', dest='overwrite', action='store_true',
-                       help='Overwrite output files, if found')
+                       default=resource_filename(__name__, "lipid_membranes/popc.mae"),
+                       help="Path to pre-built membrane + solvent block. Must "
+                       "be a .mae file. See documentation to create your own. "
+                       "Defaults to a POPC membrane",
+                       )
+    group.add_argument('-O', '--overwrite', dest='overwrite',
+                       action='store_true',
+                       help="Overwrite existing files with requested output",
+                      )
 
     group = parser.add_argument_group('Parameterization Options')
     group.add_argument('-ff', '--forcefield', dest='forcefield',
-                       type=str, metavar='<forcefield>', default="charmm",
-                       choices=supported_forcefields,
+                       type=str, metavar='<forcefield>',
+                       default="charmm",
+                       choices=supported_forcefields.keys(),
                        required=True, action="store",
-                       help="Force field to use for parameterization. Currently "
-                            "supported: amber/charmm/opls")
-    group.add_argument('--hmr', dest='hmassrepartition', default=False,
-                       action='store_true', help='Repartition Hydrogen masses'
-                       'to allow up to 4fs time steps. Currently prmtop output only')
-    group.add_argument('-top', '--topology', default=None, action='append',
-                       type=str, metavar='<topologies>', dest='extra_topos',
-                       help='Additional topology (rtf, off, lib, leaprc) file '
-                       'to include in parameterization')
-    group.add_argument('-par', '--parameters', default=None, action='append',
-                       type=str, metavar='<parameters>', dest='extra_params',
-                       help='Additional parameter (prm, lib, frcmod) file to '
-                       'include in parameterization')
+                       help="Force field to use for parameterization. Currently"
+                            " supported values: %s"
+                             % ", ".join(supported_forcefields.keys())
+                      )
+    group.add_argument('--hmr', dest='hmassrepartition',
+                       default=False,
+                       action='store_true',
+                       help="Repartition Hydrogen masses to allow up to 4fs "
+                       "time steps. Currently supported for AMBER (.prmtop) "
+                       "output format only"
+                      )
+    group.add_argument('-top', '--topology', dest='extra_topos',
+                       type=str, metavar='<topology file>',
+                       default=None,
+                       action='append',
+                       help="Additional topology (rtf, off, lib, leaprc) file "
+                       "to include in parameterization"
+                      )
+    group.add_argument('-par', '--parameters', dest='extra_params',
+                       type=str, metavar='<parameter file>',
+                       default=None,
+                       action='append',
+                       help="Additional parameter (prm, lib, frcmod) file to "
+                       "include in parameterization"
+                      )
 
     group = parser.add_argument_group('Lipid Membrane Options')
     group.add_argument('-L', '--lipid-selection', dest='lipid_sel',
-                       default='lipid or resname POPS POPG', type=str,
-                       help='atomsel for the lipids in the membrane [default: '
-                       '"lipid or resname POPS"]')
+                       type=str,
+                       default='lipid or resname POPS POPG',
+                       help="Atom selection string (VMD syntax) for the lipids "
+                       "in the membrane. Defaults to 'lipid or resname POPS'"
+                      )
     group.add_argument('-C', '--lipid-clash-check', dest='clash_lipids',
+                       type=str,
                        default='resname CLR CLOL',
-                       help='Atomsel for lipids with rings (i.e. cholesterol) '
-                       'that might clash with other lipids.')
-    group.add_argument('-f', '--lipid-friendly-sel', type=str,
-                       dest='lipid_friendly_sel',
-                       help='atomsel for parts of the protein that are '
-                       '"lipid-friendly" and should not be used when calculating '
-                       'which lipids are clashing with the protein (i.e.: lipid '
-                       'tails, sidechains of peripheral membrane proteins)')
+                       help="Atom selection string (VMD syntax) for lipids or "
+                       "other integral membrane molecules with rings (i.e. "
+                       "cholesterol) that might clash with other lipids. "
+                       "Defaults to 'resname CLR CLOL'",
+                      )
+    group.add_argument('-f', '--lipid-friendly-sel', dest='lipid_friendly_sel',
+                       type=str,
+                       help="Atom selection string (VMD syntax) for parts of "
+                       "the protein that are 'lipid-friendly' and should not be"
+                       "considered when calculating which lipids are clashing "
+                       "with the protein (i.e.: lipid tails, palmitoylations). "
+                       "Defaults to no selection."
+                      )
 
     group = parser.add_argument_group('Ion Options')
+# TODO is this being ignored
     group.add_argument('-c', '--cation',
                        default='Na', type=str,
                        help='specify cation "Na" or "K"'
-                            '[default: "Na"]')
+                            '[default: "Na"]'
+                      )
     group.add_argument('-s', '--salt-concentration', dest='salt_conc',
-                       default=0.150, type=float,
-                       help='desired salt concentration.'
-                            '[default: 0.150 M]')
+                       type=float,
+                       default=0.150,
+                       help="Salt concentration in final system, in M. Defaults"
+                       " to physiological 0.150M NaCl"
+                      )
 
     group = parser.add_argument_group('System Size Options')
     z_buffer_opts = group.add_mutually_exclusive_group()
-    z_buffer_opts.add_argument('-w', '--water-buffer', dest='wat_buffer', default=20.0,
-                               type=float, help='water padding from each side of '
-                               'protein [default 20.0 angstroms]')
+    z_buffer_opts.add_argument('-w', '--water-buffer', dest='wat_buffer',
+                               type=float,
+                               default=20.0,
+                               help="Buffer, in A, from each side of the "
+                               "protein/solute to the edge of the periodic box."
+                               " Defaults to a conservative 20.0 A"
+                              )
     group.add_argument('-m', '--membrane-buffer-dist', dest='xy_buf', default=17.5,
                        type=float, help='membrane buffer distance from the protein to the '
                                         'box edge in the XY plane.'

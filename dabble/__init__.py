@@ -8,6 +8,17 @@ import inspect
 
 #=========================================================================
 
+# Currently supported output formats and description
+supported_formats = {
+    "amber": ".prmtop and .inpcrd Amber PARM7 and RST7 formats",
+    "charmm": ".psf and .pdb Protein Structure File and PDB coordinates",
+    "desmond": "",
+    "gromacs": ".top and .gro GROMACS topology and coordinate files",
+    "pdb": "Protein Data Bank PDB file. Will not contain explicit bonds."
+}
+
+#=========================================================================
+
 class DabbleError(Exception):
     """
     An error message aimed at users, without a really long traceback.
