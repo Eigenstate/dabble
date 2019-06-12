@@ -54,8 +54,9 @@
    CH3  HH33
    CH3     C
      C     O
+     C    +N
 [ impropers ]
-  CH3    +N    C      O
+  CH3    +N    C      O # TODO THIS IS LISTED IN THE WRONG ORDER ??? -Robin
 
 [ ALA ]
  [ atoms ] 
