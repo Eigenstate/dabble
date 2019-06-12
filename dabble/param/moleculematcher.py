@@ -230,6 +230,7 @@ class MoleculeMatcher(ABC): # pylint: disable=too-few-public-methods
                 fn.write("\"%s\" -- \"%s\";\n" % (e1, e2))
 
             fn.write("packMode=\"graph\";\n")
+            fn.write("overlap=\"scalexy\";\n")
             fn.write("}\n")
 
 
@@ -291,12 +292,20 @@ class MoleculeMatcher(ABC): # pylint: disable=too-few-public-methods
         as being the same element and having the same residue membership
         (self, +, or -)
         """
+        # Unknown element on one side
         if node1.get('element') == "Other":
             return (node2.get('element') not in MoleculeMatcher.MASS_LOOKUP.values()) \
                    and (node1.get('residue') == node2.get('residue'))
+
+        # Unknown element on other side
         elif node2.get('element') == "Other":
             return (node1.get('element') not in MoleculeMatcher.MASS_LOOKUP.values()) \
                    and (node1.get('residue') == node2.get('residue'))
+
+        # Wild card element from linkages
+        if any(e.get('element') == "Any" for e in [node1, node2]):
+            return node1.get('residue') == node2.get('residue')
+
         else:
             return (node1.get('element') == node2.get('element')) and \
                    (node1.get('residue') == node2.get('residue'))
@@ -398,9 +407,11 @@ class MoleculeMatcher(ABC): # pylint: disable=too-few-public-methods
         atommatch = {i: graph.node[match[i]].get("atomname")
                      for i in match.keys()
                      if graph.node[match[i]].get("residue") == "self"}
+
         resmatch = {i: graph.node[match[i]].get("resname")
                     for i in match.keys()
                     if graph.node[match[i]].get("residue") == "self"}
+
         return (resmatch, atommatch)
 
     #=========================================================================

@@ -27,12 +27,16 @@ from __future__ import print_function
 import os
 import logging
 import tempfile
+import subprocess
 
-from dabble import DabbleError
-from dabble.param import AmberWriter, CharmmWriter, MoleculeWriter
+from pkg_resources import resource_filename
 from parmed.formats.registry import load_file
 from parmed.gromacs import GromacsGroFile, GromacsTopologyFile
 from vmd import atomsel, evaltcl, molecule
+
+from dabble import DabbleError
+from dabble.param import (AmberWriter, CharmmWriter, MoleculeWriter,
+                          GromacsMatcher)
 
 logger = logging.getLogger(__name__) # pylint: disable=invalid-name
 
@@ -59,8 +63,10 @@ class GromacsWriter(MoleculeWriter):
         Args:
             molid (int): VMD molecule ID of system to write
             tmp_dir (str): Directory for temporary files. Defaults to "."
-            lipid_sel (str): Lipid selection string. Defaults to "lipid"
             forcefield (str): Force field to use
+            lipid_sel (str): Lipid selection string. Defaults to "lipid"
+            hmr (bool): If hydrogen masses should be repartitioned. Defaults
+                to False.
             extra_topos (list of str): Additional topology (.str, .off, .lib) to
                 include.
             extra_params (list of str): Additional parameter sets (.str, .frcmod)
@@ -69,20 +75,26 @@ class GromacsWriter(MoleculeWriter):
         """
         super(GromacsWriter, self).__init__(molid, **kwargs)
 
-        self.forcefield = kwargs.get("forcefield", "charmm")
+        self.forcefield = kwargs.get("forcefield", "opls")
+        self.hmr = kwargs.get("hmr", False)
 
-        if "charmm" in self.forcefield:
-            # Topologies used will be found and returned by CharmmWriter
-            self.topologies = CharmmWriter.get_topologies(self.forcefield)
-            self.parameters = CharmmWriter.get_parameters(self.forcefield)
+        # Our get_ method handles all forcefield combinations
+        self.topologies = self.get_topologies(self.forcefield)
+        self.parameters = self.get_parameters(self.forcefield)
+        self.ffdir = self.topologies[0]
 
-        elif "amber" in self.forcefield:
-            # Topologies used will be found and returned by AmberWriter
-            self.topologies = AmberWriter.get_topologies(self.forcefield)
-            self.parameters = AmberWriter.get_topologies(self.forcefield)
+        # Handle override
+        if self.override:
+            self.topologies = []
+            self.parameters = []
 
-        else:
-            raise DabbleError("Unsupported forcefield: %s" % self.forcefield)
+        # Now extra topologies and parameters
+        self.topologies.extend(self.extra_topos)
+        self.parameters.extend(self.extra_params)
+
+        # Initialize matcher only now that all topologies etc have been set
+        if self.forcefield in ["opls", "gromos"]:
+            self.matcher = GromacsMatcher(topologies=self.topologies)
 
     #==========================================================================
 
@@ -100,6 +112,8 @@ class GromacsWriter(MoleculeWriter):
             psfgen = CharmmWriter(molid=self.molid,
                                   tmp_dir=self.tmp_dir,
                                   lipid_sel=self.lipid_sel,
+                                  forcefield=self.forcefield,
+                                  hmr=self.hmr,
                                   extra_topos=self.extra_topos,
                                   extra_params=self.extra_params,
                                   override_defaults=self.override)
@@ -111,6 +125,7 @@ class GromacsWriter(MoleculeWriter):
             prmgen = AmberWriter(molid=self.molid,
                                  tmp_dir=self.tmp_dir,
                                  forcefield=self.forcefield,
+                                 hmr=self.hmr,
                                  lipid_sel=self.lipid_sel,
                                  extra_topos=self.extra_topos,
                                  extra_params=self.extra_params,
@@ -118,6 +133,15 @@ class GromacsWriter(MoleculeWriter):
             print("Writing intermediate prmtop")
             prmgen.write(self.outprefix)
             self._amber_to_gromacs()
+
+        # Now native GROMACS style for gromos or opls
+        else: #TODO
+            print("Using the following topology files and/or directories:")
+            for top in self.topologies:
+                print("  - %s" % os.path.split(top)[1])
+
+            self._set_atom_names()
+            self._run_pdb2gmx()
 
     #==========================================================================
 
@@ -145,7 +169,6 @@ class GromacsWriter(MoleculeWriter):
         mid = molecule.load("psf", self.outprefix + ".psf",
                             "pdb", self.outprefix + ".pdb")
         atomsel("all", mid).write("gro", self.outprefix + ".gro")
-        # TODO I think this doesn't write bonds!!!
         molecule.delete(mid)
 
         # Write a temporary file for a topotools tcl script
@@ -164,12 +187,153 @@ class GromacsWriter(MoleculeWriter):
 
     #==========================================================================
 
-    # Satisfy inheritance requirement for these methods
-    # I don't natively handle gromacs parameters so this doesn't do much
-    def get_topologies(self, forcefield):
-        return self.topologies
+    def _set_atom_names(self):
+        """
+        Sets the atom and residue names for a GROMACS-style force field
 
-    def get_parameters(self, forcefield):
-        return self.parameters
+        Args:
+            molid (int): Molecule ID
+        """
+
+        # Rename all residues
+        residues = set(atomsel("all", molid=self.molid).residue)
+        n_res = len(residues)
+
+        while residues:
+            if len(residues) % 500 == 0:
+                print("Renaming residues.... %.0f%%  \r"
+                      % (100.-100*len(residues)/float(n_res)), flush=True)
+
+            residue = residues.pop()
+            sel = atomsel("residue %s" % residue)
+            resnames, atomnames = self.matcher.get_names(sel,
+                                                        print_warning=False)
+            if not resnames:
+                rgraph = self.matcher.parse_vmd_graph(sel)[0]
+                self.matcher.write_dot(rgraph, "rgraph.dot")
+                self.matcher.write_dot(self.matcher.known_res["ASP"], "asp.dot")
+                self.matcher.write_dot(self.matcher.known_res["ACE"], "ace.dot")
+                raise ValueError("Unknown residue %s:%d"
+                                 % (sel.resname[0], sel.resid[0]))
+
+            self._apply_naming_dictionary(resnames, atomnames)
+            sel.user = 1.0
+
+        # TODO: handle disulfides, other noncanonical bonds
+
+    #==========================================================================
+
+    def _run_pdb2gmx(self):
+        """
+        Runs pdb2gmx, creating a topology and structure file
+
+        Args:
+            TODO
+
+        Returns:
+            (str) Prefix of file written
+
+        Raises:
+            DabbleError if pdb2gmx is not present
+        """
+
+        # Ensure gmx is actually available
+        try:
+            subprocess.call("gmx", stdout=subprocess.DEVNULL,
+                            stderr=subprocess.DEVNULL)
+        except FileNotFoundError:
+            raise DabbleError("gmx executable not found. Is GROMACS installed "
+                              "and accessible in $PATH?")
+
+        # Save the system as a .gro file
+        _, grout = tempfile.mkstemp(prefix=self.outprefix,
+                                    suffix=".gro", dir=self.tmp_dir)
+        os.close(_)
+        atomsel("all", self.molid).write("gro", grout)
+
+        # Prepare arguments to pdb2gmx
+        gmx_args = [
+                    "gmx", "pdb2gmx",
+                    "-f", grout,
+                    "-o", self.outprefix + ".gro",
+                    "-p", self.outprefix + ".top",
+                    "-ff", os.path.split(self.ffdir)[1],
+                    "-water", "tip3p", # TODO water models
+                    "-noignh", # Use hydrogens in coordinate file
+                    ]
+
+        if self.hmr:
+            gmx_args += ["-heavyh"]
+
+        # Set GMXLIB environment variable to the directory containing our
+        # forcefield, or the user provided one, so pdb2gmx will find it
+        oldlib = os.environ.get("GMXLIB", "")
+        os.environ["GMXLIB"] = os.path.split(self.ffdir)[0]
+
+        # Run pdb2gmx
+        out = subprocess.check_output(gmx_args).decode("utf-8")
+        try:
+            out = "\n==============BEGIN PDB2GMX OUTPUT==============\n" + out \
+                + "\n===============END PDB2GMX OUTPUT===============\n"
+
+            if self.debug:
+                print(out)
+
+        except:
+            print(out)
+            raise DabbleError("Call to pdb2gmx failed! See above output for "
+                              "more information")
+
+        # Clean up
+        os.environ["GMXLIB"] = oldlib
+
+    #==========================================================================
+    #                              Static methods
+    #==========================================================================
+
+    @staticmethod
+    def get_topologies(forcefield):
+        """
+        Gets the path to GROMACS-format topologies for a given force field
+        """
+        # Amber and Charmm handled by conversion
+        if forcefield == "charmm":
+            return CharmmWriter.get_topologies(forcefield)
+
+        elif forcefield == "amber":
+            return AmberWriter.get_topologies(forcefield)
+
+        # Use GROMACS forcefield for the remaining ones
+        if forcefield == "opls":
+            ffdir = "oplsaam.ff"
+
+        elif forcefield == "gromos":
+            ffdir = "gromos54a7.ff"
+
+        else:
+            raise DabbleError("Unsupported forcefield %s" % forcefield)
+
+        ffdir = os.path.abspath(resource_filename(__name__,
+                                     os.path.join("parameters", ffdir)))
+        return [ffdir]
+
+    #==========================================================================
+
+    @staticmethod
+    def get_parameters(forcefield):
+        """
+        Get the path to GROMACS-format parameter files for a given force field
+        """
+
+        # Amber and Charmm handled by converstion
+        if forcefield == "charmm":
+            return CharmmWriter.get_parameters(forcefield)
+
+        elif forcefield == "amber":
+            return AmberWriter.get_parameters(forcefield)
+
+        # Gromacs topologies and parameters are the same directories
+        else:
+            return GromacsWriter.get_topologies(forcefield)
 
 #++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++

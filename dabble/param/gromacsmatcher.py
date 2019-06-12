@@ -26,8 +26,9 @@ from __future__ import print_function
 import logging
 import networkx as nx
 import os
-from dabble.param import MoleculeMatcher
+
 from dabble import DabbleError
+from . import MoleculeMatcher
 
 #++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
 #                                   CLASSES                                   #
@@ -51,7 +52,6 @@ class GromacsMatcher(MoleculeMatcher):
         Initializes a graph parser with the given topology files
         as known molecules
         """
-
         # Parent calls parse topologies
         super(GromacsMatcher, self).__init__(topologies=topologies)
 
@@ -79,15 +79,14 @@ class GromacsMatcher(MoleculeMatcher):
             DabbleError if topology file is malformed in various ways
             DabbleError if gromacs installation cannot be found
         """
-        # If .itp file only, just parse it
-        if os.path.splitext(filename)[1] == ".itp":
-            self._parse_itp(filename)
-            return True
-
-        # Sanity check this is a directory
+        # If .itp file only, just parse it. Otherwise, expect a directory
         if not os.path.isdir(filename):
-            raise DabbleError("GROMACS forcefields are specified by a "
-                              "directory, got '%s'" % filename)
+            if os.path.splitext(filename)[1] == ".itp":
+                return self._parse_itp(filename)
+            else:
+                raise DabbleError("GROMACS forcefields are specified by a "
+                                  "directory, got '%s'" % filename)
+
         # Ensure atomtypes.atp is present
         if not os.path.isfile(os.path.join(filename, "atomtypes.atp")):
             raise DabbleError("atomtypes.atp not present in GROMACS "
@@ -99,9 +98,9 @@ class GromacsMatcher(MoleculeMatcher):
         for file in os.listdir(filename):
             ext = os.path.splitext(file)[1]
             if ext == ".itp":
-                self._parse_itp(filename)
+                self._parse_itp(os.path.join(filename, file))
             elif ext == ".rtp":
-                self._parse_rtp(filename)
+                self._parse_rtp(os.path.join(filename, file))
 
         return True
 
@@ -111,6 +110,11 @@ class GromacsMatcher(MoleculeMatcher):
         """
         Parses an atom types definition file, populating the elements
         table.
+
+        Args:
+            filename (str): .atp file to parse
+        Returns:
+            True on success
         """
 
         with open(filename, 'r') as fileh:
@@ -122,17 +126,30 @@ class GromacsMatcher(MoleculeMatcher):
             if not len(tokens) or not len(tokens[0]):
                 continue
 
-            element = self.get_element(float(tokens[1]))
+            # Comment lines start with ';'
+            if tokens[0][0] == ";":
+                continue
+
+            try:
+                element = self.get_element(float(tokens[1]))
+            except:
+                raise DabbleError("Problem parsing line:\n%s" % line)
+
             if self.nodenames.get(tokens[0]):
                 logging.info("Already have element %s defined" % element)
             else:
                 self.nodenames[tokens[0]] = element
+
+        return True
 
     #=========================================================================
 
     def _parse_itp(self, filename):
         """
         Parses a .itp topology + parameter file
+
+        Returns:
+            True on success
         """
         graph = nx.Graph()
         unit = ""
@@ -153,8 +170,8 @@ class GromacsMatcher(MoleculeMatcher):
                 graph = None
                 continue
 
-            # Comment lines start with ';'
-            if tokens[0][0] == ";":
+            # Comment lines start with ';', preprocessor with '#'
+            if tokens[0][0] in [";", "#"]:
                 continue
 
             # Recursively handle #include lines
@@ -182,13 +199,16 @@ class GromacsMatcher(MoleculeMatcher):
 
             elif incmd == "atomtypes":
                 # Atom types line is name, atomic num, mass, charge, ...
-                element = self.get_element(float(tokens[2]))
+                try:
+                    element = self.get_element(float(tokens[2]))
+                except:
+                    raise DabbleError("bad line %s" % line)
                 if self.nodenames.get(tokens[0]) is None:
                     self.nodenames[tokens[0]] = element
 
             elif incmd == "addatoms":
                 # Atom line is idx, type, resnum, resname, atomname, cgnr,
-                # charge, mass (so we don't have to look up element)
+                # charge, mass
 
                 # Only handle single residue .itp files for now
                 if int(tokens[2]) != 1:
@@ -197,7 +217,12 @@ class GromacsMatcher(MoleculeMatcher):
                                       "not yet supported. Problem file was "
                                       "'%s'" % filename)
 
-                element = self.get_element(float(tokens[7]))
+                # Get element from atom type as mass may not be present
+                element = self.nodenames.get(tokens[1])
+                if element is None:
+                    raise DabbleError("Unknown atom type '%s'. Line was:\n%s"
+                                      % (tokens[1], line))
+
                 graph.add_node(tokens[0],
                                type=tokens[1],
                                element=element,
@@ -211,13 +236,19 @@ class GromacsMatcher(MoleculeMatcher):
                     raise DabbleError("Can't parse bond for unit %s, file %s\n"
                                       "Line was: %s" % (unit, filename, line))
 
-
+        return True
 
     #=========================================================================
 
     def _parse_rtp(self, filename):
         """
         Parses a .rtp/residue topology file
+
+        Args:
+            filename (str): .rtp file to parse
+
+        Returns:
+            True on success
         """
         incmd = ""
         unit = ""
@@ -283,16 +314,18 @@ class GromacsMatcher(MoleculeMatcher):
                                       "Line was: %s" % (unit, filename, line))
 
             elif incmd == "addimproperbonds":
-                # Impropers are listed 0-1-2-3 will have bonds 0-2, 1-2, 2-3
+                # Impropers are listed 0-1-2-3 will have bonds 0-1, 1-2, 1-3
                 # This is used because otherwise there's no way to get the +N
                 # linkage defined.
-                pairs = [(0,2), (1,2), (2,3)]
+                # See: https://mailman-1.sys.kth.se/pipermail/gromacs.org_gmx-users/2013-April/080820.html
+                pairs = [(0,1), (1,2), (1,3)]
                 for n1, n2 in pairs:
                     if not _define_bond(graph, tokens[n1], tokens[n2]):
-                        raise DabbleError("Can't parse bond for unit %s, file "
-                                          "%s\nLine was: %s" % (unit, filename,
-                                                                line))
-
+                        raise DabbleError("Can't parse bond %s-%s for unit %s, "
+                                          "file %s\nLine was: %s"
+                                          % (tokens[n1], tokens[n2],
+                                             unit, filename, line))
+        return True
 
     #=========================================================================
 
@@ -309,9 +342,9 @@ def _define_bond(graph, node1, node2):
     # Sanity check and process atom names
     for n in [node1, node2]:
         if "+" in n:
-            graph.add_node(n, atomname="+", type="", residue="+")
-        elif "-" in node1:
-            graph.add_node(n, atomname="-", type="", residue="-")
+            graph.add_node(n, atomname="+", element="Any", type="", residue="+")
+        elif "-" in n:
+            graph.add_node(n, atomname="-", element="Any", type="", residue="-")
         elif n not in graph.nodes():
             return False
 

@@ -28,6 +28,7 @@ import os
 import logging
 
 from abc import ABC, abstractmethod
+from vmd import atomsel
 
 logger = logging.getLogger(__name__) # pylint: disable=invalid-name
 
@@ -55,6 +56,9 @@ class MoleculeWriter(ABC):
             molid (int): VMD molecule ID of system to write
             tmp_dir (str): Directory for temporary files. Defaults to "."
             lipid_sel (str): Lipid selection string. Defaults to "lipid"
+            forcefield (str): Force field to use
+            hmr (bool): If hydrogen masses should be repartitioned. Defaults
+                to False.
 
             extra_topos (list of str): Additional topology (.str, .off, .lib) to
                 include.
@@ -71,6 +75,7 @@ class MoleculeWriter(ABC):
         self.lipid_sel = kwargs.get("lipid_sel", "lipid")
         self.debug = kwargs.get("debug_verbose", False)
         self.override = kwargs.get("override_defaults", False)
+        self.hmr = kwargs.get("hmr", False)
 
         self.extra_topos = kwargs.get("extra_topos")
         self.extra_params = kwargs.get("extra_params")
@@ -81,6 +86,40 @@ class MoleculeWriter(ABC):
         # Handle None from argparse in command line invocation
         if self.extra_topos is None: self.extra_topos = []
         if self.extra_params is None: self.extra_params = []
+
+    #==========================================================================
+
+    def _apply_naming_dictionary(self, atomnames, resnames, verbose=False):
+        """
+        Applies the atom names from a matcher.
+
+        Args:
+            atomnames (dict int->str): Atom index to atom name
+            resnames (dict int->str or str): Atom index to residue name,
+                or just residue name for all atoms
+            verbose (bool): If renamings should be printed out
+
+        Raises:
+            ValueError: If indices in atomnames and resnames dictionary
+                differ
+        """
+        if set(resnames.keys()) != set(atomnames.keys()):
+            raise ValueError("Invalid matching dictionary for resnames '%s'"
+                             % resnames.keys())
+
+        for idx, name in atomnames.items():
+            atom = atomsel("index %s" % idx)
+            # TODO: Name short circuiting here??
+            if verbose and atom.name[0] != name:
+                print("Renaming %s:%s: %s -> %s" % (atom.resname[0],
+                                                    atom.resid[0], atom.name[0],
+                                                    name))
+            atom.name = name
+
+            if isinstance(resnames, dict):
+                atom.resname = resnames[idx]
+            else:
+                atom.resname = resnames
 
     #==========================================================================
 

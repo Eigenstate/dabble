@@ -57,6 +57,9 @@ class AmberMatcher(MoleculeMatcher):
         Initializes a graph parser with the given topology files
         as known molecules
         """
+        # Require AMBERHOME to be set
+        if not os.environ.get("AMBERHOME"):
+            raise DabbleError("AMBERHOME must be set to use AmberMatcher")
 
         # Parent calls parse topologies
         super(AmberMatcher, self).__init__(topologies=topologies)
@@ -481,7 +484,6 @@ class AmberMatcher(MoleculeMatcher):
 
         Raises:
             DabbleError if topology file is malformed in various ways
-            DabbleError if AMBERHOME is unset
         """
         if ".off" in filename or ".lib" in filename:
             self._load_off(filename)
@@ -492,8 +494,6 @@ class AmberMatcher(MoleculeMatcher):
                               "Can't read topology '%s'" % filename)
 
         # Set AMBER search path for lib files
-        if not os.environ.get("AMBERHOME"):
-            raise DabbleError("AMBERHOME is unset!")
         leapdir = os.path.join(os.environ["AMBERHOME"], "dat", "leap")
 
         incmd = ""

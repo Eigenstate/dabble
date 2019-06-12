@@ -6,7 +6,7 @@ intermediate files as necessary to invoke the vmd psfgen plugin.
 
 Author: Robin Betz
 
-Copyright (C) 2015 Robin Betz
+Copyright (C) 2019 Robin Betz
 """
 
 # This program is free software; you can redistribute it and/or modify it under
@@ -67,6 +67,8 @@ class CharmmWriter(MoleculeWriter):
             molid (int): VMD molecule ID of system to write
             tmp_dir (str): Directory for temporary files. Defaults to "."
             lipid_sel (str): Lipid selection string. Defaults to "lipid"
+            hmr (bool): If hydrogen masses should be repartitioned. Defaults
+                to False
             forcefield (str): Forcefield to use, either "charmm" or "amber"
             extra_topos (list of str): Additional topology (.str, .off, .lib) to
                 include.
@@ -87,6 +89,8 @@ class CharmmWriter(MoleculeWriter):
         if "charmm" in self.forcefield:
             self.topologies = self.get_topologies(self.forcefield)
             self.parameters = self.get_parameters(self.forcefield)
+            if self.hmr:
+                raise DabbleError("HMR not supported with CHARMM ff yet")
 
         elif "amber" in self.forcefield:
             from dabble.param import AmberWriter # avoid circular dependnecy
@@ -132,6 +136,7 @@ class CharmmWriter(MoleculeWriter):
             prmtopgen = AmberWriter(molid=self.molid,
                                     tmp_dir=self.tmp_dir,
                                     forcefield=self.forcefield,
+                                    hmr=self.hmr,
                                     lipid_sel=self.lipid_sel,
                                     extra_topos=self.extra_topos,
                                     extra_params=self.extra_params,
@@ -157,7 +162,8 @@ class CharmmWriter(MoleculeWriter):
 
     @staticmethod
     def get_topologies(forcefield):
-        if "charmm" in forcefield:
+
+        if forcefield == "charmm":
             default_topologies = [
                 "top_all36_caps.rtf",
                 "top_all36_cgenff.rtf",
@@ -169,13 +175,18 @@ class CharmmWriter(MoleculeWriter):
                 "toppar_all36_prot_na_combined.str",
                 "toppar_all36_prot_fluoro_alkanes.str"
             ]
-        elif "amber" in forcefield:
+        elif forcefield == "amber":
             return []
+        elif forcefield == "opls":
+            default_topologies = [
+                "opls_aam.rtf"
+            ]
         else:
             raise ValueError("Invalid forcefield: '%s'" % forcefield)
 
-        return [resource_filename(__name__, os.path.join("parameters", top))
-                for top in default_topologies]
+        return [os.path.abspath(
+                    resource_filename(__name__, os.path.join("parameters", top))
+                ) for top in default_topologies]
 
     #=========================================================================
 
@@ -197,9 +208,9 @@ class CharmmWriter(MoleculeWriter):
         else:
             raise ValueError("Invalid forcefield: '%s'" % forcefield)
 
-        return [resource_filename(__name__,
-                                  os.path.join("parameters", par))
-                for par in default_parameters]
+        return [os.path.abspath(
+                    resource_filename(__name__, os.path.join("parameters", par))
+                ) for par in default_parameters]
 
     #=========================================================================
     #                           Private methods                              #
@@ -454,9 +465,11 @@ class CharmmWriter(MoleculeWriter):
 
         for residue in residues:
             sel = atomsel("residue %s and resname '%s' and user 1.0" % (residue, resname))
+
             (newname, atomnames) = self.matcher.get_names(sel, print_warning=True)
             if not newname:
                 (resname, patch, atomnames) = self.matcher.get_patches(sel)
+
                 if not newname:
                     print("ERROR: Could not find a residue definition for %s:%s"
                           % (resname, residue))
@@ -465,15 +478,8 @@ class CharmmWriter(MoleculeWriter):
                 print("\tApplying patch %s to ligand %s" % (patch, newname))
 
             # Do the renaming
-            for idx, name in atomnames.items():
-                atom = atomsel('index %s' % idx)
-                if atom.name[0] != name and "+" not in name \
-                   and "-" not in name:
-                    print("Renaming %s:%s: %s -> %s" % (resname, residue,
-                                                        atom.name[0],
-                                                        name))
-                    atom.name = name
-            sel.resname = newname
+            self._apply_naming_dictionary(atomnames, resnames=newname,
+                                          verbose=True)
 
         #logger.info("Renamed %d atoms for all resname %s->%s" % (num_renamed, resname, name))
         molecule.set_top(old_top)
@@ -569,12 +575,7 @@ class CharmmWriter(MoleculeWriter):
                                   % (sel.resname[0], resid))
 
             # Do the renaming
-            for idx, name in atomnames.items():
-                atom = atomsel('index %s' % idx)
-                if atom.name[0] != name and "+" not in name and \
-                   "-" not in name:
-                    atom.name = name
-            sel.resname = newname
+            self._apply_naming_dictionary(atomnames, resnames=newname)
 
         # Save protein chain in the correct order
         filename = self.tmp_dir + '/psf_protein_%s.pdb' % seg
@@ -797,7 +798,7 @@ class CharmmWriter(MoleculeWriter):
         # Read topology files in to psfgen
         print("Using the following topologies:")
         for top in self.topologies:
-            print("  - %s" % top.split("/")[-1])
+            print("  - %s" % os.path.split(top)[1])
             self.psfgen.read_topology(top)
 
 

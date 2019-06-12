@@ -9,8 +9,8 @@ __author__ = 'Robin Betz'
 supported_forcefields = {
     "charmm": "CHARMM36m, July 2018 update",
     "amber": "AMBER 14",
-    "opls": "OPLS AA/M",
-    "gromos": "GROMOS 54a7"
+    "opls": "OPLS AA/M, 2001 aminoacid dihedrals",
+    "gromos": "GROMOS96 54a7"
 }
 
 from dabble.param.moleculematcher import MoleculeMatcher
