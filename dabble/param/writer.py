@@ -28,6 +28,7 @@ import os
 import logging
 
 from abc import ABC, abstractmethod
+from pkg_resources import resource_filename
 from vmd import atomsel
 
 logger = logging.getLogger(__name__) # pylint: disable=invalid-name
@@ -135,9 +136,9 @@ class MoleculeWriter(ABC):
     def get_parameters(forcefield):
         pass
 
-    #++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
-    #                            STATIC FUNCTIONS                             #
-    #++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+    #==========================================================================
+    #                              Static methods
+    #==========================================================================
 
     @staticmethod
     def get_pdb_line(atom, index, resindex, hetatom=False):
@@ -173,5 +174,15 @@ class MoleculeWriter(ABC):
                                      atom.segname[0],
                                      atom.element[0])
         return result
+
+    #==========================================================================
+
+    @staticmethod
+    def _get_forcefield_path(filename):
+        """
+        Gets the absolute path to a given bundled forcefield file
+        """
+        rn = resource_filename(__name__, os.path.join("parameters", filename))
+        return os.path.abspath(rn)
 
 #++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++

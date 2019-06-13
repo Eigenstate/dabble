@@ -29,7 +29,6 @@ import logging
 import tempfile
 import subprocess
 
-from pkg_resources import resource_filename
 from parmed.formats.registry import load_file
 from parmed.gromacs import GromacsGroFile, GromacsTopologyFile
 from vmd import atomsel, evaltcl, molecule
@@ -291,21 +290,24 @@ class GromacsWriter(MoleculeWriter):
     #                              Static methods
     #==========================================================================
 
-    @staticmethod
-    def get_topologies(forcefield):
+    @classmethod
+    def get_topologies(cls, forcefield):
         """
         Gets the path to GROMACS-format topologies for a given force field
         """
-        # Amber and Charmm handled by conversion
+        # Amber, Charmm, and OPLS handled by conversion
         if forcefield == "charmm":
             return CharmmWriter.get_topologies(forcefield)
 
         elif forcefield == "amber":
             return AmberWriter.get_topologies(forcefield)
 
+        elif forcefield == "opls":
+            return CharmmWriter.get_topologies(forcefield)
+
         # Use GROMACS forcefield for the remaining ones
-        if forcefield == "opls":
-            ffdir = "oplsaam.ff"
+        #if forcefield == "opls":
+        #    ffdir = "oplsaam.ff"
 
         elif forcefield == "gromos":
             ffdir = "gromos54a7.ff"
@@ -313,9 +315,7 @@ class GromacsWriter(MoleculeWriter):
         else:
             raise DabbleError("Unsupported forcefield %s" % forcefield)
 
-        ffdir = os.path.abspath(resource_filename(__name__,
-                                     os.path.join("parameters", ffdir)))
-        return [ffdir]
+        return [cls.get_forcefield_path(ffdir)]
 
     #==========================================================================
 
@@ -331,6 +331,9 @@ class GromacsWriter(MoleculeWriter):
 
         elif forcefield == "amber":
             return AmberWriter.get_parameters(forcefield)
+
+        elif forcefield == "opls":
+            return CharmmWriter.get_parameters(forcefield)
 
         # Gromacs topologies and parameters are the same directories
         else:

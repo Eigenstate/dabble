@@ -491,11 +491,11 @@ class AmberWriter(MoleculeWriter):
                     batch.resid = [k for k in range(1, int(len(batch)/3)+1)
                                    for _ in range(3)]
                 except ValueError:
-                    print("\nERROR! You have some waters missing hydrogens!\n"
-                          "Found %d water residues, but %d water atoms. Check "
-                          " your crystallographic waters in the input structure."
-                          % (len(residues), len(batch)))
-                    quit(1)
+                    raise DabbleError("\nERROR! You have some waters missing "
+                                      "hydrogens!\nFound %d water residues, but"
+                                      " %d water atoms. Check your crystal "
+                                      "waters in the input structure."
+                                      % (len(residues), len(batch)))
                 batch.user = 0.0
                 batch.write('pdb', temp)
                 allw.update()
@@ -771,10 +771,12 @@ class AmberWriter(MoleculeWriter):
     #========================================================================#
 
     @staticmethod
-    def get_topologies(forcefield):
-        # TODO handle all forcefields here
-        if not os.environ.get("AMBERHOME"):
-            raise DabbleError("AMBERHOME must be set to use AMBER forcefield!")
+    def get_topologies(cls, forcefield):
+
+        if forcefield == "amber":
+            if not os.environ.get("AMBERHOME"):
+                raise DabbleError("AMBERHOME must be set to use AMBER "
+                                  "forcefield!")
 
         # Check amber version and set topologies accordingly
         ambpath = os.path.join(os.environ["AMBERHOME"], "dat", "leap", "cmd")
@@ -792,10 +794,14 @@ class AmberWriter(MoleculeWriter):
                                   "Dabble requires >= AmberTools16" % top)
         return topologies
 
+    #========================================================================#
+
     @staticmethod
     def get_parameters(forcefield):
         # AMBER topologies and parameters use the same leaprcs
         return AmberWriter.get_topologies(forcefield)
+
+    #========================================================================#
 
 #++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
 

@@ -11,7 +11,8 @@ Copyright (C) 2019 Robin Betz
 
 # This program is free software; you can redistribute it and/or modify it under
 # the terms of the GNU Lesser General Public License as published by the Free
-# Software Foundation; either version 2 of the License, or (at your option) any # later version.
+# Software Foundation; either version 2 of the License, or (at your option) any
+# later version.
 #
 # This program is distributed in the hope that it will be useful, but WITHOUT ANY
 # WARRANTY; without even the implied warranty of MERCHANTABILITY or FITNESS FOR A
@@ -26,7 +27,6 @@ from __future__ import print_function
 import os
 import tempfile
 from parmed.formats.registry import load_file
-from pkg_resources import resource_filename
 from psfgen import PsfGen
 from vmd import atomsel, molecule
 
@@ -85,20 +85,12 @@ class CharmmWriter(MoleculeWriter):
 
         # Set forcefield default topologies and parameters
         self.forcefield = kwargs.get("forcefield", "charmm")
+        self.topologies = self.get_topologies(self.forcefield)
+        self.parameters = self.get_parameters(self.forcefield)
 
         if "charmm" in self.forcefield:
-            self.topologies = self.get_topologies(self.forcefield)
-            self.parameters = self.get_parameters(self.forcefield)
             if self.hmr:
                 raise DabbleError("HMR not supported with CHARMM ff yet")
-
-        elif "amber" in self.forcefield:
-            from dabble.param import AmberWriter # avoid circular dependnecy
-            self.topologies = AmberWriter.get_topologies(self.forcefield)
-            self.parameters = AmberWriter.get_parameters(self.forcefield)
-
-        else:
-            raise DabbleError("Unsupported forcefield: %s" % self.forcefield)
 
         # Handle override and extra topologies
         if self.override:
@@ -160,11 +152,11 @@ class CharmmWriter(MoleculeWriter):
     #                           Static methods                               #
     #=========================================================================
 
-    @staticmethod
-    def get_topologies(forcefield):
+    @classmethod
+    def get_topologies(cls, forcefield):
 
         if forcefield == "charmm":
-            default_topologies = [
+            topos = [
                 "top_all36_caps.rtf",
                 "top_all36_cgenff.rtf",
                 "top_all36_prot.rtf",
@@ -175,26 +167,28 @@ class CharmmWriter(MoleculeWriter):
                 "toppar_all36_prot_na_combined.str",
                 "toppar_all36_prot_fluoro_alkanes.str"
             ]
-        elif forcefield == "amber":
-            return []
+
         elif forcefield == "opls":
-            default_topologies = [
+            topos = [
                 "opls_aam.rtf"
             ]
+
+        elif forcefield == "amber":
+            from dabble.param import AmberWriter # avoid circular dependency
+            return AmberWriter.get_topologies(forcefield)
+
         else:
             raise ValueError("Invalid forcefield: '%s'" % forcefield)
 
-        return [os.path.abspath(
-                    resource_filename(__name__, os.path.join("parameters", top))
-                ) for top in default_topologies]
+        return [cls._get_forcefield_path(top) for top in topos]
 
     #=========================================================================
 
-    @staticmethod
-    def get_parameters(forcefield):
+    @classmethod
+    def get_parameters(cls, forcefield):
 
-        if "charmm" in forcefield:
-            default_parameters = [
+        if forcefield == "charmm":
+            prms = [
                 "toppar_water_ions.str",
                 "par_all36m_prot.prm",
                 "par_all36_cgenff.prm",
@@ -203,14 +197,20 @@ class CharmmWriter(MoleculeWriter):
                 "par_all36_na.prm",
                 "toppar_all36_prot_na_combined.str"
             ]
-        elif "amber" in forcefield:
-            return []
+
+        elif forcefield == "amber":
+            from dabble.param import AmberWriter # avoid circular dependency
+            return AmberWriter.get_parameters(forcefield)
+
+        elif forcefield == "opls":
+            prms = [
+                "opls_aam.prm"
+            ]
+
         else:
             raise ValueError("Invalid forcefield: '%s'" % forcefield)
 
-        return [os.path.abspath(
-                    resource_filename(__name__, os.path.join("parameters", par))
-                ) for par in default_parameters]
+        return [cls._get_forcefield_path(par) for par in prms]
 
     #=========================================================================
     #                           Private methods                              #
@@ -265,11 +265,11 @@ class CharmmWriter(MoleculeWriter):
                     batch.resid = [k for k in range(1, int(len(batch)/3)+1)
                                    for _ in range(3)]
                 except ValueError:
-                    print("\nERROR! You have some waters missing hydrogens!\n"
-                          "Found %d water residues, but %d water atoms. Check "
-                          " your crystallographic waters in the input structure."
-                          % (len(residues), len(batch)))
-                    quit(1)
+                    raise DabbleError("\nERROR! You have some waters missing "
+                                      "hydrogens!\nFound %d water residues, but"
+                                      " %d water atoms. Check your crystal "
+                                      "waters in the input structure."
+                                      % (len(residues), len(batch)))
                 batch.user = 0.0
                 batch.write('pdb', temp)
                 allw.update()
@@ -610,9 +610,8 @@ class CharmmWriter(MoleculeWriter):
 
         # Check file was written at all
         if not os.path.isfile('%s.pdb'% self.outprefix):
-            print("\nERROR: psf file failed to write.\n"
-                  "       Please see log above.\n")
-            quit(1)
+            raise DabbleError("\nERROR: psf file failed to write.\n"
+                              "       Please see log above.\n")
 
         # Open the pdb file in VMD and check for atoms with no occupancy
         fileh = molecule.load('pdb', '%s.pdb' % self.outprefix)
@@ -620,15 +619,13 @@ class CharmmWriter(MoleculeWriter):
 
         # Print out error messages
         if errors:
-            print("\nERROR: Couldn't find the following atoms.")
+            errstr = "\nERROR: Couldn't find the following atoms."
             for i in range(len(errors)):
-                print("  %s%s:%s" % (errors.resname[i], errors.resid[i],
-                                     errors.name[i]))
+                errstr += "  %s%s:%s" % (errors.resname[i], errors.resid[i],
+                                         errors.name[i])
 
-            print("Check if they are present in the original structure.\n"
-                  "If they are, check dabble name translation or file a "
-                  "bug report to Robin.\n")
-            quit(1)
+            errstr += "Check if they are present in the original structure.\n"
+            raise DabbleError(errstr)
         else:
             print("\nChecked output pdb/psf has all atoms present "
                   "and correct.\n")
@@ -676,28 +673,24 @@ class CharmmWriter(MoleculeWriter):
 
         # If uneven number of atoms, there are missing or additional atoms
         if len(pdb_atoms) > len(topo_atoms):
-            print("\nERROR: Cannot process modified residue %s.\n"
-                  "       There are %d extra atoms in the input structure "
-                  "that are undefined in the topology file. The "
-                  "following atoms could not be matched and may "
-                  "either be misnamed, or additional atoms. Please "
-                  "check your input."
-                  % (resname, len(pdb_atoms)-len(topo_atoms)))
-            print("       [ %s ]\n" % ' '.join(pdb_only))
-            print("       Cannot continue.\n")
-            quit(1)
+            raise DabbleError("\nERROR: Cannot process modified residue %s.\n"
+                              "There are %d extra atoms in the input structure "
+                              "that are undefined in the topology file. The "
+                              "following atoms could not be matched and may "
+                              "either be misnamed, or additional atoms:\n"
+                              "[ %s ]\n"
+                              % (resname, len(pdb_atoms)-len(topo_atoms),
+                                 " ".join(pdb_only)))
+
         if len(topo_atoms) > len(pdb_atoms):
-            print("\nERROR: Cannot process modified residue %s.\n"
-                  "       There are %d missing atoms in the input structure "
-                  " that are defined in the topology file. The "
-                  " following atoms could not be matched and may "
-                  " either be misnamed or deleted atoms. Please "
-                  " check your input."
-                  % (resname, len(topo_atoms)-len(pdb_atoms)))
-            print("       [ %s ]\n" % ' '.join(topo_only))
-            print("       Cannot continue.\n")
-            print("Found is %s\n" % pdb_atoms)
-            quit(1)
+            raise DabbleError("\nERROR: Cannot process modified residue %s.\n"
+                              "There are %d missing atoms in the input structure "
+                              "that are defined in the topology file. The "
+                              "following atoms could not be matched and may "
+                              "either be misnamed or deleted atoms:\n"
+                              "[ %s ]\n"
+                              % (resname, len(topo_atoms)-len(pdb_atoms),
+                                 " ".join(topo_only)))
 
         # Offer to rename atoms that couldn't be matched to the topology
         if len(pdb_only):

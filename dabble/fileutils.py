@@ -286,11 +286,9 @@ def check_write_ok(filename, out_fmt, overwrite=False):
             exists.append('%s.%s' % (prefix, sfx))
 
     if len(exists):
-        print("\nERROR: The following files exist and would be overwritten:\n")
-        print("       %s\n" % ' '.join(exists))
-        print("       Won't overwrite, exiting.")
-        print("       Run with -O to overwrite files next time.")
-        quit(1)
+        raise DabbleError("\nERROR: The following files exist and would be "
+                          "overwritten:\n%s\n\tWon't overwrite unless -O "
+                          "specified" % ' '.join(exists))
 
     return False
 
