@@ -425,31 +425,60 @@ class CharmmMatcher(MoleculeMatcher):
                     node1 = tokens[txn]
                     node2 = tokens[txn+1]
                     if not _define_bond(graph, node1, node2, bool(patch)):
-                        return None
+                        if patch:
+                            return None
+                        raise DabbleError("Could not bond atoms '%s' - '%s' "
+                                          "when parsing rtf file.\n"
+                                          "Line was:\n%s"
+                                          % (node1, node2, line))
 
             # CMAP terms add edges. This makes amino acids work since the
             # next and previous amino acids aren't defined as bonds usually
-            elif tokens[0] == "CMAP":
+            #elif tokens[0] == "CMAP":
 
-                if len(tokens) == 1: # CMAP parameter section follows, ignore
-                    continue
+            #    if len(tokens) == 1: # CMAP parameter section follows, ignore
+            #        continue
 
-                if firstcmap:
-                    # Remove all +- join nodes on patching
-                    joins = [n for n in graph.nodes() if graph.node[n]["residue"] != "self"]
-                    graph.remove_nodes_from(joins)
-                    firstcmap = False
+            #    if firstcmap:
+            #        # Remove all +- join nodes on patching
+            #        joins = [n for n in graph.nodes() if graph.node[n]["residue"] != "self"]
+            #        graph.remove_nodes_from(joins)
+            #        firstcmap = False
 
-                if len(tokens) != 9: # CMAP requires 2 dihedrals
-                    raise DabbleError("Incorrect CMAP line\n"
-                                     "Line was:\n%s" % line)
+            #    if len(tokens) != 9: # CMAP requires 2 dihedrals
+            #        raise DabbleError("Incorrect CMAP line\n"
+            #                         "Line was:\n%s" % line)
+            #    tokens = tokens[1:]
+            #    nodes = [(tokens[3*j+i], tokens[3*j+i+1]) \
+            #             for j in range(int(len(tokens)/4)) \
+            #             for i in range(j, j+3)]  # oo i love one liners
+            #    for (node1, node2) in nodes:
+            #        if not _define_bond(graph, node1, node2, bool(patch)):
+            #            if patch:
+            #                return None
+            #            raise DabbleError("Could not bond atoms '%s' - '%s' "
+            #                              "when parsing rtf file.\n"
+            #                              "Line was:\n%s"
+            #                              % (node1, node2, line))
+            # DEBUG, use impropers so opls works too
+            # Impropers have the 2nd atom (index 1) as the central atom
+            elif tokens[0] == "IMPR":
                 tokens = tokens[1:]
-                nodes = [(tokens[3*j+i], tokens[3*j+i+1]) \
-                         for j in range(int(len(tokens)/4)) \
-                         for i in range(j, j+3)]  # oo i love one liners
-                for (node1, node2) in nodes:
+                if len(tokens) % 4:
+                    raise DabbleError("Incorrect number of atoms in improper "
+                                      "term\nLine was:\n%s" % line)
+                bonds = [(0,1), (1,2), (1,3)]
+                for n1, n2 in bonds:
+                    node1 = tokens[n1]
+                    node2 = tokens[n2]
                     if not _define_bond(graph, node1, node2, bool(patch)):
-                        return None
+                        if patch:
+                            return None
+                        self.write_dot(graph, "test.dot")
+                        raise DabbleError("Could not bond atoms from improper "
+                                          "'%s' - '%s'.\nLine was:\n%s"
+                                          % (node1, node2, line))
+
 
             # Check for atom definitions
             elif tokens[0] == "MASS":
@@ -488,6 +517,8 @@ class CharmmMatcher(MoleculeMatcher):
         nx.set_node_attributes(graph, name="resname", values=resname)
 
         # If we didn't patch, set the whole residue to unpatched atom attribute
+        # If we are patching, new atoms will have that attribute set when
+        # they are added.
         if not patch:
             nx.set_node_attributes(graph, name="patched", values=False)
 
@@ -533,15 +564,15 @@ class CharmmMatcher(MoleculeMatcher):
         # Now that all atom and mass lines are read, get the element for each atom
         for node, data in graph.nodes(data=True):
             if data.get('residue') != "self":
-                typestr = ''.join([i for i in node if not i.isdigit()
-                                   and i != "+" and i != "-"])
+                element = "Any"
             else:
-                typestr = data.get('type')
+                element = self.nodenames.get(data.get('type'))
 
-            element = self.nodenames.get(typestr)
             if not element:
-                raise DabbleError("Unknown atom type %s, name '%s'"
-                                  % (typestr, node))
+                self.write_dot(graph, "invalid_type.dot")
+                raise DabbleError("Unknown atom type %s, name '%s'.\nDumping "
+                                  "graph as invalid_type.dot"
+                                  % (data.get("type"), node))
             data['element'] = element
 
 #++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
@@ -561,12 +592,12 @@ def _define_bond(graph, node1, node2, patch):
       patch (bool): If this bond is defined by a patch
 
     Returns:
-      (bool) if bond could be defined
-
-    Raises:
-        ValueError if a non +- atom name is not defined in the MASS
-          line dictionary
+      (bool) If the bond could be defined
     """
+    # If both atoms are extraresidue, refuse to define the bond
+    # and just silently continue. This helps deal with impropers
+    if all("+" in _ or "-" in _ for _ in [node1, node2]):
+        return True
 
     # Sanity check and process atom names
     for n in [node1, node2]:
@@ -577,20 +608,21 @@ def _define_bond(graph, node1, node2, patch):
         elif n not in graph.nodes():
             return False
 
-    # If we are applying a patch and there are _join atoms attached
-    # to the atom we are applying a bond to, delete the _join atom.
+    # If we are applying a patch and there are extraresidue atoms attached
+    # to the atom we are applying a bond to, delete the extraresidue atom.
     # It can be added back later if it was actually needed.
+    neighbor_joins = []
     if graph.node[node1]["patched"] and not graph.node[node2]["patched"]:
         neighbor_joins = [e[1] for e in graph.edges(nbunch=[node2]) \
                           if graph.node[e[1]]["residue"] != "self" and \
                           not graph.node[e[1]]["patched"]]
-        graph.remove_nodes_from(neighbor_joins)
+
     elif graph.node[node2]["patched"] and not graph.node[node1]["patched"]:
         neighbor_joins = [e[1] for e in graph.edges(nbunch=[node1]) \
                           if graph.node[e[1]]["residue"] != "self" and \
                           not graph.node[e[1]]["patched"]]
-        graph.remove_nodes_from(neighbor_joins)
 
+    graph.remove_nodes_from(neighbor_joins)
     graph.add_edge(node1, node2, patched=patch)
     return True
 

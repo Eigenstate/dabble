@@ -104,7 +104,8 @@ class MoleculeWriter(ABC):
             ValueError: If indices in atomnames and resnames dictionary
                 differ
         """
-        if set(resnames.keys()) != set(atomnames.keys()):
+        if isinstance(resnames, dict) and \
+           set(resnames.keys()) != set(atomnames.keys()):
             raise ValueError("Invalid matching dictionary for resnames '%s'"
                              % resnames.keys())
 

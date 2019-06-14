@@ -103,7 +103,7 @@ class CharmmWriter(MoleculeWriter):
 
         # Once all topologies defined, initialize matcher only if
         # using CHARMM topologies (not if we're doing a conversion)
-        if "charmm" in self.forcefield:
+        if "charmm" in self.forcefield or "opls" in self.forcefield:
             self.matcher = CharmmMatcher(self.topologies)
 
     #=========================================================================
@@ -141,6 +141,14 @@ class CharmmWriter(MoleculeWriter):
         elif "charmm" in self.forcefield:
             self._run_psfgen()
 
+        # OPLS forcefield. Same as charmm but list separately for readability
+        elif "opls" in self.forcefield:
+            self._run_psfgen()
+
+        else:
+            raise DabbleError("Unsupported forcefield '%s' for CharmmWriter"
+                              % self.forcefield)
+
         # Check output and finish up
         self._check_psf_output()
 
@@ -170,7 +178,8 @@ class CharmmWriter(MoleculeWriter):
 
         elif forcefield == "opls":
             topos = [
-                "opls_aam.rtf"
+                "opls_aam.rtf",
+                "opls_aam_caps.rtf"
             ]
 
         elif forcefield == "amber":
@@ -548,10 +557,10 @@ class CharmmWriter(MoleculeWriter):
         for residue in residues:
             sel = atomsel('residue %s' % residue)
             resid = sel.resid[0]
+
             # Only try to match single amino acid if there are 1 or 2 bonds
             if len(self.matcher.get_extraresidue_atoms(sel)) < 3:
-                (newname, atomnames) = self.matcher.get_names(sel,
-                                                              print_warning=False)
+                (newname, atomnames) = self.matcher.get_names(sel, False)
 
             # See if it's a disulfide bond participant
             else:
