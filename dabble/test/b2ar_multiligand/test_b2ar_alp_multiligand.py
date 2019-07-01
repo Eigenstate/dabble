@@ -28,7 +28,7 @@ def check_gro(filename):
 
 #==============================================================================
 
-def check_result(format, outdir):
+def check_result(format, outdir, solvent=True):
     if format == "prmtop":
         m2 = molecule.load("parm7", os.path.join(outdir, "test.prmtop"),
                            "rst7", os.path.join(outdir, "test.inpcrd"))
@@ -44,13 +44,14 @@ def check_result(format, outdir):
 
     assert len(set(atomsel("protein").resid)) == 282
     assert len(set(atomsel("resname ACE NMA NME").resid)) == 4
-    assert len(atomsel("water")) == 32106
-    assert len(atomsel("same fragment as lipid")) == 12194
+    if solvent:
+        assert len(atomsel("water")) == 32106
+        assert len(atomsel("same fragment as lipid")) == 12194
 
     # Check for the corrrect number of alprenolols
     assert len(atomsel("resname ALP")) == 420
     assert len(set(atomsel("resname ALP").resid)) == 10
-    assert "OX" in set(atomsel("resname ALP").name)
+    assert any(_ in set(atomsel("resname ALP").name) for _ in ["O09", "OX"])
     assert "O1" not in set(atomsel("resname ALP").name)
 
     # Check coordinates are unique (not zero)
@@ -228,17 +229,30 @@ def test_unliganded_gro_gromos(tmpdir):
 
 #==============================================================================
 
-def test_unliganded_gro_opls(tmpdir):
+def test_multiligand_charmm_opls(tmpdir):
     """
-    Gromos parameters, OPLS AA/M format
+    Charmm parameters, OPLS AA/M format
     """
-    from dabble.param import GromacsWriter
+    from dabble.param import CharmmWriter
     p = str(tmpdir)
 
-    molid = molecule.load("mae", os.path.join(dir, "B2AR_unliganded.mae"))
-    w = GromacsWriter(tmp_dir=p, molid=molid, forcefield="opls")
+    molid = molecule.load("mae", os.path.join(dir, "test_multiligand_correct.mae"))
+
+    # lipid unsupported
+    w = CharmmWriter(tmp_dir=p, molid=molid, forcefield="opls",
+                     extra_topos=[os.path.join(dir, "dalp_opls.rtf")],
+                     extra_params=[os.path.join(dir, "dalp_opls.prm")])
+    with pytest.raises(ValueError):
+        w.write(os.path.join(p, "test"))
+
+    # No lipid should work
+    molecule.delete(molid)
+    molid = molecule.load("mae", os.path.join(dir, "B2AR_10ALPs.mae"))
+    w = CharmmWriter(tmp_dir=p, molid=molid, forcefield="opls",
+                     extra_topos=[os.path.join(dir, "dalp_opls.rtf")],
+                     extra_params=[os.path.join(dir, "dalp_opls.prm")])
     w.write(os.path.join(p, "test"))
-    check_result("gro", p)
+    check_result("psf", p, solvent=False)
 
 #==============================================================================
 

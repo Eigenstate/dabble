@@ -352,9 +352,10 @@ class CharmmWriter(MoleculeWriter):
         residues.sort()
 
         # Lipids not compatible with AMBER parameters, CHARMM format
-        if len(residues) and "amber" in self.forcefield:
-            raise ValueError("AMBER parameters not supported for lipids in "
-                             "CHARMM output format")
+        if len(residues) and \
+                ("amber" in self.forcefield or "opls" in self.forcefield):
+            raise ValueError("AMBER or OPLS parameters not supported for lipids"
+                             " in CHARMM output format")
 
         # Sanity check for < 10k lipids
         if len(residues) >= 10000:
@@ -363,10 +364,21 @@ class CharmmWriter(MoleculeWriter):
         # Loop through all residues and renumber and correctly name them
         counter = 1
         for res in residues:
-            # Renumber residue
             sel = atomsel('residue %s' % res)
+
+            # Find a name match for this residue
+            (newname, atomnames) = self.matcher.get_names(sel, print_warning=True)
+            if not newname:
+                raise DabbleError("No residue definition for lipid %s:%s"
+                                  % (sel.name[0], sel.resid[0]))
+
+            # Do the renaming
+            self._apply_naming_dictionary(atomnames, resnames=newname,
+                                          verbose=True)
+            # Renumber residue
             sel.resid = counter
             counter = counter + 1
+
 
         # Write temporary lipid pdb
         temp = tempfile.mkstemp(suffix='.pdb', prefix='psf_lipid_',
