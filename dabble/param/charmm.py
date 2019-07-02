@@ -592,6 +592,15 @@ class CharmmWriter(MoleculeWriter):
 
         self.psfgen.read_coords(segid=seg, filename=filename)
 
+        # Fix coordinates that are out of bounds, ie 5 characters
+        badidxs = atomsel("fragment '%s' and (abs(x) >= 100 or abs(y) >= 100 "
+                          "or abs(z) >= 100)" % frag, molid).index
+        for idx in badidxs:
+            atom = atomsel("index %d" % idx, molid)
+            self.psfgen.set_position(segid=seg, resid=atom.resid[0],
+                                     atomname=atom.name[0],
+                                     position=(atom.x[0], atom.y[0], atom.z[0]))
+
         if old_top != -1:
             molecule.set_top(old_top)
 
