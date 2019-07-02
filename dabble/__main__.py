@@ -32,7 +32,7 @@ from dabble import VmdSilencer, DabbleBuilder, supported_formats
 from dabble.param import supported_forcefields
 from pkg_resources import resource_filename
 
-__version__ = '2.7.9'
+__version__ = '2.7.10'
 __author__ = 'Robin Betz'
 
 #++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++

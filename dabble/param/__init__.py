@@ -2,7 +2,7 @@
 Parameterizes molecules for molecular dynamics simulations
 """
 
-__version__ = '2.7.9'
+__version__ = '2.7.10'
 __author__ = 'Robin Betz'
 
 # Currently supported forcefields and information
