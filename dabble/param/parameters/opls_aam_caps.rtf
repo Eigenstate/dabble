@@ -1,0 +1,56 @@
+! Caps are represented as patches in OPLS
+! Dabble likes to have caps as their own residue
+! This file defines ACE and NMA caps in addition to the patch definitions
+
+DECL +N
+DECL +HN
+DECL +CA
+DECL -C
+DECL -CA
+
+RESI ACE          0.00 ! acetylated N-terminus, as residue, not patch
+GROUP                  ! use in generate statement
+ATOM CAY  C135   -0.180 !
+ATOM HY1  H140    0.060 ! HY1 HY2 HY3
+ATOM HY2  H140    0.060 !    \ | /
+ATOM HY3  H140    0.060 !     CAY
+GROUP                  !      |
+ATOM CY   C235    0.500 !      CY=OY
+ATOM OY   O236   -0.500 !      |
+                       !
+BOND CY CAY CY +N CAY HY1 CAY HY2 CAY HY3
+DOUBLE OY CY
+IMPR OY CY CAY +N
+IMPR +HN +N CY +CA
+ACCEPTOR OY CY
+IC CY   +N    CA  C     0.0000  0.0000  -60.0000  0.0000  0.0000
+IC CY   +CA   *+N  +HN  0.0000  0.0000  180.0000  0.0000  0.0000
+IC CAY  CY   +N   +CA   0.0000  0.0000  180.0000  0.0000  0.0000
+IC +N   CAY  *CY  OY    0.0000  0.0000  180.0000  0.0000  0.0000
+IC OY   CY   CAY  HY1   0.0000  0.0000  180.0000  0.0000  0.0000
+IC OY   CY   CAY  HY2   0.0000  0.0000   60.0000  0.0000  0.0000
+IC OY   CY   CAY  HY3   0.0000  0.0000  -60.0000  0.0000  0.0000
+
+
+RESI NMA          0.00  ! NMA C-terminus, as a residue
+GROUP                   !
+ATOM NT   N238   -0.500 !      |
+ATOM HNT  H241    0.300 !      NT-HNT
+ATOM CAT  C242    0.020 !      |
+ATOM HT1  H140    0.060 ! HT1-CAT-HT3
+ATOM HT2  H140    0.060 !      |
+ATOM HT3  H140    0.060 !     HT2
+
+!GraphMatcher: BOND -C NT ! Magic comment so this parses correctly in dabble
+BOND  NT HNT  NT CAT  CAT HT1  CAT HT2  CAT HT3
+!DIHE -CA -C NT CAT
+IMPR HNT NT -C CAT   -O -C -CA NT
+DONOR HNT NT
+IC N   -CA   -C    -O    0.0000  0.0000  180.0000  0.0000  0.0000
+IC NT  -CA   *-C   -O    0.0000  0.0000  180.0000  0.0000  0.0000
+IC -C    CAT  *NT  HNT   0.0000  0.0000  180.0000  0.0000  0.0000
+IC -CA  -C    NT   CAT   0.0000  0.0000  180.0000  0.0000  0.0000
+IC -C    NT   CAT  HT1   0.0000  0.0000   60.0000  0.0000  0.0000
+IC -C    NT   CAT  HT2   0.0000  0.0000  180.0000  0.0000  0.0000
+IC -C    NT   CAT  HT3   0.0000  0.0000  -60.0000  0.0000  0.0000
+
