@@ -5,7 +5,7 @@ representation of each molecule.
 
 Author: Robin Betz
 
-Copyright (C) 2015 Robin Betz
+Copyright (C) 2019 Robin Betz
 """
 
 # This program is free software; you can redistribute it and/or modify it under
@@ -74,8 +74,8 @@ class MoleculeMatcher(ABC): # pylint: disable=too-few-public-methods
 
     # For checking which residues can have patchs
     # pylint: disable=invalid-name
-    _acids = "ALA ARG ASN ASP CYS CYX GLN GLU GLY HSD HSE HSP ILE LEU LYS " \
-             "MET PHE PRO SER THR TRP TYR VAL".split()
+    amino_acids = "ALA ARG ASN ASP CYS CYX GLN GLU GLY HSD HSE HSP ILE LEU " \
+                  "LYS MET PHE PRO SER THR TRP TYR VAL".split()
     # pylint: enable=invalid-name
 
     #==========================================================================
@@ -147,6 +147,7 @@ class MoleculeMatcher(ABC): # pylint: disable=too-few-public-methods
             graph = self.known_res.get(resname)
             matcher = isomorphism.GraphMatcher(rgraph, graph,
                                                node_match=self._check_atom_match)
+
             if matcher.is_isomorphic():
                 return self._get_names_from_match(graph, next(matcher.match()))
 
@@ -173,6 +174,8 @@ class MoleculeMatcher(ABC): # pylint: disable=too-few-public-methods
             else:
                 print("      I couldn't find any residues with that name. Did you "
                       "forget to provide a topology file?")
+            print("\tDumping debug information as 'nomatch.dot'")
+            self.write_dot(graph, "nomatch.dot")
 
         return (None, None)
 
@@ -235,7 +238,7 @@ class MoleculeMatcher(ABC): # pylint: disable=too-few-public-methods
 
 
     #=========================================================================
-    #                           Private methods                              #
+    #                           Abstract methods                             #
     #=========================================================================
 
     @abstractmethod

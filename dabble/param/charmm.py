@@ -369,12 +369,14 @@ class CharmmWriter(MoleculeWriter):
             # Find a name match for this residue
             (newname, atomnames) = self.matcher.get_names(sel, print_warning=True)
             if not newname:
-                raise DabbleError("No residue definition for lipid %s:%s"
-                                  % (sel.name[0], sel.resid[0]))
+                raise DabbleError("No residue definition for lipid %s:%s, "
+                                  "residue %d"
+                                  % (sel.name[0], sel.resid[0], sel.residue[0]))
 
             # Do the renaming
-            self._apply_naming_dictionary(atomnames, resnames=newname,
-                                          verbose=True)
+            self._apply_naming_dictionary(atomnames=atomnames,
+                                          resnames=newname,
+                                          verbose=False)
             # Renumber residue
             sel.resid = counter
             counter = counter + 1
@@ -499,7 +501,8 @@ class CharmmWriter(MoleculeWriter):
                 print("\tApplying patch %s to ligand %s" % (patch, newname))
 
             # Do the renaming
-            self._apply_naming_dictionary(atomnames, resnames=newname,
+            self._apply_naming_dictionary(atomnames=atomnames,
+                                          resnames=newname,
                                           verbose=True)
 
         #logger.info("Renamed %d atoms for all resname %s->%s" % (num_renamed, resname, name))
@@ -564,8 +567,9 @@ class CharmmWriter(MoleculeWriter):
         patches = set()
         extpatches = set()
         seg = "P%s" % frag
+        fragsel = atomsel("fragment '%s'" % frag)
 
-        residues = list(set(atomsel("fragment '%s'" % frag).residue))
+        residues = list(set(fragsel.residue))
         for residue in residues:
             sel = atomsel('residue %s' % residue)
             resid = sel.resid[0]
@@ -596,7 +600,8 @@ class CharmmWriter(MoleculeWriter):
                                   % (sel.resname[0], resid))
 
             # Do the renaming
-            self._apply_naming_dictionary(atomnames, resnames=newname)
+            self._apply_naming_dictionary(atomnames=atomnames,
+                                          resnames=newname)
 
         # Save protein chain in the correct order
         filename = self.tmp_dir + '/psf_protein_%s.pdb' % seg
@@ -617,6 +622,7 @@ class CharmmWriter(MoleculeWriter):
         if old_top != -1:
             molecule.set_top(old_top)
 
+        fragsel.user = 0.0
         return extpatches
 
     #==========================================================================
@@ -640,10 +646,10 @@ class CharmmWriter(MoleculeWriter):
 
         # Print out error messages
         if errors:
-            errstr = "\nERROR: Couldn't find the following atoms."
+            errstr = "\nERROR: Couldn't find the following atoms.\n"
             for i in range(len(errors)):
-                errstr += "  %s%s:%s" % (errors.resname[i], errors.resid[i],
-                                         errors.name[i])
+                errstr += "\t%s%s:%s\n" % (errors.resname[i], errors.resid[i],
+                                           errors.name[i])
 
             errstr += "Check if they are present in the original structure.\n"
             raise DabbleError(errstr)
@@ -829,7 +835,6 @@ class CharmmWriter(MoleculeWriter):
             self._write_water_blocks()
 
         # Now lipid
-        # TODO: lipid names aren't matched with topologies?
         if len(atomsel(self.lipid_sel)):
             self._write_lipid_blocks()
 
@@ -840,8 +845,6 @@ class CharmmWriter(MoleculeWriter):
             for frag in sorted(set(atomsel("resname %s" % patchable_acids,
                                     molid=self.molid).fragment)):
                 extpatches.update(self._write_protein_blocks(self.molid, frag))
-            atomsel("same fragment as resname %s" % patchable_acids,
-                    molid=self.molid).user = 0.0
 
             # List all patches applied to the protein
             print("Applying the following patches:\n")

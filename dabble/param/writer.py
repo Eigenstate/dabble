@@ -90,14 +90,14 @@ class MoleculeWriter(ABC):
 
     #==========================================================================
 
-    def _apply_naming_dictionary(self, atomnames, resnames, verbose=False):
+    def _apply_naming_dictionary(self, resnames, atomnames, verbose=False):
         """
         Applies the atom names from a matcher.
 
         Args:
-            atomnames (dict int->str): Atom index to atom name
             resnames (dict int->str or str): Atom index to residue name,
                 or just residue name for all atoms
+            atomnames (dict int->str): Atom index to atom name
             verbose (bool): If renamings should be printed out
 
         Raises:
@@ -130,11 +130,11 @@ class MoleculeWriter(ABC):
         pass
 
     @abstractmethod
-    def get_topologies(forcefield):
+    def get_topologies(self, forcefield):
         pass
 
     @abstractmethod
-    def get_parameters(forcefield):
+    def get_parameters(self, forcefield):
         pass
 
     #==========================================================================
@@ -146,7 +146,6 @@ class MoleculeWriter(ABC):
         """
         Get the PDB-formatted line corresponding to this atom, with a newline
         at the end.
-
         Args:
             atom (VMD atomsel): Atom selected
             index (int): Index in PDB file.
@@ -167,7 +166,7 @@ class MoleculeWriter(ABC):
                                      atom.resname[0],
                                      atom.chain[0],
                                      resindex,
-                                     ins if len(ins) else " ",
+                                     ins if ins else " ",
                                      atom.x[0],
                                      atom.y[0],
                                      atom.z[0],

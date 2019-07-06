@@ -74,7 +74,7 @@ class AmberWriter(MoleculeWriter):
         # Set forcefield default topologies and parameters
         self.forcefield = kwargs.get("forcefield", "amber")
 
-        if "charmm" in self.forcefield:
+        if self.forcefield == "charmm":
             # Import CharmmWriter as needed to avoid circular imports
             from dabble.param import CharmmWriter
 
@@ -82,7 +82,13 @@ class AmberWriter(MoleculeWriter):
             self.topologies = CharmmWriter.get_topologies(self.forcefield)
             self.parameters = CharmmWriter.get_parameters(self.forcefield)
 
-        elif self.forcefield == 'amber':
+        # Duplicate code here for clarity
+        elif self.forcefield == "opls":
+            from dabble.param import CharmmWriter
+            self.topologies = CharmmWriter.get_topologies(self.forcefield)
+            self.parameters = CharmmWriter.get_parameters(self.forcefield)
+
+        elif self.forcefield == "amber":
             # This will raise DabbleError if AMBERHOME is unset
             self.topologies = self.get_topologies(self.forcefield)
             self.parameters = self.get_parameters(self.forcefield)
@@ -116,17 +122,18 @@ class AmberWriter(MoleculeWriter):
         self.outprefix = filename
 
         # Charmm forcefield
-        if "charmm" in self.forcefield:
+        if "charmm" in self.forcefield or "opls" in self.forcefield:
             from dabble.param import CharmmWriter
             charmmw = CharmmWriter(molid=self.molid,
-                                  tmp_dir=self.tmp_dir,
-                                  lipid_sel=self.lipid_sel,
-                                  extra_topos=self.extra_topos,
-                                  extra_params=self.extra_params,
-                                  override_defaults=self.override,
-                                  debug_verbose=self.debug)
+                                   tmp_dir=self.tmp_dir,
+                                   forcefield=self.forcefield,
+                                   lipid_sel=self.lipid_sel,
+                                   extra_topos=self.extra_topos,
+                                   extra_params=self.extra_params,
+                                   override_defaults=self.override,
+                                   debug_verbose=self.debug)
             charmmw.write(self.outprefix)
-            self._psf_to_charmm_amber()
+            self._psf_to_prmtop()
 
         # Amber forcefield
         elif "amber" in self.forcefield:
@@ -223,7 +230,8 @@ class AmberWriter(MoleculeWriter):
                 conect.add(other)
 
             # Do the renaming
-            self._apply_naming_dictionary(resnames, atomnames)
+            self._apply_naming_dictionary(resnames=resnames,
+                                          atomnames=atomnames)
 
         atomsel('all').user = 1.0
         print("\n", flush=True)
@@ -231,7 +239,7 @@ class AmberWriter(MoleculeWriter):
 
     #==========================================================================
 
-    def _psf_to_charmm_amber(self):
+    def _psf_to_prmtop(self):
         """
         Runs the chamber command of ParmEd to produce AMBER format input files.
 
@@ -338,18 +346,21 @@ class AmberWriter(MoleculeWriter):
                 if not resnames:
                     raise DabbleError("Residue %s:%s not a valid lipid" %
                                       (sel.resname[0], sel.resid[0]))
-                self._apply_naming_dictionary(resnames, atomnames)
+                self._apply_naming_dictionary(resnames=resnames,
+                                              atomnames=atomnames)
                 sel.resid = resid
                 resid += 1
                 continue
             else:
                 # Apply the name to the heads
-                self._apply_naming_dictionary(headres, headnam)
+                self._apply_naming_dictionary(resnames=headres,
+                                              atomnames=headnam)
 
                 # Pull out the tail resnames and indices
                 taildicts = self.matcher.get_lipid_tails(sel, headnam.keys())
                 for (resnames, atomnames) in taildicts:
-                    self._apply_naming_dictionary(resnames, atomnames)
+                    self._apply_naming_dictionary(resnames=resnames,
+                                                  atomnames=atomnames)
 
                 # Renumber the first tail, head, then second tail and write
                 # them separately. Needs to be done this way to guarantee order.
@@ -359,7 +370,7 @@ class AmberWriter(MoleculeWriter):
                 firstdict = [_ for _ in taildicts if minusidx in _[0].keys()]
                 if len(firstdict) != 1:
                     raise DabbleError("Error finding tails for lipid %s:%s" %
-                                     (sel.resname[0], sel.resid[0]))
+                                      (sel.resname[0], sel.resid[0]))
                 firstdict = firstdict[0]
 
                 lsel = atomsel('index %s' % ' '.join([str(x) for x in \
@@ -392,7 +403,7 @@ class AmberWriter(MoleculeWriter):
 
     #==========================================================================
 
-    def _write_residue(self, ressel, fileh, idx, hetatom=False):
+    def _write_residue(self, ressel, fileh, idx, hetatom=True):
         """
         Writes a residue to a pdb file
 
@@ -404,7 +415,7 @@ class AmberWriter(MoleculeWriter):
         """
         for i in ressel.index:
             a = atomsel('index %d' % i) # pylint: disable=invalid-name
-            fileh.write(self.get_pdb_line(a, idx, a.resid[0], hetatom=True))
+            fileh.write(self.get_pdb_line(a, idx, a.resid[0], hetatom=hetatom))
             idx += 1
         return idx
 
@@ -453,7 +464,7 @@ class AmberWriter(MoleculeWriter):
                                 dir=self.tmp_dir)[1]
         ionnames = [_ for _ in self.matcher.known_res.keys() if '+' in _ or '-' in _]
         ions = atomsel("resname NA CL %s and user 1.0" % ' '.join("'%s'" % _ for _ in ionnames))
-        if len(ions):
+        if ions:
             ions.resid = range(1, len(ions) + 1)
             ions.write('pdb', temp)
             ions.user = 0.0
@@ -553,7 +564,8 @@ class AmberWriter(MoleculeWriter):
                 inside
         """
         pdbinfos = []
-        psel = atomsel("user 1.0 and resname %s" % " ".join(self.matcher._acids))
+        psel = atomsel("user 1.0 and resname %s"
+                       % " ".join(self.matcher.amino_acids))
 
         # Start the protein numbering from 1, as it's lost in the prmtop anyway.
         # Make resids increase across chains/fragments too, so that bond section
@@ -618,7 +630,7 @@ class AmberWriter(MoleculeWriter):
         """
         # Ensure leap is actually available
         tleap = os.path.join(os.environ.get("AMBERHOME"), "bin", "tleap")
-        if not (os.path.isfile(tleap) and os.access(tleap, os.X_OX)):
+        if not (os.path.isfile(tleap) and os.access(tleap, os.X_OK)):
             raise DabbleError("$AMBERHOME/bin/tleap not found at '%s'. "
                               "Check your amber installation." % tleap)
 
@@ -720,7 +732,7 @@ class AmberWriter(MoleculeWriter):
         # Do a quick sanity check that all the protein is present.
         mademol = molecule.load("parm7", self.outprefix+ ".prmtop",
                                 "rst7", self.outprefix+ ".inpcrd")
-        checkacids = " ".join(self.matcher._acids)
+        checkacids = " ".join(self.matcher.amino_acids)
         if len(atomsel("resname %s" % checkacids, molid=mademol)) \
         != len(atomsel("resname %s" % checkacids, molid=self.molid)):
            print(out)
@@ -770,7 +782,7 @@ class AmberWriter(MoleculeWriter):
     #                            Static methods                              #
     #========================================================================#
 
-    @staticmethod
+    @classmethod
     def get_topologies(cls, forcefield):
 
         if forcefield == "amber":
@@ -796,10 +808,10 @@ class AmberWriter(MoleculeWriter):
 
     #========================================================================#
 
-    @staticmethod
-    def get_parameters(forcefield):
+    @classmethod
+    def get_parameters(cls, forcefield):
         # AMBER topologies and parameters use the same leaprcs
-        return AmberWriter.get_topologies(forcefield)
+        return cls.get_topologies(forcefield)
 
     #========================================================================#
 

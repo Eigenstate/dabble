@@ -105,12 +105,26 @@ class CharmmMatcher(MoleculeMatcher):
         # Parent assigns and parses topologies
         super(CharmmMatcher, self).__init__(topologies=topologies)
 
-        # Assign elements
-        for res in self.known_res.keys():
-            self._assign_elements(self.known_res[res])
+        # Assign elements to all known residues
+        for graph in self.known_res.values():
+            self._assign_elements(graph)
 
         # Create dictionary of patched amino acids that we know about
-        for res in [s for s in self.known_res.keys() if s in self._acids]:
+        for res in [s for s in self.known_res.keys()
+                    if s in self.amino_acids]:
+
+            # Also add the +C -N linkages in amino acids. There's no reliable
+            # way to add these using the info in the psf files (impropers and
+            # cmap terms mess up other molecule types) so we just add them in
+            # this function call by name
+            _define_bond(self.known_res[res], "+N", "C", patch=False)
+            _define_bond(self.known_res[res], "-C", "N", patch=False)
+
+            # Assign elements again, in case some extraresidue atoms were
+            # added by the amino acid linkage bonds. Patches take care
+            # of their own element assignment for new atoms later.
+            self._assign_elements(self.known_res[res])
+
             for patch in self.patches.keys():
                 applied = self._apply_patch(res, patch)
                 if applied:
@@ -147,7 +161,9 @@ class CharmmMatcher(MoleculeMatcher):
                         node_match=super(CharmmMatcher, self)._check_atom_match)
             if matcher.is_isomorphic():
                 logger.info("Detected patch %s", names[1])
-                return (names[0], names[1], next(matcher.match()))
+                match = next(matcher.match())
+                _, atomnames = self._get_names_from_match(graph, match)
+                return (names[0], names[1], atomnames)
 
         logger.error("Couldn't find a patch for resname '%s'."
                      "Dumping as 'rgraph.dot'", resname)
@@ -185,7 +201,7 @@ class CharmmMatcher(MoleculeMatcher):
         truncated.remove_nodes_from([n for n in rgraph.nodes() if \
                                      rgraph.node[n]["residue"] != "self"])
         matches = {}
-        for matchname in self._acids:
+        for matchname in self.amino_acids:
             graph = self.known_res.get(matchname)
             if not graph:
                 continue
@@ -432,54 +448,6 @@ class CharmmMatcher(MoleculeMatcher):
                                           "Line was:\n%s"
                                           % (node1, node2, line))
 
-            # CMAP terms add edges. This makes amino acids work since the
-            # next and previous amino acids aren't defined as bonds usually
-            #elif tokens[0] == "CMAP":
-
-            #    if len(tokens) == 1: # CMAP parameter section follows, ignore
-            #        continue
-
-            #    if firstcmap:
-            #        # Remove all +- join nodes on patching
-            #        joins = [n for n in graph.nodes() if graph.node[n]["residue"] != "self"]
-            #        graph.remove_nodes_from(joins)
-            #        firstcmap = False
-
-            #    if len(tokens) != 9: # CMAP requires 2 dihedrals
-            #        raise DabbleError("Incorrect CMAP line\n"
-            #                         "Line was:\n%s" % line)
-            #    tokens = tokens[1:]
-            #    nodes = [(tokens[3*j+i], tokens[3*j+i+1]) \
-            #             for j in range(int(len(tokens)/4)) \
-            #             for i in range(j, j+3)]  # oo i love one liners
-            #    for (node1, node2) in nodes:
-            #        if not _define_bond(graph, node1, node2, bool(patch)):
-            #            if patch:
-            #                return None
-            #            raise DabbleError("Could not bond atoms '%s' - '%s' "
-            #                              "when parsing rtf file.\n"
-            #                              "Line was:\n%s"
-            #                              % (node1, node2, line))
-            # DEBUG, use impropers so opls works too
-            # Impropers have the 2nd atom (index 1) as the central atom
-            elif tokens[0] == "IMPR":
-                tokens = tokens[1:]
-                if len(tokens) % 4:
-                    raise DabbleError("Incorrect number of atoms in improper "
-                                      "term\nLine was:\n%s" % line)
-                bonds = [(0,1), (1,2), (1,3)]
-                for n1, n2 in bonds:
-                    node1 = tokens[n1]
-                    node2 = tokens[n2]
-                    if not _define_bond(graph, node1, node2, bool(patch)):
-                        if patch:
-                            return None
-                        self.write_dot(graph, "test.dot")
-                        raise DabbleError("Could not bond atoms from improper "
-                                          "'%s' - '%s'.\nLine was:\n%s"
-                                          % (node1, node2, line))
-
-
             # Check for atom definitions
             elif tokens[0] == "MASS":
                 if self.nodenames.get(tokens[2]):
@@ -551,7 +519,7 @@ class CharmmMatcher(MoleculeMatcher):
     def _assign_elements(self, graph):
         """
         Assigns elements to parsed in residues. Called after all
-        topology files are read in. Element "_join" is assigned
+        topology files are read in. Element "Any" is assigned
         to atoms from other residues (+- atoms), since these are only
         defined by name.
 
@@ -596,6 +564,7 @@ def _define_bond(graph, node1, node2, patch):
     """
     # If both atoms are extraresidue, refuse to define the bond
     # and just silently continue. This helps deal with impropers
+    # TODO remove we don't use impropers anymore
     if all("+" in _ or "-" in _ for _ in [node1, node2]):
         return True
 

@@ -161,6 +161,9 @@ class AmberMatcher(MoleculeMatcher):
             else:
                 print("\tI couldn't find any residues with that name. Did you "
                       "forget to provide a topology file?")
+            print("\tDumping debug information as 'nomatch.dot'")
+            self.write_dot(graph, "nomatch.dot")
+
 
         return (None, None)
 
@@ -258,7 +261,7 @@ class AmberMatcher(MoleculeMatcher):
 
         # Prefer canonical amino acids here over weird other types
         if len(possible_matches) > 1:
-            canonicals = [_ for _ in possible_matches if _ in self._acids]
+            canonicals = [_ for _ in possible_matches if _ in self.amino_acids]
             if len(canonicals) == 1:
                 print("\tPreferring canonical acid %s" % canonicals[0])
                 matchname = canonicals.pop()
