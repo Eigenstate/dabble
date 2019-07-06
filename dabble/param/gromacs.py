@@ -91,8 +91,9 @@ class GromacsWriter(MoleculeWriter):
         self.topologies.extend(self.extra_topos)
         self.parameters.extend(self.extra_params)
 
+        # XXX - matcher currently not used because I don't trust OPLS AA/M
         # Initialize matcher only now that all topologies etc have been set
-        if self.forcefield in ["opls", "gromos"]:
+        if self.forcefield in []:
             self.matcher = GromacsMatcher(topologies=self.topologies)
 
     #==========================================================================
@@ -107,7 +108,7 @@ class GromacsWriter(MoleculeWriter):
         self.outprefix = filename
 
         # Charmm forcefield
-        if "charmm" in self.forcefield:
+        if "charmm" in self.forcefield or "opls" in self.forcefield:
             psfgen = CharmmWriter(molid=self.molid,
                                   tmp_dir=self.tmp_dir,
                                   lipid_sel=self.lipid_sel,
@@ -134,7 +135,11 @@ class GromacsWriter(MoleculeWriter):
             self._amber_to_gromacs()
 
         # Now native GROMACS style for gromos or opls
-        else: #TODO
+        else:
+            # Currently unsupported
+            raise DabbleError("Forcefield '%s' not supported for gromacs"
+                              % self.forcefield)
+
             print("Using the following topology files and/or directories:")
             for top in self.topologies:
                 print("  - %s" % os.path.split(top)[1])
@@ -193,7 +198,6 @@ class GromacsWriter(MoleculeWriter):
         Args:
             molid (int): Molecule ID
         """
-
         # Rename all residues
         residues = set(atomsel("all", molid=self.molid).residue)
         n_res = len(residues)
@@ -210,12 +214,11 @@ class GromacsWriter(MoleculeWriter):
             if not resnames:
                 rgraph = self.matcher.parse_vmd_graph(sel)[0]
                 self.matcher.write_dot(rgraph, "rgraph.dot")
-                self.matcher.write_dot(self.matcher.known_res["ASP"], "asp.dot")
-                self.matcher.write_dot(self.matcher.known_res["ACE"], "ace.dot")
                 raise ValueError("Unknown residue %s:%d"
                                  % (sel.resname[0], sel.resid[0]))
 
-            self._apply_naming_dictionary(resnames, atomnames)
+            self._apply_naming_dictionary(resnames=resnames,
+                                          atomnames=atomnames)
             sel.user = 1.0
 
         # TODO: handle disulfides, other noncanonical bonds
@@ -295,6 +298,7 @@ class GromacsWriter(MoleculeWriter):
         """
         Gets the path to GROMACS-format topologies for a given force field
         """
+
         # Amber, Charmm, and OPLS handled by conversion
         if forcefield == "charmm":
             return CharmmWriter.get_topologies(forcefield)
@@ -305,22 +309,26 @@ class GromacsWriter(MoleculeWriter):
         elif forcefield == "opls":
             return CharmmWriter.get_topologies(forcefield)
 
+        # No forcefields really ship with gromacs right now because
+        # I found an error in the OPLS AA/M gromacs implementation and
+        # they won't respond to my emails
+
         # Use GROMACS forcefield for the remaining ones
         #if forcefield == "opls":
         #    ffdir = "oplsaam.ff"
 
-        elif forcefield == "gromos":
-            ffdir = "gromos54a7.ff"
+        #elif forcefield == "gromos":
+        #    ffdir = "gromos54a7.ff"
 
         else:
             raise DabbleError("Unsupported forcefield %s" % forcefield)
 
-        return [cls.get_forcefield_path(ffdir)]
+        #return [cls.get_forcefield_path(ffdir)]
 
     #==========================================================================
 
-    @staticmethod
-    def get_parameters(forcefield):
+    @classmethod
+    def get_parameters(cls, forcefield):
         """
         Get the path to GROMACS-format parameter files for a given force field
         """
