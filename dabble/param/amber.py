@@ -325,9 +325,9 @@ class AmberWriter(MoleculeWriter):
             return None
 
         molecule.set_top(self.molid)
-        temp = tempfile.mkstemp(suffix='.pdb', prefix='amber_lipids_',
-                                dir=self.tmp_dir)[1]
-        fileh = open(temp, 'w')
+        f, temp = tempfile.mkstemp(suffix='.pdb', prefix='amber_lipids_',
+                                   dir=self.tmp_dir)
+        fileh = os.fdopen(f, 'w')
 
         # Check if it's a normal residue first in case cholesterol etc in
         # the selection
@@ -346,6 +346,7 @@ class AmberWriter(MoleculeWriter):
             if not headres:
                 resnames, atomnames = self.matcher.get_names(sel, print_warning=False)
                 if not resnames:
+                    fileh.close()
                     raise DabbleError("Residue %s:%s not a valid lipid" %
                                       (sel.resname[0], sel.resid[0]))
                 self._apply_naming_dictionary(resnames=resnames,
@@ -371,6 +372,7 @@ class AmberWriter(MoleculeWriter):
                 # First tail
                 firstdict = [_ for _ in taildicts if minusidx in _[0].keys()]
                 if len(firstdict) != 1:
+                    fileh.close()
                     raise DabbleError("Error finding tails for lipid %s:%s" %
                                       (sel.resname[0], sel.resid[0]))
                 firstdict = firstdict[0]
@@ -438,8 +440,9 @@ class AmberWriter(MoleculeWriter):
         pdbs = []
 
         for residue in set(atomsel("user 1.0").residue):
-            temp = tempfile.mkstemp(suffix='.pdb', prefix='amber_extra',
-                                    dir=self.tmp_dir)[1]
+            _, temp = tempfile.mkstemp(suffix='.pdb', prefix='amber_extra',
+                                       dir=self.tmp_dir)
+            os.close(_)
             sel = atomsel("residue %d" % residue)
             sel.user = 0.0
             sel.resid = idx
@@ -462,8 +465,9 @@ class AmberWriter(MoleculeWriter):
 
         written = []
         # First write all the ions using just vmd
-        temp = tempfile.mkstemp(suffix='.pdb', prefix='amber_ion',
-                                dir=self.tmp_dir)[1]
+        _, temp = tempfile.mkstemp(suffix='.pdb', prefix='amber_ion',
+                                   dir=self.tmp_dir)
+        os.close(_)
         ionnames = [_ for _ in self.matcher.known_res.keys() if '+' in _ or '-' in _]
         ions = atomsel("resname NA CL %s and user 1.0"
                        % ' '.join("'%s'" % _ for _ in ionnames))
@@ -493,9 +497,10 @@ class AmberWriter(MoleculeWriter):
             print("Going to write %d files for %d water atoms"
                   % (num_written, len(allw)))
             for i in range(num_written):
-                temp = tempfile.mkstemp(suffix='_%d.pdb' % i,
-                                        prefix='amber_wat_',
-                                        dir=self.tmp_dir)[1]
+                _, temp = tempfile.mkstemp(suffix='_%d.pdb' % i,
+                                           prefix='amber_wat_',
+                                           dir=self.tmp_dir)
+                os.close(_)
                 written.append(temp)
                 residues = list(set(allw.residue))[:9999]
 
@@ -535,22 +540,21 @@ class AmberWriter(MoleculeWriter):
         Returns:
             (str) Name of the pdb file written
         """
-        temp = tempfile.mkstemp(suffix='_indexed.pdb', prefix='amber_wat_',
-                                dir=self.tmp_dir)[1]
-        fileh = open(temp, 'w')
+        f, temp = tempfile.mkstemp(suffix='_indexed.pdb', prefix='amber_wat_',
+                                   dir=self.tmp_dir)
 
         idx = 1
-        for residx, residue in enumerate(residues):
-            res = atomsel('residue %d' % residue)
-            res.user = 0.0
+        with os.fdopen(f, 'w') as fileh:
+            for residx, residue in enumerate(residues):
+                res = atomsel('residue %d' % residue)
+                res.user = 0.0
 
-            for i in res.index:
-                a = atomsel('index %d' % i) # pylint: disable=invalid-name
-                fileh.write(self.get_pdb_line(a, idx, residx+1))
-                idx += 1
+                for i in res.index:
+                    a = atomsel('index %d' % i) # pylint: disable=invalid-name
+                    fileh.write(self.get_pdb_line(a, idx, residx+1))
+                    idx += 1
 
-        fileh.write('END\n')
-        fileh.close()
+            fileh.write('END\n')
         return temp
 
     #==========================================================================
@@ -575,12 +579,12 @@ class AmberWriter(MoleculeWriter):
         # for covalent modifications is simple.
         fragres = 1
         for i, frag in enumerate(sorted(set(psel.fragment))):
-            temp = tempfile.mkstemp(suffix='_prot.pdb', prefix='amber_prot_',
-                                    dir=self.tmp_dir)[1]
+            f, temp = tempfile.mkstemp(suffix='_prot.pdb', prefix='amber_prot_',
+                                       dir=self.tmp_dir)
 
             # Now write out all the resides to a pdb file
             resseq = []
-            with open(temp, 'w') as fileh:
+            with os.fdopen(f, 'w') as fileh:
                 idx = 1
                 # Grab resids again since they may have updated
                 # Check for multiple residues with the same resid (insertion codes)
@@ -638,9 +642,9 @@ class AmberWriter(MoleculeWriter):
                               "Check your amber installation." % tleap)
 
         # Create the leap input file
-        leapin = tempfile.mkstemp(suffix='.in', prefix='dabble_leap_',
-                                  dir=self.tmp_dir)[1]
-        with open(leapin, 'w') as fileh:
+        f, leapin = tempfile.mkstemp(suffix='.in', prefix='dabble_leap_',
+                                     dir=self.tmp_dir)
+        with os.fdopen(f, 'w') as fileh:
             for i in self.topologies + self.parameters:
                 if "leaprc" in i:
                     fileh.write("source %s\n" % i)
@@ -712,7 +716,6 @@ class AmberWriter(MoleculeWriter):
             fileh.write("saveamberparm p %s.prmtop %s.inpcrd\n"
                         % (self.outprefix, self.outprefix))
             fileh.write("quit\n")
-            fileh.close()
 
         # Now invoke leap. If it fails, print output
         out = ""
@@ -760,11 +763,11 @@ class AmberWriter(MoleculeWriter):
                 new_topos.append(t)
                 continue
 
-            temp = tempfile.mkstemp(suffix=".leaprc", prefix="amber_",
-                                    dir=self.tmp_dir)[1]
+            f, temp = tempfile.mkstemp(suffix=".leaprc", prefix="amber_",
+                                       dir=self.tmp_dir)
             inpdb = False
             with open(t, 'r') as fn:
-                with open(temp, 'w') as tf:
+                with os.fdopen(f, 'w') as tf:
                     for line in fn:
                         if inpdb and line == "}\n":
                             inpdb = False

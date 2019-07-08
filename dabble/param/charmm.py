@@ -271,8 +271,10 @@ class CharmmWriter(MoleculeWriter):
         # Pull out and write 10k waters at a time if we have normal waters
         if allw:
             for i in range(num_written):
-                temp = tempfile.mkstemp(suffix='_%d.pdb' % i, prefix='psf_wat_',
-                                        dir=self.tmp_dir)[1]
+                _, temp = tempfile.mkstemp(suffix='_%d.pdb' % i,
+                                           prefix='psf_wat_',
+                                           dir=self.tmp_dir)
+                os.close(_)
                 residues = list(set(allw.residue))[:9999]
 
                 batch = atomsel('residue %s' % ' '.join([str(x) for x in residues]))
@@ -317,21 +319,19 @@ class CharmmWriter(MoleculeWriter):
         Returns:
             (str): Filename where waters are written
         """
-        temp = tempfile.mkstemp(suffix='_indexed.pdb', prefix='psf_wat_',
-                                dir=self.tmp_dir)[1]
-        fileh = open(temp, 'w')
-
+        f, temp = tempfile.mkstemp(suffix='_indexed.pdb', prefix='psf_wat_',
+                                   dir=self.tmp_dir)
         idx = 1
-        for ridx, residue in enumerate(residues):
-            res = atomsel('residue %d' % residue, molid=molid)
+        with os.fdopen(f, 'w') as fileh:
+            for ridx, residue in enumerate(residues):
+                res = atomsel('residue %d' % residue, molid=molid)
 
-            for i in res.index:
-                a = atomsel('index %d' % i, molid) # pylint: disable=invalid-name
-                fileh.write(self.get_pdb_line(a, idx, ridx+1))
-                idx += 1
+                for i in res.index:
+                    a = atomsel('index %d' % i, molid) # pylint: disable=invalid-name
+                    fileh.write(self.get_pdb_line(a, idx, ridx+1))
+                    idx += 1
 
-        fileh.write('END\n')
-        fileh.close()
+            fileh.write('END\n')
         return temp
 
     #==========================================================================
@@ -389,8 +389,9 @@ class CharmmWriter(MoleculeWriter):
 
 
         # Write temporary lipid pdb
-        temp = tempfile.mkstemp(suffix='.pdb', prefix='psf_lipid_',
-                                dir=self.tmp_dir)[1]
+        _, temp = tempfile.mkstemp(suffix='.pdb', prefix='psf_lipid_',
+                                   dir=self.tmp_dir)
+        os.close(_)
         alll.user = 0.0
         alll.write('pdb', temp)
 
@@ -441,8 +442,9 @@ class CharmmWriter(MoleculeWriter):
         batch.resid = [k for k in range(1, len(batch)+1)]
 
         # Save the temporary ions file
-        temp = tempfile.mkstemp(suffix='.pdb', prefix='psf_ions_',
-                                dir=self.tmp_dir)[1]
+        _, temp = tempfile.mkstemp(suffix='.pdb', prefix='psf_ions_',
+                                   dir=self.tmp_dir)
+        os.close(_)
         atomsel('name SOD CLA POT').user = 0.0
         atomsel('name SOD CLA POT').write('pdb', temp)
 
@@ -536,8 +538,9 @@ class CharmmWriter(MoleculeWriter):
         alig = atomsel('user 1.0 and residue %s' % " ".join([str(x) for x in residues]))
 
         # Write temporary file containg the residues and update tcl commands
-        temp = tempfile.mkstemp(suffix='.pdb', prefix='psf_block_',
-                                dir=self.tmp_dir)[1]
+        _, temp = tempfile.mkstemp(suffix='.pdb', prefix='psf_block_',
+                                   dir=self.tmp_dir)
+        os.close(_)
         alig.write('pdb', temp)
         alig.user = 0.0
 
