@@ -232,7 +232,7 @@ class AmberMatcher(MoleculeMatcher):
 
         # Create a subgraph with no externally bonded atoms for matching
         # Otherwise, extra bonded atom will prevent matches from happening
-        noext,_ = self.parse_vmd_graph(selection)
+        noext, _ = self.parse_vmd_graph(selection)
         noext.remove_nodes_from([i for i in noext.nodes()
                                  if noext.node[i].get("residue") != "self"])
 
@@ -255,7 +255,9 @@ class AmberMatcher(MoleculeMatcher):
             return (None, None, None)
 
         # Want minimumally different thing, ie fewest _join atoms different
-        def difference(res): return len(self.known_res[res]) - len(noext)
+        def difference(res):
+            return len(self.known_res[res]) - len(noext)
+
         minscore = min(difference(_) for _ in matches)
         possible_matches = [_ for _ in matches if difference(_) == minscore]
 
@@ -292,7 +294,7 @@ class AmberMatcher(MoleculeMatcher):
             ch = atomsel("index %d" % num, molid=molid).chain[0]
             if ch != chain:
                 partners.append(num)
-            elif rid != residue+1 and rid != residue-1:
+            elif rid not in (residue+1, residue-1):
                 partners.append(num)
         if len(partners) != 1:
             return (None, None, None)
@@ -348,7 +350,7 @@ class AmberMatcher(MoleculeMatcher):
                             molid=molid).element[0] == "S"]
         if not partners:
             raise DabbleError("3 bonded Cys %d isn't a valid disulfide!"
-                             % selection.resid[0])
+                              % selection.resid[0])
         osel = atomsel("index %d" % partners[0], molid=molid)
         conect = osel.residue[0]
 
@@ -504,10 +506,10 @@ class AmberMatcher(MoleculeMatcher):
             for line in fileh:
                 if "#" in line:
                     line = line[:line.index("#")]
-                if not len(line):
+                if not line:
                     continue
                 tokens = [i.strip(" \t'\"\n") for i in line.split()]
-                if not len(tokens):
+                if not tokens:
                     continue
 
                 # addAtomTypes adds more atoms
@@ -589,10 +591,10 @@ class AmberMatcher(MoleculeMatcher):
 
         with open(filename, 'r') as fileh:
             for line in fileh:
-                if not len(line):
+                if not line:
                     continue
                 tokens = [i.strip(" \t\"\n") for i in line.split()]
-                if not len(tokens) or not len(tokens[0]):
+                if not tokens or not tokens[0]:
                     continue
 
                 # Find the MASS lines
@@ -635,10 +637,10 @@ class AmberMatcher(MoleculeMatcher):
 
         with open(filename, 'r') as fileh:
             for line in fileh:
-                if not len(line):
+                if not line:
                     continue
                 tokens = [i.strip(" \t\"\n") for i in line.split()]
-                if not len(tokens) or not len(tokens[0]):
+                if not tokens or not tokens[0]:
                     continue
 
                 # If we find a command, pull out the unit name then figure
@@ -743,15 +745,17 @@ class AmberMatcher(MoleculeMatcher):
         # so a match just needs to be the same type of join atom
         if node1.get('residue') != "self" or node2.get('residue') != "self":
             return node1.get('residue') == node2.get('residue')
-        elif node1.get('element') == "Other":
+
+        if node1.get('element') == "Other":
             return (node2.get('element') not in AmberMatcher.LEAP_ELEMENTS.values()) \
                    and (node1.get('residue') == node2.get('residue'))
-        elif node2.get('element') == "Other":
+
+        if node2.get('element') == "Other":
             return (node1.get('element') not in AmberMatcher.LEAP_ELEMENTS.values()) \
                    and (node1.get('residue') == node2.get('residue'))
-        else:
-            return (node1.get('element') == node2.get('element')) and \
-                   (node1.get('residue') == node2.get('residue'))
+
+        return (node1.get('element') == node2.get('element')) and \
+               (node1.get('residue') == node2.get('residue'))
 
     #=========================================================================
 

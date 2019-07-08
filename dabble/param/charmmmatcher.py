@@ -42,15 +42,15 @@ class Patch(object):
     As patches can be applied to one or more residues, it allows
     unlimited segids and resids inside.
     """
-    def __init__(self, name, segids=[], resids=[]):
+    def __init__(self, name, segids=None, resids=None):
         self.name = name
-        self.segids = segids
-        self.resids = resids
+        self.segids = [] if segids is None else segids
+        self.resids = [] if resids is None else resids
 
     def __repr__(self):
         return "%s %s" % (self.name,
-                          " ".join("%s:%s" % (x,y) for x,y in zip(self.segids,
-                                                                  self.resids)))
+                          " ".join("%s:%s" % (x, y)
+                                   for x, y in zip(self.segids, self.resids)))
 
     def __eq__(self, other):
         if isinstance(other, Patch):
@@ -125,7 +125,7 @@ class CharmmMatcher(MoleculeMatcher):
             # of their own element assignment for new atoms later.
             self._assign_elements(self.known_res[res])
 
-            for patch in self.patches.keys():
+            for patch in self.patches:
                 applied = self._apply_patch(res, patch)
                 if applied:
                     self.known_pres[(res, patch)] = applied
@@ -155,7 +155,7 @@ class CharmmMatcher(MoleculeMatcher):
         rgraph = self.parse_vmd_graph(selection)[0]
 
         # Check this residue against all possible patches applied to the
-        for names in self.known_pres.keys():
+        for names in self.known_pres:
             graph = self.known_pres[names]
             matcher = isomorphism.GraphMatcher(rgraph, graph, \
                         node_match=super(CharmmMatcher, self)._check_atom_match)
@@ -172,7 +172,7 @@ class CharmmMatcher(MoleculeMatcher):
 
     #=========================================================================
 
-    def get_disulfide(self, selstring, fragment, molid): #pylint: disable=too-many-locals
+    def get_disulfide(self, selstring, molid): #pylint: disable=too-many-locals
         """
         Checks if the selection corresponds to a cysteine in a disulfide bond.
         Sets the patch line appropriately and matches atom names using
@@ -180,7 +180,6 @@ class CharmmMatcher(MoleculeMatcher):
 
         Args:
             selstring (str): Selection to check
-            fragment (str): Fragment ID (to narrow down selection)
             molid (int): VMD molecule of entire system (needed for disu partner)
 
         Returns:
@@ -329,10 +328,10 @@ class CharmmMatcher(MoleculeMatcher):
                     line = line.replace("!GraphMatcher:", "")
                 if "!" in line:
                     line = line[:line.index("!")]
-                if not len(line):
+                if not line:
                     continue
                 tokens = [i.strip() for i in line.split()]
-                if not len(tokens):
+                if not tokens:
                     continue
 
                 # Handle previous data
@@ -348,9 +347,9 @@ class CharmmMatcher(MoleculeMatcher):
                     resname = tokens[1]
                     # Only warn for too long str files
                     if len(resname) > 4 and filename.split('.')[-1] == "str":
-                       raise DabbleError("Residue name '%s' too long for psfgen"
-                                         " to parse. Max is 4 characters!"
-                                         % resname)
+                        raise DabbleError("Residue name '%s' too long for psfgen"
+                                          " to parse. Max is 4 characters!"
+                                          % resname)
                     patch = False
                     if self.known_res.get(resname):
                         logging.info("Skipping duplicate residue %s", resname)
@@ -361,9 +360,9 @@ class CharmmMatcher(MoleculeMatcher):
                 elif tokens[0] == "PRES":
                     resname = tokens[1] # prefix with _ so we can tell it's a patch
                     if len(resname) > 10:
-                       raise DabbleError("Patch name '%s' too long for psfgen"
-                                         " to parse. Max is 10 characters."
-                                         % resname)
+                        raise DabbleError("Patch name '%s' too long for psfgen"
+                                          " to parse. Max is 10 characters."
+                                          % resname)
                     patch = True
                     if self.patches.get(resname):
                         logging.warning("Skipping duplicate patch %s", resname[1:])
@@ -414,8 +413,6 @@ class CharmmMatcher(MoleculeMatcher):
         else:
             graph = nx.Graph(data=patch)
 
-        firstcmap = True
-
         for line in data.splitlines():
             tokens = [i.strip().upper() for i in line.split()]
 
@@ -436,7 +433,7 @@ class CharmmMatcher(MoleculeMatcher):
             elif tokens[0] == "BOND" or tokens[0] == "DOUBLE":
                 if len(tokens) % 2 == 0:
                     raise DabbleError("Unequal number of atoms in bond terms\n"
-                                     "Line was:\n%s" % line)
+                                      "Line was:\n%s" % line)
                 for txn in range(1, len(tokens), 2):
                     node1 = tokens[txn]
                     node2 = tokens[txn+1]
@@ -564,7 +561,6 @@ def _define_bond(graph, node1, node2, patch):
     """
     # If both atoms are extraresidue, refuse to define the bond
     # and just silently continue. This helps deal with impropers
-    # TODO remove we don't use impropers anymore
     if all("+" in _ or "-" in _ for _ in [node1, node2]):
         return True
 
@@ -622,4 +618,3 @@ def _prune_joins(graph):
                 graph.remove_node(nei)
 
 #=========================================================================
-

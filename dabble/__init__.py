@@ -25,6 +25,7 @@ class DabbleError(Exception):
     """
 
     def __init__(self, msg):
+        super(DabbleError, self).__init__()
         try:
             ln = sys.exc_info()[-1].tb_lineno
         except AttributeError:

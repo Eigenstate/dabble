@@ -210,7 +210,7 @@ class GromacsWriter(MoleculeWriter):
             residue = residues.pop()
             sel = atomsel("residue %s" % residue)
             resnames, atomnames = self.matcher.get_names(sel,
-                                                        print_warning=False)
+                                                         print_warning=False)
             if not resnames:
                 rgraph = self.matcher.parse_vmd_graph(sel)[0]
                 self.matcher.write_dot(rgraph, "rgraph.dot")
@@ -255,14 +255,14 @@ class GromacsWriter(MoleculeWriter):
 
         # Prepare arguments to pdb2gmx
         gmx_args = [
-                    "gmx", "pdb2gmx",
-                    "-f", grout,
-                    "-o", self.outprefix + ".gro",
-                    "-p", self.outprefix + ".top",
-                    "-ff", os.path.split(self.ffdir)[1],
-                    "-water", "tip3p", # TODO water models
-                    "-noignh", # Use hydrogens in coordinate file
-                    ]
+            "gmx", "pdb2gmx",
+            "-f", grout,
+            "-o", self.outprefix + ".gro",
+            "-p", self.outprefix + ".top",
+            "-ff", os.path.split(self.ffdir)[1],
+            "-water", "tip3p", # TODO water models
+            "-noignh", # Use hydrogens in coordinate file
+        ]
 
         if self.hmr:
             gmx_args += ["-heavyh"]
@@ -303,10 +303,10 @@ class GromacsWriter(MoleculeWriter):
         if forcefield == "charmm":
             return CharmmWriter.get_topologies(forcefield)
 
-        elif forcefield == "amber":
+        if forcefield == "amber":
             return AmberWriter.get_topologies(forcefield)
 
-        elif forcefield == "opls":
+        if forcefield == "opls":
             return CharmmWriter.get_topologies(forcefield)
 
         # No forcefields really ship with gromacs right now because
@@ -320,8 +320,7 @@ class GromacsWriter(MoleculeWriter):
         #elif forcefield == "gromos":
         #    ffdir = "gromos54a7.ff"
 
-        else:
-            raise DabbleError("Unsupported forcefield %s" % forcefield)
+        raise DabbleError("Unsupported forcefield %s" % forcefield)
 
         #return [cls.get_forcefield_path(ffdir)]
 
@@ -337,14 +336,13 @@ class GromacsWriter(MoleculeWriter):
         if forcefield == "charmm":
             return CharmmWriter.get_parameters(forcefield)
 
-        elif forcefield == "amber":
+        if forcefield == "amber":
             return AmberWriter.get_parameters(forcefield)
 
-        elif forcefield == "opls":
+        if forcefield == "opls":
             return CharmmWriter.get_parameters(forcefield)
 
         # Gromacs topologies and parameters are the same directories
-        else:
-            return GromacsWriter.get_topologies(forcefield)
+        return GromacsWriter.get_topologies(forcefield)
 
 #++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++

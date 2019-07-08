@@ -33,11 +33,17 @@ from vmd import atomsel, molecule
 from dabble import DabbleError
 from dabble.param import CharmmMatcher, MoleculeWriter, Patch
 
+# Handle python 2/3 input
+try:
+    input = raw_input
+except NameError:
+    pass
+
 #++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
 #                                CONSTANTS                                    #
 #++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
 
-patchable_acids = ('ACE ALA ARG ASN ASP CYS CYX GLN GLU GLY HIE HIS HSP HSE '
+PATCHABLE_ACIDS = ('ACE ALA ARG ASN ASP CYS CYX GLN GLU GLY HIE HIS HSP HSE '
                    'HSD ILE LEU LYS MET NMA PHE PRO SER THR TRP TYR VAL')
 
 #++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
@@ -352,8 +358,8 @@ class CharmmWriter(MoleculeWriter):
         residues.sort()
 
         # Lipids not compatible with AMBER parameters, CHARMM format
-        if len(residues) and \
-                ("amber" in self.forcefield or "opls" in self.forcefield):
+        if residues and ("amber" in self.forcefield or
+                         "opls" in self.forcefield):
             raise ValueError("AMBER or OPLS parameters not supported for lipids"
                              " in CHARMM output format")
 
@@ -410,14 +416,14 @@ class CharmmWriter(MoleculeWriter):
         # Get ion resids that aren't associated w other molecules
         # because some ligands have Na, Cl, K
         total = atomsel('element Na Cl K')
-        if len(total):
+        if total:
             not_ions = atomsel("(same fragment as element Na Cl K)  and (not index %s)"
                                % " ".join([str(s) for s in set(total.index)]))
             ions = set(total.residue) - set(not_ions.residue)
         else:
             ions = set(total.residue)
 
-        if not len(ions):
+        if not ions:
             return
         ionstr = "residue " + " ".join([str(s) for s in ions])
 
@@ -505,7 +511,6 @@ class CharmmWriter(MoleculeWriter):
                                           resnames=newname,
                                           verbose=True)
 
-        #logger.info("Renamed %d atoms for all resname %s->%s" % (num_renamed, resname, name))
         molecule.set_top(old_top)
 
         return residues
@@ -582,7 +587,7 @@ class CharmmWriter(MoleculeWriter):
             else:
                 (newname, patch, atomnames) = \
                         self.matcher.get_disulfide("residue %d" % residue,
-                                                   frag, molid)
+                                                   molid)
                 if newname:
                     extpatches.add(patch)
 
@@ -653,10 +658,9 @@ class CharmmWriter(MoleculeWriter):
 
             errstr += "Check if they are present in the original structure.\n"
             raise DabbleError(errstr)
-        else:
-            print("\nChecked output pdb/psf has all atoms present "
-                  "and correct.\n")
 
+        print("\nChecked output pdb/psf has all atoms present "
+              "and correct.\n")
 
     #==========================================================================
 
@@ -685,10 +689,10 @@ class CharmmWriter(MoleculeWriter):
             topo_atoms = _get_atoms_from_rtf(text=topfile.readlines(),
                                              resname=resname)
             # Use first definition found of this residue
-            if len(topo_atoms):
+            if topo_atoms:
                 break
             topfile.close()
-        if not len(topo_atoms):
+        if not topo_atoms:
             return False
         print("Successfully found residue %s in input topologies" % resname)
 
@@ -720,7 +724,7 @@ class CharmmWriter(MoleculeWriter):
                                  " ".join(topo_only)))
 
         # Offer to rename atoms that couldn't be matched to the topology
-        if len(pdb_only):
+        if pdb_only:
             print("\nWARNING: Having some trouble with modified residue %s.\n"
                   "         The following atom names cannot be matched up "
                   " to the input topologies. They are probably "
@@ -735,8 +739,6 @@ class CharmmWriter(MoleculeWriter):
                 print("Unmatched topology names: [ %s ]"
                       % ' '.join(topo_only))
 
-                try: input = raw_input
-                except NameError: pass
                 newname = input("  %s  -> " % unmatched)
                 while newname not in topo_only:
                     print("'%s' is not an available name in the topology."
@@ -773,8 +775,6 @@ class CharmmWriter(MoleculeWriter):
         print("Type NONE for no patch, if your residue is completely "
               "defined in a str file")
         print("Or type HELP for a list of all patches I know about")
-        try: input = raw_input
-        except NameError: pass
         patchname = input("> ")
         if patchname == "HELP":
             print("   PATCH     COMMENT")
@@ -804,7 +804,7 @@ class CharmmWriter(MoleculeWriter):
             topfile = open(top, 'r')
             for line in topfile:
                 tokens = line.split()
-                if not len(tokens):
+                if not tokens:
                     continue
                 if tokens[0] == "PRES":
                     comment = ' '.join(tokens[tokens.index("!")+1:])
@@ -827,23 +827,23 @@ class CharmmWriter(MoleculeWriter):
         check_atom_names(molid=self.molid)
 
         # Now ions if present, changing the atom names
-        if len(atomsel('ions', molid=self.molid)) > 0:
+        if atomsel('ions', molid=self.molid):
             self._write_ion_blocks()
 
         # Save water 10k molecules at a time
-        if len(atomsel('water', molid=self.molid)):
+        if atomsel('water', molid=self.molid):
             self._write_water_blocks()
 
         # Now lipid
-        if len(atomsel(self.lipid_sel)):
+        if atomsel(self.lipid_sel):
             self._write_lipid_blocks()
 
         # Now handle the protein
         # Save and reload the protein so residue looping is correct
-        if len(atomsel("resname %s" % patchable_acids, molid=self.molid)):
+        if atomsel("resname %s" % PATCHABLE_ACIDS, molid=self.molid):
             extpatches = set()
-            for frag in sorted(set(atomsel("resname %s" % patchable_acids,
-                                    molid=self.molid).fragment)):
+            for frag in sorted(set(atomsel("resname %s" % PATCHABLE_ACIDS,
+                                           molid=self.molid).fragment)):
                 extpatches.update(self._write_protein_blocks(self.molid, frag))
 
             # List all patches applied to the protein
@@ -957,7 +957,7 @@ def _get_atoms_from_rtf(text, resname):
     found = False
     for line in text:
         words = line.split()
-        if not len(words):
+        if not words:
             continue
         if not found and words[0] == 'RESI' \
            and words[1] == resname:

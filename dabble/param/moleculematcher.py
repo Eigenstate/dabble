@@ -105,7 +105,7 @@ class MoleculeMatcher(ABC): # pylint: disable=too-few-public-methods
             # Trim out pseudoatoms from the topologies as they will prevent
             # topology matching. We do this here rather than at parse time
             # as it allows more error checking in the parsing.
-            for unit, graph in self.known_res.items():
+            for graph in self.known_res.values():
                 graph.remove_nodes_from([i for i in graph.nodes() if
                                          graph.node[i].get("type") in
                                          self.pseudoatoms])
@@ -200,44 +200,6 @@ class MoleculeMatcher(ABC): # pylint: disable=too-few-public-methods
         return externs
 
     #=========================================================================
-
-    def write_dot(self, graph, output):
-        """
-        Writes the residue as a dot file that can be rendered as a SVG
-        to aid in debugging.
-
-        Args:
-            graph (networkx Graph): Graph to draw
-            output (str): Filename to write to
-        """
-        colors = {"C": "#40e0d0",
-                  "O": "#ff0000",
-                  "H": "#cecece",
-                  "N": "#4268f4"}
-        default = "#b27c00"
-
-        with open(output, 'w') as fn:
-            fn.write("strict graph {\n")
-            for nodename in graph.nodes():
-                node = graph.node[nodename]
-                ele = node.get("element")
-                oth = "" if node.get("residue") == "self" else "+-"
-
-                fn.write("\"%s\" [shape=record style=\"filled,rounded\" "
-                         "fillcolor=\"%s\" "
-                         "label=\"%s%s|{%s|%s}\"];\n"
-                         % (nodename, colors.get(ele, default), oth, ele,
-                            node.get("atomname"), node.get("type", "")))
-
-            for e1, e2 in graph.edges():
-                fn.write("\"%s\" -- \"%s\";\n" % (e1, e2))
-
-            fn.write("packMode=\"graph\";\n")
-            fn.write("overlap=\"scalexy\";\n")
-            fn.write("}\n")
-
-
-    #=========================================================================
     #                           Abstract methods                             #
     #=========================================================================
 
@@ -281,10 +243,7 @@ class MoleculeMatcher(ABC): # pylint: disable=too-few-public-methods
         """
 
         ele = MoleculeMatcher.MASS_LOOKUP.get(int(mass+0.5))
-        if not ele:
-            return "Other"
-        else:
-            return ele
+        return "Other" if not ele else ele
 
     #=========================================================================
 
@@ -301,7 +260,7 @@ class MoleculeMatcher(ABC): # pylint: disable=too-few-public-methods
                    and (node1.get('residue') == node2.get('residue'))
 
         # Unknown element on other side
-        elif node2.get('element') == "Other":
+        if node2.get('element') == "Other":
             return (node1.get('element') not in MoleculeMatcher.MASS_LOOKUP.values()) \
                    and (node1.get('residue') == node2.get('residue'))
 
@@ -309,9 +268,8 @@ class MoleculeMatcher(ABC): # pylint: disable=too-few-public-methods
         if any(e.get('element') == "Any" for e in [node1, node2]):
             return node1.get('residue') == node2.get('residue')
 
-        else:
-            return (node1.get('element') == node2.get('element')) and \
-                   (node1.get('residue') == node2.get('residue'))
+        return (node1.get('element') == node2.get('element')) and \
+               (node1.get('residue') == node2.get('residue'))
 
     #=========================================================================
 
@@ -339,7 +297,7 @@ class MoleculeMatcher(ABC): # pylint: disable=too-few-public-methods
         resid = set(selection.resid)
         if len(resid) > 1:
             raise ValueError("Selection %s is more than one resid!" % selection)
-        if not len(resid):
+        if not resid:
             raise ValueError("Empty selection %s to vmd graph!" % selection)
         resid = resid.pop()
 
@@ -354,7 +312,7 @@ class MoleculeMatcher(ABC): # pylint: disable=too-few-public-methods
 
         # Dictionary translating index to element, set as known attribute
         rdict = {selection.index[i]: selection.element[i]
-                for i in range(len(selection))}
+                 for i in range(len(selection))}
 
         # Atom name dictionary
         adict = {selection.index[i]: selection.name[i]
@@ -416,6 +374,44 @@ class MoleculeMatcher(ABC): # pylint: disable=too-few-public-methods
                     if graph.node[match[i]].get("residue") == "self"}
 
         return (resmatch, atommatch)
+
+    #=========================================================================
+
+    @staticmethod
+    def write_dot(graph, output):
+        """
+        Writes the residue as a dot file that can be rendered as a SVG
+        to aid in debugging.
+
+        Args:
+            graph (networkx Graph): Graph to draw
+            output (str): Filename to write to
+        """
+        colors = {"C": "#40e0d0",
+                  "O": "#ff0000",
+                  "H": "#cecece",
+                  "N": "#4268f4"}
+        default = "#b27c00"
+
+        with open(output, 'w') as fn:
+            fn.write("strict graph {\n")
+            for nodename in graph.nodes():
+                node = graph.node[nodename]
+                ele = node.get("element")
+                oth = "" if node.get("residue") == "self" else "+-"
+
+                fn.write("\"%s\" [shape=record style=\"filled,rounded\" "
+                         "fillcolor=\"%s\" "
+                         "label=\"%s%s|{%s|%s}\"];\n"
+                         % (nodename, colors.get(ele, default), oth, ele,
+                            node.get("atomname"), node.get("type", "")))
+
+            for e1, e2 in graph.edges():
+                fn.write("\"%s\" -- \"%s\";\n" % (e1, e2))
+
+            fn.write("packMode=\"graph\";\n")
+            fn.write("overlap=\"scalexy\";\n")
+            fn.write("}\n")
 
     #=========================================================================
 

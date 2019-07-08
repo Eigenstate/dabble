@@ -255,8 +255,10 @@ class AmberWriter(MoleculeWriter):
             print("Enter the path to the filename(s) from the current working "
                   "directory, separated by a comma, of any additional prm or str files "
                   "you wish to use.\n", flush=True)
-            try: input = raw_input
-            except NameError: pass
+            try:
+                input = raw_input
+            except NameError:
+                pass
             inp = input('> ')
             if inp:
                 self.parameters.extend(inp.split(','))
@@ -463,7 +465,8 @@ class AmberWriter(MoleculeWriter):
         temp = tempfile.mkstemp(suffix='.pdb', prefix='amber_ion',
                                 dir=self.tmp_dir)[1]
         ionnames = [_ for _ in self.matcher.known_res.keys() if '+' in _ or '-' in _]
-        ions = atomsel("resname NA CL %s and user 1.0" % ' '.join("'%s'" % _ for _ in ionnames))
+        ions = atomsel("resname NA CL %s and user 1.0"
+                       % ' '.join("'%s'" % _ for _ in ionnames))
         if ions:
             ions.resid = range(1, len(ions) + 1)
             ions.write('pdb', temp)
@@ -597,9 +600,9 @@ class AmberWriter(MoleculeWriter):
 
             # Insert line breaks every 100 AA to avoid buffer overflow in tleap
             seqstring = ""
-            for i, res in enumerate(resseq):
+            for _, res in enumerate(resseq):
                 seqstring += " %s" % res
-                if i % 100 == 0:
+                if _ % 100 == 0:
                     seqstring += "\n"
             pdbinfos.append((temp, seqstring))
 
@@ -663,7 +666,7 @@ class AmberWriter(MoleculeWriter):
                     fileh.write("p%s = loadmol2 %s\n" % (i, pdb))
                 else:
                     raise DabbleError("Unknown coordinate type: %s"
-                                     % pdb)
+                                      % pdb)
 
             for i, f in enumerate(ligfiles):
                 if "pdb" in f[0]:
@@ -680,7 +683,7 @@ class AmberWriter(MoleculeWriter):
             # Need to combine before creating bond lines since can't create
             # bonds between UNITs
             fileh.write("p = combine { %s }\n"
-                         % ' '.join(["pp%d" % i for i in range(len(prot_pdbseqs))]))
+                        % ' '.join(["pp%d" % i for i in range(len(prot_pdbseqs))]))
 
             # Create bond lines
             while conect:
@@ -694,17 +697,15 @@ class AmberWriter(MoleculeWriter):
                 s2 = atomsel("index %d" % other)
                 conect.remove(other)
 
-                fileh.write("bond p.{0}.{1} p.{2}.{3}\n".format(
-                    s1.resid[0],
-                    s1.name[0],
-                    s2.resid[0],
-                    s2.name[0])
-                )
+                fileh.write("bond p.{0}.{1} p.{2}.{3}\n".format(s1.resid[0],
+                                                                s1.name[0],
+                                                                s2.resid[0],
+                                                                s2.name[0]))
 
-            if len(pdbs):
+            if pdbs:
                 fileh.write("\np = combine { p %s }\n"
                             % ' '.join(["p%d"%i for i in range(len(pdbs))]))
-            if len(ligfiles):
+            if ligfiles:
                 fileh.write("p = combine { p %s }\n"
                             % ' '.join(["l%d"%i for i in range(len(ligfiles))]))
             fileh.write("setbox p centers 0.0\n")
@@ -734,12 +735,13 @@ class AmberWriter(MoleculeWriter):
                                 "rst7", self.outprefix+ ".inpcrd")
         checkacids = " ".join(self.matcher.amino_acids)
         if len(atomsel("resname %s" % checkacids, molid=mademol)) \
-        != len(atomsel("resname %s" % checkacids, molid=self.molid)):
-           print(out)
-           raise DabbleError("Not all protein was present in the output prmtop."
-                             " This indicates a problem with tleap. Check the "
-                             "above output, especially for covalent ligands. "
-                             "Is naming consistent in all .off files?")
+           != len(atomsel("resname %s" % checkacids, molid=self.molid)):
+            print(out)
+            raise DabbleError("Not all protein was present in the output "
+                              "prmtop. This indicates a problem with tleap. "
+                              "Check the above output, especially for covalent "
+                              "ligands. Is naming consistent in all .off "
+                              "files?")
 
         return self.outprefix
 
@@ -816,5 +818,3 @@ class AmberWriter(MoleculeWriter):
     #========================================================================#
 
 #++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
-
-

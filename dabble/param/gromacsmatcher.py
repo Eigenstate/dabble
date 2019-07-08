@@ -23,9 +23,9 @@ Copyright (C) 2019 Robin Betz
 # Boston, MA 02111-1307, USA.
 
 from __future__ import print_function
+import os
 import logging
 import networkx as nx
-import os
 
 from dabble import DabbleError
 from . import MoleculeMatcher
@@ -83,9 +83,8 @@ class GromacsMatcher(MoleculeMatcher):
         if not os.path.isdir(filename):
             if os.path.splitext(filename)[1] == ".itp":
                 return self._parse_itp(filename)
-            else:
-                raise DabbleError("GROMACS forcefields are specified by a "
-                                  "directory, got '%s'" % filename)
+            raise DabbleError("GROMACS forcefields are specified by a "
+                              "directory, got '%s'" % filename)
 
         # Ensure atomtypes.atp is present
         if not os.path.isfile(os.path.join(filename, "atomtypes.atp")):
@@ -123,7 +122,7 @@ class GromacsMatcher(MoleculeMatcher):
         for line in lines:
             line = line.strip()
             tokens = [i.strip(" \t\n") for i in line.split()]
-            if not len(tokens) or not len(tokens[0]):
+            if not tokens or not tokens[0]:
                 continue
 
             # Comment lines start with ';'
@@ -136,7 +135,7 @@ class GromacsMatcher(MoleculeMatcher):
                 raise DabbleError("Problem parsing line:\n%s" % line)
 
             if self.nodenames.get(tokens[0]):
-                logging.info("Already have element %s defined" % element)
+                logging.info("Already have element %s defined", element)
             else:
                 self.nodenames[tokens[0]] = element
 
@@ -161,11 +160,11 @@ class GromacsMatcher(MoleculeMatcher):
         for line in lines:
             # Get a line and make sure it's not empty
             line = line.strip()
-            if not len(line):
+            if not line:
                 continue
             tokens = [i.strip(" \t\n") for i in line.split()]
             # Empty line separates residues
-            if not len(tokens) or not len(tokens[0]):
+            if not tokens or not tokens[0]:
                 unit = ""
                 graph = None
                 continue
@@ -260,11 +259,11 @@ class GromacsMatcher(MoleculeMatcher):
         for line in lines:
             # Get a line and make sure it's not empty
             line = line.strip()
-            if not len(line):
+            if not line:
                 continue
             tokens = [i.strip(" \t\n") for i in line.split()]
             # Empty line separates residues
-            if not len(tokens) or not len(tokens[0]):
+            if not tokens or not tokens[0]:
                 unit = ""
                 graph = None
                 continue
@@ -288,7 +287,7 @@ class GromacsMatcher(MoleculeMatcher):
                     incmd = "none"
                 elif self.known_res.get(tokens[1]):
                     incmd = "none"
-                    logging.info("Skipping duplicate residue %s" % tokens[1])
+                    logging.info("Skipping duplicate residue %s", tokens[1])
                     unit = ""
                 else:
                     incmd = "none"
@@ -318,6 +317,7 @@ class GromacsMatcher(MoleculeMatcher):
                 # This is used because otherwise there's no way to get the +N
                 # linkage defined.
                 # See: https://mailman-1.sys.kth.se/pipermail/gromacs.org_gmx-users/2013-April/080820.html
+                # TODO: Handle amino acids manually like for CharmmMatcher
                 pairs = [(0,1), (1,2), (1,3)]
                 for n1, n2 in pairs:
                     if not _define_bond(graph, tokens[n1], tokens[n2]):
