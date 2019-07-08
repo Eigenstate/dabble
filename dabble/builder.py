@@ -696,9 +696,9 @@ class DabbleBuilder(object):
             lipid_center = atomsel('noh and residue %s' % str(i),
                                    molid=molid).center()
             # Sanity check
-            if lipid_center:
+            if not lipid_center:
                 raise DabbleError("No heavy atoms found in suspicious residue %s"
-                                  "Check your input file." % str(i))
+                                  "\nCheck your input file." % str(i))
 
             if abs(lipid_center[0]) > half_x_size or \
                abs(lipid_center[1]) > half_y_size:
