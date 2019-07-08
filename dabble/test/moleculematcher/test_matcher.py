@@ -43,7 +43,7 @@ def test_atom_naming(tmpdir):
 def test_residue_parsing(tmpdir):
     """
     Checks that a residue is assigned the correct names when read
-    from an off file
+    from an off file in AMBER format
     """
     from dabble.param import AmberMatcher
     tmpdir = str(tmpdir)
@@ -85,7 +85,7 @@ def test_residue_renaming(tmpdir):
     """
     Reads a mol2 of LSD with incorrect names as a VMD graph.
     Then, loads a lib file for LSD with correct names, and gaff
-    atom types. Should ideally match them up correctly.
+    atom types. Tests AMBER matching.
 
     The LSD definition also has a pseudoatom that needs to be correctly
     ignored in order for matching to occur.
@@ -118,3 +118,98 @@ def test_residue_renaming(tmpdir):
 
 #==============================================================================
 
+def test_patches():
+    """
+    Tests molecule matching in CHARMM with patches
+    """
+    from vmd import atomsel, molecule
+    from dabble.param import CharmmMatcher
+
+    molid = molecule.load("mae", os.path.join(dir, "phosphoserine.mae"))
+    g = CharmmMatcher([os.path.join(dir, "phosphoserine.str")])
+    (name, patch, mdict) = g.get_patches(atomsel("resname SEP", molid=molid))
+    assert name == "SER"
+    assert patch == "PSEP"
+
+    # Oxygens are interchangeable so don't compare them
+    correct = {5: '-C', 16: 'N', 17: 'CA', 18: 'CB', 19: 'OG', 20: 'C', 21:
+               'O', 22: 'P', 26: 'HN', 27: 'HA', 28: 'HB1', 29: 'HB2', 30:
+               '+N'}
+    for i, n in correct.items():
+        assert mdict[i] == n
+
+    # Interchangeable oxygens
+    assert "O" in mdict[23]
+    assert "O" in mdict[24]
+    assert "O" in mdict[25]
+
+#==============================================================================
+
+def test_check_resname():
+    """
+    Tests check for 6 character resname in CHARMM
+    """
+    import pytest
+    from dabble import DabbleError
+    from dabble.param import CharmmMatcher
+
+    with pytest.raises(DabbleError):
+        _ = CharmmMatcher([os.path.join(dir, "lsd_toolong.str")])
+
+#==============================================================================
+
+def test_compare_mol():
+    """
+    Tests name matching with CHARMM
+    """
+    from vmd import atomsel, molecule
+    from dabble.param import CharmmMatcher
+
+    molid = molecule.load("mae", os.path.join(dir, "lsd_prot.mae"))
+    g = CharmmMatcher([os.path.join(dir, "lsd_prot_trunc.str"),
+                       os.path.join(dir, "masses.rtf")])
+    (resdict, mdict) = g.get_names(atomsel("all", molid=molid))
+
+    # Don't check diethyls as they're interchangeable
+    correct = {0: 'C13', 1: 'N20', 2: 'C12', 3: 'C11', 4: 'C15', 5: 'C7',
+               6: 'C3', 7: 'C8', 8: 'N1', 9: 'C1', 10: 'C4', 11: 'C5', 12: 'C2',
+               13: 'C6', 14: 'C9', 15: 'C10', 16: 'C14', 17: 'C16', 18: 'O1',
+               19: 'N3', 24: 'H131', 25: 'H132', 26: 'H121', 27: 'H122',
+               28: 'H123', 29: 'H11', 30: 'H151', 31: 'H8', 32: 'H4',
+               33: 'H5', 34: 'H2', 35: 'H10', 36: 'H14', 47: 'H152',
+               48: 'HN1', 49: 'HN2'}
+    for i, n in correct.items():
+        assert mdict[i] == n
+
+    assert "LSD" == resdict
+
+#==============================================================================
+
+def test_gromacs_itp():
+
+    from vmd import atomsel, molecule
+    from dabble.param import GromacsMatcher
+
+    molid = molecule.load("mae", os.path.join(dir, "lsd_prot.mae"))
+    g = GromacsMatcher(topologies=[os.path.join(dir, "lsd.itp")])
+
+    print(list(g.known_res.keys()))
+    assert "GLSD" in g.known_res.keys()
+    g.write_dot(g.known_res["GLSD"], "test.dot")
+    (resdict, mdict) = g.get_names(atomsel("all", molid))
+
+    correct = {13: 'C12', 6: 'C13', 5: 'C14', 7: 'C15', 8: 'N16', 9: 'C17', 10:
+               'C18', 11: 'C19', 12: 'C20', 14: 'C11', 15: 'C10', 16: 'C8', 17:
+               'C6', 19: 'N3', 20: 'C2', 21: 'C1', 22: 'C4', 23: 'C5', 18:
+               'O7', 36: 'H9', 4: 'C21', 3: 'C22', 29: 'H23', 1: 'N24', 49:
+               'H25', 2: 'C26', 0: 'C27', 39: 'H28', 40: 'H29', 41: 'H30', 37:
+               'H31', 38: 'H32', 42: 'H33', 43: 'H34', 44: 'H35', 45: 'H36',
+               46: 'H37', 35: 'H38', 31: 'H39', 48: 'H40', 32: 'H41', 33:
+               'H42', 34: 'H43', 47: 'H44', 30: 'H45', 26: 'H46', 27: 'H47',
+               28: 'H48', 24: 'H49', 25: 'H50'}
+
+    assert all(k == "GLSD" for k in resdict.values())
+    for i, n in correct.items():
+        assert mdict[i] == n
+
+#==============================================================================

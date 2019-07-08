@@ -28,6 +28,8 @@ import os
 import logging
 
 from abc import ABC, abstractmethod
+from pkg_resources import resource_filename
+from vmd import atomsel
 
 logger = logging.getLogger(__name__) # pylint: disable=invalid-name
 
@@ -55,6 +57,9 @@ class MoleculeWriter(ABC):
             molid (int): VMD molecule ID of system to write
             tmp_dir (str): Directory for temporary files. Defaults to "."
             lipid_sel (str): Lipid selection string. Defaults to "lipid"
+            forcefield (str): Force field to use
+            hmr (bool): If hydrogen masses should be repartitioned. Defaults
+                to False.
 
             extra_topos (list of str): Additional topology (.str, .off, .lib) to
                 include.
@@ -71,16 +76,57 @@ class MoleculeWriter(ABC):
         self.lipid_sel = kwargs.get("lipid_sel", "lipid")
         self.debug = kwargs.get("debug_verbose", False)
         self.override = kwargs.get("override_defaults", False)
+        self.hmr = kwargs.get("hmr", False)
 
         self.extra_topos = kwargs.get("extra_topos")
         self.extra_params = kwargs.get("extra_params")
         # Handle None from argparse in command line invocation
-        if self.extra_topos is None: self.extra_topos = []
-        if self.extra_params is None: self.extra_params = []
+        if self.extra_topos is None:
+            self.extra_topos = []
+        if self.extra_params is None:
+            self.extra_params = []
 
         # Handle None from argparse in command line invocation
-        if self.extra_topos is None: self.extra_topos = []
-        if self.extra_params is None: self.extra_params = []
+        if self.extra_topos is None:
+            self.extra_topos = []
+        if self.extra_params is None:
+            self.extra_params = []
+
+    #==========================================================================
+
+    @staticmethod
+    def _apply_naming_dictionary(resnames, atomnames, verbose=False):
+        """
+        Applies the atom names from a matcher.
+
+        Args:
+            resnames (dict int->str or str): Atom index to residue name,
+                or just residue name for all atoms
+            atomnames (dict int->str): Atom index to atom name
+            verbose (bool): If renamings should be printed out
+
+        Raises:
+            ValueError: If indices in atomnames and resnames dictionary
+                differ
+        """
+        if isinstance(resnames, dict) and \
+           set(resnames.keys()) != set(atomnames.keys()):
+            raise ValueError("Invalid matching dictionary for resnames '%s'"
+                             % resnames.keys())
+
+        for idx, name in atomnames.items():
+            atom = atomsel("index %s" % idx)
+            # TODO: Name short circuiting here??
+            if verbose and atom.name[0] != name:
+                print("Renaming %s:%s: %s -> %s" % (atom.resname[0],
+                                                    atom.resid[0], atom.name[0],
+                                                    name))
+            atom.name = name
+
+            if isinstance(resnames, dict):
+                atom.resname = resnames[idx]
+            else:
+                atom.resname = resnames
 
     #==========================================================================
 
@@ -89,23 +135,22 @@ class MoleculeWriter(ABC):
         pass
 
     @abstractmethod
-    def get_topologies(forcefield):
+    def get_topologies(self, forcefield):
         pass
 
     @abstractmethod
-    def get_parameters(forcefield):
+    def get_parameters(self, forcefield):
         pass
 
-    #++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
-    #                            STATIC FUNCTIONS                             #
-    #++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+    #==========================================================================
+    #                              Static methods
+    #==========================================================================
 
     @staticmethod
     def get_pdb_line(atom, index, resindex, hetatom=False):
         """
         Get the PDB-formatted line corresponding to this atom, with a newline
         at the end.
-
         Args:
             atom (VMD atomsel): Atom selected
             index (int): Index in PDB file.
@@ -126,7 +171,7 @@ class MoleculeWriter(ABC):
                                      atom.resname[0],
                                      atom.chain[0],
                                      resindex,
-                                     ins if len(ins) else " ",
+                                     ins if ins else " ",
                                      atom.x[0],
                                      atom.y[0],
                                      atom.z[0],
@@ -134,5 +179,15 @@ class MoleculeWriter(ABC):
                                      atom.segname[0],
                                      atom.element[0])
         return result
+
+    #==========================================================================
+
+    @staticmethod
+    def _get_forcefield_path(filename):
+        """
+        Gets the absolute path to a given bundled forcefield file
+        """
+        rn = resource_filename(__name__, os.path.join("parameters", filename))
+        return os.path.abspath(rn)
 
 #++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++

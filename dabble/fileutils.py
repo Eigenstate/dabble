@@ -26,7 +26,7 @@ import tempfile
 
 from vmd import molecule, atomsel
 from dabble import DabbleError
-from dabble.param import AmberWriter, CharmmWriter, GromacsWriter
+from dabble.param import AmberWriter, CharmmWriter, GromacsWriter, LammpsWriter
 
 #++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
 
@@ -46,7 +46,7 @@ def load_solute(filename, tmp_dir):
     """
     if len(filename) < 3:
         raise DabbleError("Cannot determine filetype of input file '%s'"
-                         % filename)
+                          % filename)
     ext = filename.split(".")[-1]
     if ext == 'mae':
         molid = molecule.load('mae', filename)
@@ -100,18 +100,19 @@ def concatenate_mae_files(output_filename,
     if input_ids is not None:
         input_filenames = [(molecule.get_filenames(i))[0] for i in input_ids]
 
-    assert len(input_filenames) > 0, 'need at least one input filename'
+    if not input_filenames:
+        raise ValueError("Need at least one input filename")
+
     outfile = open(output_filename, 'w')
     for line in open(input_filenames[0]):
         outfile.write(line)
     for input_filename in input_filenames[1:]:
         infile = open(input_filename)
-        for i in range(5):
+        for _ in range(5):
             infile.readline()
         for line in infile:
             outfile.write(line)
     outfile.close()
-    return
 
 #==========================================================================
 
@@ -229,7 +230,7 @@ def write_final_system(out_fmt, out_name, molid, **kwargs):
 
     # For gromacs files, use either topotools or parmed depending on
     # forcefield. GromacsWriter handles this for us
-    elif out_fmt == 'gromacs':
+    elif out_fmt == "gromacs":
         if "charmm" in kwargs.get('forcefield'):
             print("Writing Gromacs format files with CHARMM parameters. "
                   "This may take a moment...\n")
@@ -240,6 +241,11 @@ def write_final_system(out_fmt, out_name, molid, **kwargs):
         writeit = GromacsWriter(molid=temp_mol,
                                 tmp_dir=kwargs['tmp_dir'],
                                 forcefield=kwargs['forcefield'])
+        writeit.write(mae_name.replace(".mae", ""))
+
+    # LAMMPS has its own writer
+    elif out_fmt == "lammps":
+        writeit = LammpsWriter(molid=temp_mol, *kwargs)
         writeit.write(mae_name.replace(".mae", ""))
 
     molecule.delete(temp_mol)
@@ -285,25 +291,23 @@ def check_write_ok(filename, out_fmt, overwrite=False):
         if os.path.isfile('%s.%s' % (prefix, sfx)):
             exists.append('%s.%s' % (prefix, sfx))
 
-    if len(exists):
-        print("\nERROR: The following files exist and would be overwritten:\n")
-        print("       %s\n" % ' '.join(exists))
-        print("       Won't overwrite, exiting.")
-        print("       Run with -O to overwrite files next time.")
-        quit(1)
+    if exists:
+        raise DabbleError("\nERROR: The following files exist and would be "
+                          "overwritten:\n%s\n\tWon't overwrite unless -O "
+                          "specified" % ' '.join(exists))
 
     return False
 
 #==========================================================================
 
-def check_out_type(value, format, forcefield, hmr=False):
+def check_out_type(value, outformat, forcefield, hmr=False):
     """
     Checks the file format of the requiested output is supported, and sets
     internal variables as necessary.
 
     Args:
       value (str): Filename requested
-      format (str): Format requested, or None to infer from filename
+      outformat (str): Format requested, or None to infer from filename
       forcefield (str): Force field requested
       hmr (bool): If hydrogen mass repartitioning is requested
 
@@ -315,11 +319,10 @@ def check_out_type(value, format, forcefield, hmr=False):
       NotImplementedError: if hydrogen mass repartitioning is requested
                            for amber files
     """
-    if format is not None:
-        print("Will output files in %s format" % format)
-        return format
-    else:
-        print("Inferring output format from file extension")
+    if outformat is not None:
+        print("Will output files in %s format" % outformat)
+        return outformat
+    print("Inferring output format from file extension")
 
     ext = value.rsplit('.')[-1]
     if ext == 'mae':
@@ -328,13 +331,15 @@ def check_out_type(value, format, forcefield, hmr=False):
         out_fmt = 'pdb'
     elif ext == 'dms':
         out_fmt = 'dms'
+    elif ext == 'dat':
+        out_fmt = 'lammps'
     elif ext == 'psf' and forcefield in ["amber", "charmm", "opls"]:
         out_fmt = 'charmm'
     elif ext == 'prmtop' and forcefield in ["amber", "charmm", "opls"]:
         out_fmt = 'amber'
     else:
         raise DabbleError("%s is an unsupported format with %s forcefield"
-                         % (value, forcefield))
+                          % (value, forcefield))
 
     if hmr and (out_fmt != 'amber'):
         raise DabbleError("HMR only supported with AMBER outputs!")

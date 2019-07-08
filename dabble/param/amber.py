@@ -25,7 +25,6 @@
 
 from __future__ import print_function
 import os
-import sys
 import tempfile
 import warnings
 from subprocess import check_output
@@ -67,16 +66,15 @@ class AmberWriter(MoleculeWriter):
             extra_params (list of str): Additional parameter sets (.str, .frcmod)
             override_defaults (bool): If set, omits default amber ff14 parameters.
             debug_verbose (bool): Prints additional output, like from tleap.
-
         """
         # Initialize standard MoleculeWriter items
         super(AmberWriter, self).__init__(molid, **kwargs)
-        self.hmr = kwargs.get("hmr", False)
         self.prompt_params = False
 
         # Set forcefield default topologies and parameters
         self.forcefield = kwargs.get("forcefield", "amber")
-        if "charmm" in self.forcefield:
+
+        if self.forcefield == "charmm":
             # Import CharmmWriter as needed to avoid circular imports
             from dabble.param import CharmmWriter
 
@@ -84,7 +82,14 @@ class AmberWriter(MoleculeWriter):
             self.topologies = CharmmWriter.get_topologies(self.forcefield)
             self.parameters = CharmmWriter.get_parameters(self.forcefield)
 
-        elif self.forcefield == 'amber':
+        # Duplicate code here for clarity
+        elif self.forcefield == "opls":
+            from dabble.param import CharmmWriter
+            self.topologies = CharmmWriter.get_topologies(self.forcefield)
+            self.parameters = CharmmWriter.get_parameters(self.forcefield)
+
+        elif self.forcefield == "amber":
+            # This will raise DabbleError if AMBERHOME is unset
             self.topologies = self.get_topologies(self.forcefield)
             self.parameters = self.get_parameters(self.forcefield)
             self.parameters = []
@@ -117,17 +122,18 @@ class AmberWriter(MoleculeWriter):
         self.outprefix = filename
 
         # Charmm forcefield
-        if "charmm" in self.forcefield:
+        if "charmm" in self.forcefield or "opls" in self.forcefield:
             from dabble.param import CharmmWriter
             charmmw = CharmmWriter(molid=self.molid,
-                                  tmp_dir=self.tmp_dir,
-                                  lipid_sel=self.lipid_sel,
-                                  extra_topos=self.extra_topos,
-                                  extra_params=self.extra_params,
-                                  override_defaults=self.override,
-                                  debug_verbose=self.debug)
+                                   tmp_dir=self.tmp_dir,
+                                   forcefield=self.forcefield,
+                                   lipid_sel=self.lipid_sel,
+                                   extra_topos=self.extra_topos,
+                                   extra_params=self.extra_params,
+                                   override_defaults=self.override,
+                                   debug_verbose=self.debug)
             charmmw.write(self.outprefix)
-            self._psf_to_charmm_amber()
+            self._psf_to_prmtop()
 
         # Amber forcefield
         elif "amber" in self.forcefield:
@@ -135,11 +141,7 @@ class AmberWriter(MoleculeWriter):
             # Print info about topologies
             print("Using the following topologies:")
             for top in self.topologies:
-                print("  - %s" % top.split("/")[-1])
-                top = os.path.abspath(top)
-
-            for par in self.parameters:
-                par = os.path.abspath(par)
+                print("  - %s" % os.path.split(top)[1])
 
             # Assign atom types
             print("Assigning AMBER atom types...")
@@ -203,9 +205,8 @@ class AmberWriter(MoleculeWriter):
         conect = set() # Atom indices bound to noncanonical residues
         while nonlips:
             if len(nonlips) % 500 == 0:
-                sys.stdout.write("Renaming residues.... %.0f%%  \r"
-                                 % (100.-100*len(nonlips)/float(n_res)))
-                sys.stdout.flush()
+                print("Renaming residues.... %.0f%%  \r"
+                      % (100.-100*len(nonlips)/float(n_res)), flush=True)
 
             residue = nonlips.pop()
             sel = atomsel("residue %s" % residue)
@@ -229,15 +230,16 @@ class AmberWriter(MoleculeWriter):
                 conect.add(other)
 
             # Do the renaming
-            self._apply_naming_dictionary(resnames, atomnames)
+            self._apply_naming_dictionary(resnames=resnames,
+                                          atomnames=atomnames)
 
         atomsel('all').user = 1.0
-        sys.stdout.write("\n")
+        print("\n", flush=True)
         return conect
 
     #==========================================================================
 
-    def _psf_to_charmm_amber(self):
+    def _psf_to_prmtop(self):
         """
         Runs the chamber command of ParmEd to produce AMBER format input files.
 
@@ -247,16 +249,16 @@ class AmberWriter(MoleculeWriter):
 
         # Ask the user for additional parameter files
         if self.prompt_params:
-            sys.stdout.flush()
-            print("\nCurrently using the following parameter files:")
+            print("\nCurrently using the following parameter files:", flush=True)
             for prm in self.parameters:
-                print("  - %s" % prm.split("/")[-1])
+                print("  - %s" % os.path.split(prm)[1])
             print("Enter the path to the filename(s) from the current working "
                   "directory, separated by a comma, of any additional prm or str files "
-                  "you wish to use.\n")
-            sys.stdout.flush()
-            try: input = raw_input
-            except NameError: pass
+                  "you wish to use.\n", flush=True)
+            try:
+                input = raw_input
+            except NameError:
+                pass
             inp = input('> ')
             if inp:
                 self.parameters.extend(inp.split(','))
@@ -279,8 +281,7 @@ class AmberWriter(MoleculeWriter):
         args += ["-box", " %f,%f,%f" % (box['a'], box['b'], box['c'])]
         args += ["nosettle"]
 
-        print("Running chamber. This may take a while...")
-        sys.stdout.flush()
+        print("Running chamber. This may take a while...", flush=True)
         parm = AmberParm()
         with warnings.catch_warnings(record=True) as w:
             action = chamber(parm, *args)
@@ -324,9 +325,9 @@ class AmberWriter(MoleculeWriter):
             return None
 
         molecule.set_top(self.molid)
-        temp = tempfile.mkstemp(suffix='.pdb', prefix='amber_lipids_',
-                                dir=self.tmp_dir)[1]
-        fileh = open(temp, 'w')
+        f, temp = tempfile.mkstemp(suffix='.pdb', prefix='amber_lipids_',
+                                   dir=self.tmp_dir)
+        fileh = os.fdopen(f, 'w')
 
         # Check if it's a normal residue first in case cholesterol etc in
         # the selection
@@ -335,9 +336,8 @@ class AmberWriter(MoleculeWriter):
         while lipid_res:
             residue = lipid_res.pop()
             if len(lipid_res) % 1 == 0:
-                sys.stdout.write("Writing lipids.... %.0f%%  \r"
-                                 % (100.-100.*len(lipid_res)/float(n_lips)))
-                sys.stdout.flush()
+                print("Writing lipids.... %.0f%%  \r"
+                      % (100.-100.*len(lipid_res)/float(n_lips)), flush=True)
 
             sel = atomsel('residue %s' % residue)
             headres, headnam, minusidx = self.matcher.get_lipid_head(sel)
@@ -346,20 +346,24 @@ class AmberWriter(MoleculeWriter):
             if not headres:
                 resnames, atomnames = self.matcher.get_names(sel, print_warning=False)
                 if not resnames:
+                    fileh.close()
                     raise DabbleError("Residue %s:%s not a valid lipid" %
                                       (sel.resname[0], sel.resid[0]))
-                self._apply_naming_dictionary(resnames, atomnames)
+                self._apply_naming_dictionary(resnames=resnames,
+                                              atomnames=atomnames)
                 sel.resid = resid
                 resid += 1
                 continue
             else:
                 # Apply the name to the heads
-                self._apply_naming_dictionary(headres, headnam)
+                self._apply_naming_dictionary(resnames=headres,
+                                              atomnames=headnam)
 
                 # Pull out the tail resnames and indices
                 taildicts = self.matcher.get_lipid_tails(sel, headnam.keys())
                 for (resnames, atomnames) in taildicts:
-                    self._apply_naming_dictionary(resnames, atomnames)
+                    self._apply_naming_dictionary(resnames=resnames,
+                                                  atomnames=atomnames)
 
                 # Renumber the first tail, head, then second tail and write
                 # them separately. Needs to be done this way to guarantee order.
@@ -368,8 +372,9 @@ class AmberWriter(MoleculeWriter):
                 # First tail
                 firstdict = [_ for _ in taildicts if minusidx in _[0].keys()]
                 if len(firstdict) != 1:
+                    fileh.close()
                     raise DabbleError("Error finding tails for lipid %s:%s" %
-                                     (sel.resname[0], sel.resid[0]))
+                                      (sel.resname[0], sel.resid[0]))
                 firstdict = firstdict[0]
 
                 lsel = atomsel('index %s' % ' '.join([str(x) for x in \
@@ -397,12 +402,12 @@ class AmberWriter(MoleculeWriter):
 
         fileh.write("END\n")
         fileh.close()
-        sys.stdout.write("\n")
+        print("\n", flush=True)
         return temp
 
     #==========================================================================
 
-    def _write_residue(self, ressel, fileh, idx, hetatom=False):
+    def _write_residue(self, ressel, fileh, idx, hetatom=True):
         """
         Writes a residue to a pdb file
 
@@ -414,21 +419,9 @@ class AmberWriter(MoleculeWriter):
         """
         for i in ressel.index:
             a = atomsel('index %d' % i) # pylint: disable=invalid-name
-            fileh.write(self.get_pdb_line(a, idx, a.resid[0], hetatom=True))
+            fileh.write(self.get_pdb_line(a, idx, a.resid[0], hetatom=hetatom))
             idx += 1
         return idx
-
-    #==========================================================================
-
-    def _apply_naming_dictionary(self, resnames, atomnames):
-        """
-        Applies the names from a matcher.
-        """
-        for idx, name in atomnames.items():
-            atom = atomsel('index %s' % idx)
-            if atom.name[0] != name:
-                atom.name = name
-            atom.resname = resnames[idx]
 
     #==========================================================================
 
@@ -447,8 +440,9 @@ class AmberWriter(MoleculeWriter):
         pdbs = []
 
         for residue in set(atomsel("user 1.0").residue):
-            temp = tempfile.mkstemp(suffix='.pdb', prefix='amber_extra',
-                                    dir=self.tmp_dir)[1]
+            _, temp = tempfile.mkstemp(suffix='.pdb', prefix='amber_extra',
+                                       dir=self.tmp_dir)
+            os.close(_)
             sel = atomsel("residue %d" % residue)
             sel.user = 0.0
             sel.resid = idx
@@ -471,11 +465,13 @@ class AmberWriter(MoleculeWriter):
 
         written = []
         # First write all the ions using just vmd
-        temp = tempfile.mkstemp(suffix='.pdb', prefix='amber_ion',
-                                dir=self.tmp_dir)[1]
+        _, temp = tempfile.mkstemp(suffix='.pdb', prefix='amber_ion',
+                                   dir=self.tmp_dir)
+        os.close(_)
         ionnames = [_ for _ in self.matcher.known_res.keys() if '+' in _ or '-' in _]
-        ions = atomsel("resname NA CL %s and user 1.0" % ' '.join("'%s'" % _ for _ in ionnames))
-        if len(ions):
+        ions = atomsel("resname NA CL %s and user 1.0"
+                       % ' '.join("'%s'" % _ for _ in ionnames))
+        if ions:
             ions.resid = range(1, len(ions) + 1)
             ions.write('pdb', temp)
             ions.user = 0.0
@@ -501,9 +497,10 @@ class AmberWriter(MoleculeWriter):
             print("Going to write %d files for %d water atoms"
                   % (num_written, len(allw)))
             for i in range(num_written):
-                temp = tempfile.mkstemp(suffix='_%d.pdb' % i,
-                                        prefix='amber_wat_',
-                                        dir=self.tmp_dir)[1]
+                _, temp = tempfile.mkstemp(suffix='_%d.pdb' % i,
+                                           prefix='amber_wat_',
+                                           dir=self.tmp_dir)
+                os.close(_)
                 written.append(temp)
                 residues = list(set(allw.residue))[:9999]
 
@@ -513,11 +510,11 @@ class AmberWriter(MoleculeWriter):
                     batch.resid = [k for k in range(1, int(len(batch)/3)+1)
                                    for _ in range(3)]
                 except ValueError:
-                    print("\nERROR! You have some waters missing hydrogens!\n"
-                          "Found %d water residues, but %d water atoms. Check "
-                          " your crystallographic waters in the input structure."
-                          % (len(residues), len(batch)))
-                    quit(1)
+                    raise DabbleError("\nERROR! You have some waters missing "
+                                      "hydrogens!\nFound %d water residues, but"
+                                      " %d water atoms. Check your crystal "
+                                      "waters in the input structure."
+                                      % (len(residues), len(batch)))
                 batch.user = 0.0
                 batch.write('pdb', temp)
                 allw.update()
@@ -543,22 +540,21 @@ class AmberWriter(MoleculeWriter):
         Returns:
             (str) Name of the pdb file written
         """
-        temp = tempfile.mkstemp(suffix='_indexed.pdb', prefix='amber_wat_',
-                                dir=self.tmp_dir)[1]
-        fileh = open(temp, 'w')
+        f, temp = tempfile.mkstemp(suffix='_indexed.pdb', prefix='amber_wat_',
+                                   dir=self.tmp_dir)
 
         idx = 1
-        for residx, residue in enumerate(residues):
-            res = atomsel('residue %d' % residue)
-            res.user = 0.0
+        with os.fdopen(f, 'w') as fileh:
+            for residx, residue in enumerate(residues):
+                res = atomsel('residue %d' % residue)
+                res.user = 0.0
 
-            for i in res.index:
-                a = atomsel('index %d' % i) # pylint: disable=invalid-name
-                fileh.write(self.get_pdb_line(a, idx, residx+1))
-                idx += 1
+                for i in res.index:
+                    a = atomsel('index %d' % i) # pylint: disable=invalid-name
+                    fileh.write(self.get_pdb_line(a, idx, residx+1))
+                    idx += 1
 
-        fileh.write('END\n')
-        fileh.close()
+            fileh.write('END\n')
         return temp
 
     #==========================================================================
@@ -575,19 +571,20 @@ class AmberWriter(MoleculeWriter):
                 inside
         """
         pdbinfos = []
-        psel = atomsel("user 1.0 and resname %s" % " ".join(self.matcher._acids))
+        psel = atomsel("user 1.0 and resname %s"
+                       % " ".join(self.matcher.amino_acids))
 
         # Start the protein numbering from 1, as it's lost in the prmtop anyway.
         # Make resids increase across chains/fragments too, so that bond section
         # for covalent modifications is simple.
         fragres = 1
         for i, frag in enumerate(sorted(set(psel.fragment))):
-            temp = tempfile.mkstemp(suffix='_prot.pdb', prefix='amber_prot_',
-                                    dir=self.tmp_dir)[1]
+            f, temp = tempfile.mkstemp(suffix='_prot.pdb', prefix='amber_prot_',
+                                       dir=self.tmp_dir)
 
             # Now write out all the resides to a pdb file
             resseq = []
-            with open(temp, 'w') as fileh:
+            with os.fdopen(f, 'w') as fileh:
                 idx = 1
                 # Grab resids again since they may have updated
                 # Check for multiple residues with the same resid (insertion codes)
@@ -607,9 +604,9 @@ class AmberWriter(MoleculeWriter):
 
             # Insert line breaks every 100 AA to avoid buffer overflow in tleap
             seqstring = ""
-            for i, res in enumerate(resseq):
+            for _, res in enumerate(resseq):
                 seqstring += " %s" % res
-                if i % 100 == 0:
+                if _ % 100 == 0:
                     seqstring += "\n"
             pdbinfos.append((temp, seqstring))
 
@@ -635,17 +632,19 @@ class AmberWriter(MoleculeWriter):
             (str) Prefix of file written
 
         Raises:
-            ValueError if AMBERHOME is unset
-            ValueError if topology type cannot be determined
+            DabbleError if tleap is not present
+            DabbleError if topology type cannot be determined
         """
         # Ensure leap is actually available
-        if not os.environ.get("AMBERHOME"):
-            raise DabbleError("AMBERHOME must be set to use leap!")
+        tleap = os.path.join(os.environ.get("AMBERHOME"), "bin", "tleap")
+        if not (os.path.isfile(tleap) and os.access(tleap, os.X_OK)):
+            raise DabbleError("$AMBERHOME/bin/tleap not found at '%s'. "
+                              "Check your amber installation." % tleap)
 
         # Create the leap input file
-        leapin = tempfile.mkstemp(suffix='.in', prefix='dabble_leap_',
-                                  dir=self.tmp_dir)[1]
-        with open(leapin, 'w') as fileh:
+        f, leapin = tempfile.mkstemp(suffix='.in', prefix='dabble_leap_',
+                                     dir=self.tmp_dir)
+        with os.fdopen(f, 'w') as fileh:
             for i in self.topologies + self.parameters:
                 if "leaprc" in i:
                     fileh.write("source %s\n" % i)
@@ -671,7 +670,7 @@ class AmberWriter(MoleculeWriter):
                     fileh.write("p%s = loadmol2 %s\n" % (i, pdb))
                 else:
                     raise DabbleError("Unknown coordinate type: %s"
-                                     % pdb)
+                                      % pdb)
 
             for i, f in enumerate(ligfiles):
                 if "pdb" in f[0]:
@@ -688,7 +687,7 @@ class AmberWriter(MoleculeWriter):
             # Need to combine before creating bond lines since can't create
             # bonds between UNITs
             fileh.write("p = combine { %s }\n"
-                         % ' '.join(["pp%d" % i for i in range(len(prot_pdbseqs))]))
+                        % ' '.join(["pp%d" % i for i in range(len(prot_pdbseqs))]))
 
             # Create bond lines
             while conect:
@@ -702,35 +701,28 @@ class AmberWriter(MoleculeWriter):
                 s2 = atomsel("index %d" % other)
                 conect.remove(other)
 
-                fileh.write("bond p.{0}.{1} p.{2}.{3}\n".format(
-                    s1.resid[0],
-                    s1.name[0],
-                    s2.resid[0],
-                    s2.name[0])
-                )
+                fileh.write("bond p.{0}.{1} p.{2}.{3}\n".format(s1.resid[0],
+                                                                s1.name[0],
+                                                                s2.resid[0],
+                                                                s2.name[0]))
 
-            if len(pdbs):
+            if pdbs:
                 fileh.write("\np = combine { p %s }\n"
                             % ' '.join(["p%d"%i for i in range(len(pdbs))]))
-            if len(ligfiles):
+            if ligfiles:
                 fileh.write("p = combine { p %s }\n"
                             % ' '.join(["l%d"%i for i in range(len(ligfiles))]))
             fileh.write("setbox p centers 0.0\n")
             fileh.write("saveamberparm p %s.prmtop %s.inpcrd\n"
                         % (self.outprefix, self.outprefix))
             fileh.write("quit\n")
-            fileh.close()
 
         # Now invoke leap. If it fails, print output
         out = ""
         try:
-            out = check_output([os.path.join(os.environ.get("AMBERHOME"),
-                                             "bin", "tleap"),
-                                "-f", leapin]).decode("utf-8")
-            out = "%s%s%s" % (
-                "\n================BEGIN TLEAP OUTPUT================\n",
-                out,
-                "\n=================END TLEAP OUTPUT=================\n")
+            out = check_output([tleap, "-f", leapin]).decode("utf-8")
+            out = "\n===============BEGIN TLEAP OUTPUT===============\n" + out \
+                + "\n================END TLEAP OUTPUT================\n"
 
             if self.debug:
                 print(out)
@@ -738,19 +730,21 @@ class AmberWriter(MoleculeWriter):
                 raise DabbleError("Tleap call failed")
         except:
             print(out)
-            raise DabbleError("Call to tleap failed! See above output for errors")
-            quit(1)
+            raise DabbleError("Call to tleap failed! See above output for "
+                              "more information")
 
         # Do a quick sanity check that all the protein is present.
         mademol = molecule.load("parm7", self.outprefix+ ".prmtop",
                                 "rst7", self.outprefix+ ".inpcrd")
-        if len(atomsel("resname %s" % " ".join(self.matcher._acids), mademol)) \
-                != len(atomsel("resname %s" % " ".join(self.matcher._acids), self.molid)):
-           print(out)
-           raise DabbleError("Not all protein was present in the output prmtop."
-                             " This indicates a problem with tleap. Check the "
-                             "above output, especially for covalent ligands. "
-                             "Is naming consistent in all .off files?")
+        checkacids = " ".join(self.matcher.amino_acids)
+        if len(atomsel("resname %s" % checkacids, molid=mademol)) \
+           != len(atomsel("resname %s" % checkacids, molid=self.molid)):
+            print(out)
+            raise DabbleError("Not all protein was present in the output "
+                              "prmtop. This indicates a problem with tleap. "
+                              "Check the above output, especially for covalent "
+                              "ligands. Is naming consistent in all .off "
+                              "files?")
 
         return self.outprefix
 
@@ -769,11 +763,11 @@ class AmberWriter(MoleculeWriter):
                 new_topos.append(t)
                 continue
 
-            temp = tempfile.mkstemp(suffix=".leaprc", prefix="amber_",
-                                    dir=self.tmp_dir)[1]
+            f, temp = tempfile.mkstemp(suffix=".leaprc", prefix="amber_",
+                                       dir=self.tmp_dir)
             inpdb = False
             with open(t, 'r') as fn:
-                with open(temp, 'w') as tf:
+                with os.fdopen(f, 'w') as tf:
                     for line in fn:
                         if inpdb and line == "}\n":
                             inpdb = False
@@ -793,13 +787,13 @@ class AmberWriter(MoleculeWriter):
     #                            Static methods                              #
     #========================================================================#
 
-    @staticmethod
-    def get_topologies(forcefield):
-        if not os.environ.get("AMBERHOME"):
-            raise DabbleError("AMBERHOME must be set to use AMBER forcefield!")
-        if not os.path.isfile(os.path.join(os.environ.get("AMBERHOME"),
-                                           "bin", "tleap")):
-            raise DabbleError("tleap is not present in $AMBERHOME/bin!")
+    @classmethod
+    def get_topologies(cls, forcefield):
+
+        if forcefield == "amber":
+            if not os.environ.get("AMBERHOME"):
+                raise DabbleError("AMBERHOME must be set to use AMBER "
+                                  "forcefield!")
 
         # Check amber version and set topologies accordingly
         ambpath = os.path.join(os.environ["AMBERHOME"], "dat", "leap", "cmd")
@@ -811,17 +805,19 @@ class AmberWriter(MoleculeWriter):
         ]
 
         for i, top in enumerate(topologies):
-            topologies[i] = os.path.join(ambpath, top)
+            topologies[i] = os.path.abspath(os.path.join(ambpath, top))
             if not os.path.isfile(topologies[i]):
                 raise DabbleError("AMBER forcefield files '%s' not found\n"
                                   "Dabble requires >= AmberTools16" % top)
         return topologies
 
-    @staticmethod
-    def get_parameters(forcefield):
-        # AMBER default leaprcs all go in topologies
-        return []
+    #========================================================================#
+
+    @classmethod
+    def get_parameters(cls, forcefield):
+        # AMBER topologies and parameters use the same leaprcs
+        return cls.get_topologies(forcefield)
+
+    #========================================================================#
 
 #++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
-
-

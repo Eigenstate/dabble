@@ -6,12 +6,13 @@ intermediate files as necessary to invoke the vmd psfgen plugin.
 
 Author: Robin Betz
 
-Copyright (C) 2015 Robin Betz
+Copyright (C) 2019 Robin Betz
 """
 
 # This program is free software; you can redistribute it and/or modify it under
 # the terms of the GNU Lesser General Public License as published by the Free
-# Software Foundation; either version 2 of the License, or (at your option) any # later version.
+# Software Foundation; either version 2 of the License, or (at your option) any
+# later version.
 #
 # This program is distributed in the hope that it will be useful, but WITHOUT ANY
 # WARRANTY; without even the implied warranty of MERCHANTABILITY or FITNESS FOR A
@@ -26,18 +27,23 @@ from __future__ import print_function
 import os
 import tempfile
 from parmed.formats.registry import load_file
-from pkg_resources import resource_filename
 from psfgen import PsfGen
 from vmd import atomsel, molecule
 
 from dabble import DabbleError
 from dabble.param import CharmmMatcher, MoleculeWriter, Patch
 
+# Handle python 2/3 input
+try:
+    input = raw_input
+except NameError:
+    pass
+
 #++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
 #                                CONSTANTS                                    #
 #++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
 
-patchable_acids = ('ACE ALA ARG ASN ASP CYS CYX GLN GLU GLY HIE HIS HSP HSE '
+PATCHABLE_ACIDS = ('ACE ALA ARG ASN ASP CYS CYX GLN GLU GLY HIE HIS HSP HSE '
                    'HSD ILE LEU LYS MET NMA PHE PRO SER THR TRP TYR VAL')
 
 #++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
@@ -67,6 +73,8 @@ class CharmmWriter(MoleculeWriter):
             molid (int): VMD molecule ID of system to write
             tmp_dir (str): Directory for temporary files. Defaults to "."
             lipid_sel (str): Lipid selection string. Defaults to "lipid"
+            hmr (bool): If hydrogen masses should be repartitioned. Defaults
+                to False
             forcefield (str): Forcefield to use, either "charmm" or "amber"
             extra_topos (list of str): Additional topology (.str, .off, .lib) to
                 include.
@@ -83,18 +91,12 @@ class CharmmWriter(MoleculeWriter):
 
         # Set forcefield default topologies and parameters
         self.forcefield = kwargs.get("forcefield", "charmm")
+        self.topologies = self.get_topologies(self.forcefield)
+        self.parameters = self.get_parameters(self.forcefield)
 
         if "charmm" in self.forcefield:
-            self.topologies = self.get_topologies(self.forcefield)
-            self.parameters = self.get_parameters(self.forcefield)
-
-        elif "amber" in self.forcefield:
-            from dabble.param import AmberWriter # avoid circular dependnecy
-            self.topologies = AmberWriter.get_topologies(self.forcefield)
-            self.parameters = AmberWriter.get_parameters(self.forcefield)
-
-        else:
-            raise DabbleError("Unsupported forcefield: %s" % self.forcefield)
+            if self.hmr:
+                raise DabbleError("HMR not supported with CHARMM ff yet")
 
         # Handle override and extra topologies
         if self.override:
@@ -107,7 +109,7 @@ class CharmmWriter(MoleculeWriter):
 
         # Once all topologies defined, initialize matcher only if
         # using CHARMM topologies (not if we're doing a conversion)
-        if "charmm" in self.forcefield:
+        if "charmm" in self.forcefield or "opls" in self.forcefield:
             self.matcher = CharmmMatcher(self.topologies)
 
     #=========================================================================
@@ -132,6 +134,7 @@ class CharmmWriter(MoleculeWriter):
             prmtopgen = AmberWriter(molid=self.molid,
                                     tmp_dir=self.tmp_dir,
                                     forcefield=self.forcefield,
+                                    hmr=self.hmr,
                                     lipid_sel=self.lipid_sel,
                                     extra_topos=self.extra_topos,
                                     extra_params=self.extra_params,
@@ -144,6 +147,14 @@ class CharmmWriter(MoleculeWriter):
         elif "charmm" in self.forcefield:
             self._run_psfgen()
 
+        # OPLS forcefield. Same as charmm but list separately for readability
+        elif "opls" in self.forcefield:
+            self._run_psfgen()
+
+        else:
+            raise DabbleError("Unsupported forcefield '%s' for CharmmWriter"
+                              % self.forcefield)
+
         # Check output and finish up
         self._check_psf_output()
 
@@ -155,10 +166,11 @@ class CharmmWriter(MoleculeWriter):
     #                           Static methods                               #
     #=========================================================================
 
-    @staticmethod
-    def get_topologies(forcefield):
-        if "charmm" in forcefield:
-            default_topologies = [
+    @classmethod
+    def get_topologies(cls, forcefield):
+
+        if forcefield == "charmm":
+            topos = [
                 "top_all36_caps.rtf",
                 "top_all36_cgenff.rtf",
                 "top_all36_prot.rtf",
@@ -169,21 +181,29 @@ class CharmmWriter(MoleculeWriter):
                 "toppar_all36_prot_na_combined.str",
                 "toppar_all36_prot_fluoro_alkanes.str"
             ]
-        elif "amber" in forcefield:
-            return []
+
+        elif forcefield == "opls":
+            topos = [
+                "opls_aam.rtf",
+                "opls_aam_caps.rtf"
+            ]
+
+        elif forcefield == "amber":
+            from dabble.param import AmberWriter # avoid circular dependency
+            return AmberWriter.get_topologies(forcefield)
+
         else:
             raise ValueError("Invalid forcefield: '%s'" % forcefield)
 
-        return [resource_filename(__name__, os.path.join("parameters", top))
-                for top in default_topologies]
+        return [cls._get_forcefield_path(top) for top in topos]
 
     #=========================================================================
 
-    @staticmethod
-    def get_parameters(forcefield):
+    @classmethod
+    def get_parameters(cls, forcefield):
 
-        if "charmm" in forcefield:
-            default_parameters = [
+        if forcefield == "charmm":
+            prms = [
                 "toppar_water_ions.str",
                 "par_all36m_prot.prm",
                 "par_all36_cgenff.prm",
@@ -192,14 +212,20 @@ class CharmmWriter(MoleculeWriter):
                 "par_all36_na.prm",
                 "toppar_all36_prot_na_combined.str"
             ]
-        elif "amber" in forcefield:
-            return []
+
+        elif forcefield == "amber":
+            from dabble.param import AmberWriter # avoid circular dependency
+            return AmberWriter.get_parameters(forcefield)
+
+        elif forcefield == "opls":
+            prms = [
+                "opls_aam.prm"
+            ]
+
         else:
             raise ValueError("Invalid forcefield: '%s'" % forcefield)
 
-        return [resource_filename(__name__,
-                                  os.path.join("parameters", par))
-                for par in default_parameters]
+        return [cls._get_forcefield_path(par) for par in prms]
 
     #=========================================================================
     #                           Private methods                              #
@@ -245,8 +271,10 @@ class CharmmWriter(MoleculeWriter):
         # Pull out and write 10k waters at a time if we have normal waters
         if allw:
             for i in range(num_written):
-                temp = tempfile.mkstemp(suffix='_%d.pdb' % i, prefix='psf_wat_',
-                                        dir=self.tmp_dir)[1]
+                _, temp = tempfile.mkstemp(suffix='_%d.pdb' % i,
+                                           prefix='psf_wat_',
+                                           dir=self.tmp_dir)
+                os.close(_)
                 residues = list(set(allw.residue))[:9999]
 
                 batch = atomsel('residue %s' % ' '.join([str(x) for x in residues]))
@@ -254,11 +282,11 @@ class CharmmWriter(MoleculeWriter):
                     batch.resid = [k for k in range(1, int(len(batch)/3)+1)
                                    for _ in range(3)]
                 except ValueError:
-                    print("\nERROR! You have some waters missing hydrogens!\n"
-                          "Found %d water residues, but %d water atoms. Check "
-                          " your crystallographic waters in the input structure."
-                          % (len(residues), len(batch)))
-                    quit(1)
+                    raise DabbleError("\nERROR! You have some waters missing "
+                                      "hydrogens!\nFound %d water residues, but"
+                                      " %d water atoms. Check your crystal "
+                                      "waters in the input structure."
+                                      % (len(residues), len(batch)))
                 batch.user = 0.0
                 batch.write('pdb', temp)
                 allw.update()
@@ -291,21 +319,19 @@ class CharmmWriter(MoleculeWriter):
         Returns:
             (str): Filename where waters are written
         """
-        temp = tempfile.mkstemp(suffix='_indexed.pdb', prefix='psf_wat_',
-                                dir=self.tmp_dir)[1]
-        fileh = open(temp, 'w')
-
+        f, temp = tempfile.mkstemp(suffix='_indexed.pdb', prefix='psf_wat_',
+                                   dir=self.tmp_dir)
         idx = 1
-        for ridx, residue in enumerate(residues):
-            res = atomsel('residue %d' % residue, molid=molid)
+        with os.fdopen(f, 'w') as fileh:
+            for ridx, residue in enumerate(residues):
+                res = atomsel('residue %d' % residue, molid=molid)
 
-            for i in res.index:
-                a = atomsel('index %d' % i, molid) # pylint: disable=invalid-name
-                fileh.write(self.get_pdb_line(a, idx, ridx+1))
-                idx += 1
+                for i in res.index:
+                    a = atomsel('index %d' % i, molid) # pylint: disable=invalid-name
+                    fileh.write(self.get_pdb_line(a, idx, ridx+1))
+                    idx += 1
 
-        fileh.write('END\n')
-        fileh.close()
+            fileh.write('END\n')
         return temp
 
     #==========================================================================
@@ -332,9 +358,10 @@ class CharmmWriter(MoleculeWriter):
         residues.sort()
 
         # Lipids not compatible with AMBER parameters, CHARMM format
-        if len(residues) and "amber" in self.forcefield:
-            raise ValueError("AMBER parameters not supported for lipids in "
-                             "CHARMM output format")
+        if residues and ("amber" in self.forcefield or
+                         "opls" in self.forcefield):
+            raise ValueError("AMBER or OPLS parameters not supported for lipids"
+                             " in CHARMM output format")
 
         # Sanity check for < 10k lipids
         if len(residues) >= 10000:
@@ -343,14 +370,28 @@ class CharmmWriter(MoleculeWriter):
         # Loop through all residues and renumber and correctly name them
         counter = 1
         for res in residues:
-            # Renumber residue
             sel = atomsel('residue %s' % res)
+
+            # Find a name match for this residue
+            (newname, atomnames) = self.matcher.get_names(sel, print_warning=True)
+            if not newname:
+                raise DabbleError("No residue definition for lipid %s:%s, "
+                                  "residue %d"
+                                  % (sel.name[0], sel.resid[0], sel.residue[0]))
+
+            # Do the renaming
+            self._apply_naming_dictionary(atomnames=atomnames,
+                                          resnames=newname,
+                                          verbose=False)
+            # Renumber residue
             sel.resid = counter
             counter = counter + 1
 
+
         # Write temporary lipid pdb
-        temp = tempfile.mkstemp(suffix='.pdb', prefix='psf_lipid_',
-                                dir=self.tmp_dir)[1]
+        _, temp = tempfile.mkstemp(suffix='.pdb', prefix='psf_lipid_',
+                                   dir=self.tmp_dir)
+        os.close(_)
         alll.user = 0.0
         alll.write('pdb', temp)
 
@@ -376,14 +417,14 @@ class CharmmWriter(MoleculeWriter):
         # Get ion resids that aren't associated w other molecules
         # because some ligands have Na, Cl, K
         total = atomsel('element Na Cl K')
-        if len(total):
+        if total:
             not_ions = atomsel("(same fragment as element Na Cl K)  and (not index %s)"
                                % " ".join([str(s) for s in set(total.index)]))
             ions = set(total.residue) - set(not_ions.residue)
         else:
             ions = set(total.residue)
 
-        if not len(ions):
+        if not ions:
             return
         ionstr = "residue " + " ".join([str(s) for s in ions])
 
@@ -401,8 +442,9 @@ class CharmmWriter(MoleculeWriter):
         batch.resid = [k for k in range(1, len(batch)+1)]
 
         # Save the temporary ions file
-        temp = tempfile.mkstemp(suffix='.pdb', prefix='psf_ions_',
-                                dir=self.tmp_dir)[1]
+        _, temp = tempfile.mkstemp(suffix='.pdb', prefix='psf_ions_',
+                                   dir=self.tmp_dir)
+        os.close(_)
         atomsel('name SOD CLA POT').user = 0.0
         atomsel('name SOD CLA POT').write('pdb', temp)
 
@@ -454,9 +496,11 @@ class CharmmWriter(MoleculeWriter):
 
         for residue in residues:
             sel = atomsel("residue %s and resname '%s' and user 1.0" % (residue, resname))
+
             (newname, atomnames) = self.matcher.get_names(sel, print_warning=True)
             if not newname:
                 (resname, patch, atomnames) = self.matcher.get_patches(sel)
+
                 if not newname:
                     print("ERROR: Could not find a residue definition for %s:%s"
                           % (resname, residue))
@@ -465,17 +509,10 @@ class CharmmWriter(MoleculeWriter):
                 print("\tApplying patch %s to ligand %s" % (patch, newname))
 
             # Do the renaming
-            for idx, name in atomnames.items():
-                atom = atomsel('index %s' % idx)
-                if atom.name[0] != name and "+" not in name \
-                   and "-" not in name:
-                    print("Renaming %s:%s: %s -> %s" % (resname, residue,
-                                                        atom.name[0],
-                                                        name))
-                    atom.name = name
-            sel.resname = newname
+            self._apply_naming_dictionary(atomnames=atomnames,
+                                          resnames=newname,
+                                          verbose=True)
 
-        #logger.info("Renamed %d atoms for all resname %s->%s" % (num_renamed, resname, name))
         molecule.set_top(old_top)
 
         return residues
@@ -501,8 +538,9 @@ class CharmmWriter(MoleculeWriter):
         alig = atomsel('user 1.0 and residue %s' % " ".join([str(x) for x in residues]))
 
         # Write temporary file containg the residues and update tcl commands
-        temp = tempfile.mkstemp(suffix='.pdb', prefix='psf_block_',
-                                dir=self.tmp_dir)[1]
+        _, temp = tempfile.mkstemp(suffix='.pdb', prefix='psf_block_',
+                                   dir=self.tmp_dir)
+        os.close(_)
         alig.write('pdb', temp)
         alig.user = 0.0
 
@@ -537,21 +575,22 @@ class CharmmWriter(MoleculeWriter):
         patches = set()
         extpatches = set()
         seg = "P%s" % frag
+        fragsel = atomsel("fragment '%s'" % frag)
 
-        residues = list(set(atomsel("fragment '%s'" % frag).residue))
+        residues = list(set(fragsel.residue))
         for residue in residues:
             sel = atomsel('residue %s' % residue)
             resid = sel.resid[0]
+
             # Only try to match single amino acid if there are 1 or 2 bonds
             if len(self.matcher.get_extraresidue_atoms(sel)) < 3:
-                (newname, atomnames) = self.matcher.get_names(sel,
-                                                              print_warning=False)
+                (newname, atomnames) = self.matcher.get_names(sel, False)
 
             # See if it's a disulfide bond participant
             else:
                 (newname, patch, atomnames) = \
                         self.matcher.get_disulfide("residue %d" % residue,
-                                                   frag, molid)
+                                                   molid)
                 if newname:
                     extpatches.add(patch)
 
@@ -569,12 +608,8 @@ class CharmmWriter(MoleculeWriter):
                                   % (sel.resname[0], resid))
 
             # Do the renaming
-            for idx, name in atomnames.items():
-                atom = atomsel('index %s' % idx)
-                if atom.name[0] != name and "+" not in name and \
-                   "-" not in name:
-                    atom.name = name
-            sel.resname = newname
+            self._apply_naming_dictionary(atomnames=atomnames,
+                                          resnames=newname)
 
         # Save protein chain in the correct order
         filename = self.tmp_dir + '/psf_protein_%s.pdb' % seg
@@ -604,6 +639,7 @@ class CharmmWriter(MoleculeWriter):
         if old_top != -1:
             molecule.set_top(old_top)
 
+        fragsel.user = 0.0
         return extpatches
 
     #==========================================================================
@@ -618,9 +654,8 @@ class CharmmWriter(MoleculeWriter):
 
         # Check file was written at all
         if not os.path.isfile('%s.pdb'% self.outprefix):
-            print("\nERROR: psf file failed to write.\n"
-                  "       Please see log above.\n")
-            quit(1)
+            raise DabbleError("\nERROR: psf file failed to write.\n"
+                              "       Please see log above.\n")
 
         # Open the pdb file in VMD and check for atoms with no occupancy
         fileh = molecule.load('pdb', '%s.pdb' % self.outprefix)
@@ -628,19 +663,16 @@ class CharmmWriter(MoleculeWriter):
 
         # Print out error messages
         if errors:
-            print("\nERROR: Couldn't find the following atoms.")
+            errstr = "\nERROR: Couldn't find the following atoms.\n"
             for i in range(len(errors)):
-                print("  %s%s:%s" % (errors.resname[i], errors.resid[i],
-                                     errors.name[i]))
+                errstr += "\t%s%s:%s\n" % (errors.resname[i], errors.resid[i],
+                                           errors.name[i])
 
-            print("Check if they are present in the original structure.\n"
-                  "If they are, check dabble name translation or file a "
-                  "bug report to Robin.\n")
-            quit(1)
-        else:
-            print("\nChecked output pdb/psf has all atoms present "
-                  "and correct.\n")
+            errstr += "Check if they are present in the original structure.\n"
+            raise DabbleError(errstr)
 
+        print("\nChecked output pdb/psf has all atoms present "
+              "and correct.\n")
 
     #==========================================================================
 
@@ -669,10 +701,10 @@ class CharmmWriter(MoleculeWriter):
             topo_atoms = _get_atoms_from_rtf(text=topfile.readlines(),
                                              resname=resname)
             # Use first definition found of this residue
-            if len(topo_atoms):
+            if topo_atoms:
                 break
             topfile.close()
-        if not len(topo_atoms):
+        if not topo_atoms:
             return False
         print("Successfully found residue %s in input topologies" % resname)
 
@@ -684,31 +716,27 @@ class CharmmWriter(MoleculeWriter):
 
         # If uneven number of atoms, there are missing or additional atoms
         if len(pdb_atoms) > len(topo_atoms):
-            print("\nERROR: Cannot process modified residue %s.\n"
-                  "       There are %d extra atoms in the input structure "
-                  "that are undefined in the topology file. The "
-                  "following atoms could not be matched and may "
-                  "either be misnamed, or additional atoms. Please "
-                  "check your input."
-                  % (resname, len(pdb_atoms)-len(topo_atoms)))
-            print("       [ %s ]\n" % ' '.join(pdb_only))
-            print("       Cannot continue.\n")
-            quit(1)
+            raise DabbleError("\nERROR: Cannot process modified residue %s.\n"
+                              "There are %d extra atoms in the input structure "
+                              "that are undefined in the topology file. The "
+                              "following atoms could not be matched and may "
+                              "either be misnamed, or additional atoms:\n"
+                              "[ %s ]\n"
+                              % (resname, len(pdb_atoms)-len(topo_atoms),
+                                 " ".join(pdb_only)))
+
         if len(topo_atoms) > len(pdb_atoms):
-            print("\nERROR: Cannot process modified residue %s.\n"
-                  "       There are %d missing atoms in the input structure "
-                  " that are defined in the topology file. The "
-                  " following atoms could not be matched and may "
-                  " either be misnamed or deleted atoms. Please "
-                  " check your input."
-                  % (resname, len(topo_atoms)-len(pdb_atoms)))
-            print("       [ %s ]\n" % ' '.join(topo_only))
-            print("       Cannot continue.\n")
-            print("Found is %s\n" % pdb_atoms)
-            quit(1)
+            raise DabbleError("\nERROR: Cannot process modified residue %s.\n"
+                              "There are %d missing atoms in the input structure "
+                              "that are defined in the topology file. The "
+                              "following atoms could not be matched and may "
+                              "either be misnamed or deleted atoms:\n"
+                              "[ %s ]\n"
+                              % (resname, len(topo_atoms)-len(pdb_atoms),
+                                 " ".join(topo_only)))
 
         # Offer to rename atoms that couldn't be matched to the topology
-        if len(pdb_only):
+        if pdb_only:
             print("\nWARNING: Having some trouble with modified residue %s.\n"
                   "         The following atom names cannot be matched up "
                   " to the input topologies. They are probably "
@@ -723,8 +751,6 @@ class CharmmWriter(MoleculeWriter):
                 print("Unmatched topology names: [ %s ]"
                       % ' '.join(topo_only))
 
-                try: input = raw_input
-                except NameError: pass
                 newname = input("  %s  -> " % unmatched)
                 while newname not in topo_only:
                     print("'%s' is not an available name in the topology."
@@ -761,8 +787,6 @@ class CharmmWriter(MoleculeWriter):
         print("Type NONE for no patch, if your residue is completely "
               "defined in a str file")
         print("Or type HELP for a list of all patches I know about")
-        try: input = raw_input
-        except NameError: pass
         patchname = input("> ")
         if patchname == "HELP":
             print("   PATCH     COMMENT")
@@ -792,7 +816,7 @@ class CharmmWriter(MoleculeWriter):
             topfile = open(top, 'r')
             for line in topfile:
                 tokens = line.split()
-                if not len(tokens):
+                if not tokens:
                     continue
                 if tokens[0] == "PRES":
                     comment = ' '.join(tokens[tokens.index("!")+1:])
@@ -806,7 +830,7 @@ class CharmmWriter(MoleculeWriter):
         # Read topology files in to psfgen
         print("Using the following topologies:")
         for top in self.topologies:
-            print("  - %s" % top.split("/")[-1])
+            print("  - %s" % os.path.split(top)[1])
             self.psfgen.read_topology(top)
 
 
@@ -815,27 +839,24 @@ class CharmmWriter(MoleculeWriter):
         check_atom_names(molid=self.molid)
 
         # Now ions if present, changing the atom names
-        if len(atomsel('ions', molid=self.molid)) > 0:
+        if atomsel('ions', molid=self.molid):
             self._write_ion_blocks()
 
         # Save water 10k molecules at a time
-        if len(atomsel('water', molid=self.molid)):
+        if atomsel('water', molid=self.molid):
             self._write_water_blocks()
 
         # Now lipid
-        # TODO: lipid names aren't matched with topologies?
-        if len(atomsel(self.lipid_sel)):
+        if atomsel(self.lipid_sel):
             self._write_lipid_blocks()
 
         # Now handle the protein
         # Save and reload the protein so residue looping is correct
-        if len(atomsel("resname %s" % patchable_acids, molid=self.molid)):
+        if atomsel("resname %s" % PATCHABLE_ACIDS, molid=self.molid):
             extpatches = set()
-            for frag in sorted(set(atomsel("resname %s" % patchable_acids,
-                                    molid=self.molid).fragment)):
+            for frag in sorted(set(atomsel("resname %s" % PATCHABLE_ACIDS,
+                                           molid=self.molid).fragment)):
                 extpatches.update(self._write_protein_blocks(self.molid, frag))
-            atomsel("same fragment as resname %s" % patchable_acids,
-                    molid=self.molid).user = 0.0
 
             # List all patches applied to the protein
             print("Applying the following patches:\n")
@@ -948,7 +969,7 @@ def _get_atoms_from_rtf(text, resname):
     found = False
     for line in text:
         words = line.split()
-        if not len(words):
+        if not words:
             continue
         if not found and words[0] == 'RESI' \
            and words[1] == resname:

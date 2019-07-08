@@ -57,6 +57,9 @@ class AmberMatcher(MoleculeMatcher):
         Initializes a graph parser with the given topology files
         as known molecules
         """
+        # Require AMBERHOME to be set
+        if not os.environ.get("AMBERHOME"):
+            raise DabbleError("AMBERHOME must be set to use AmberMatcher")
 
         # Parent calls parse topologies
         super(AmberMatcher, self).__init__(topologies=topologies)
@@ -141,14 +144,7 @@ class AmberMatcher(MoleculeMatcher):
 
         # Only return within-residue atom naming dictionary (no _join)
         if matched:
-            nammatch = {i: graph.node[match[i]].get("atomname")
-                        for i in match.keys()
-                        if graph.node[match[i]].get("residue") == "self"}
-            resmatch = {i: graph.node[match[i]].get("resname")
-                        for i in match.keys()
-                        if graph.node[match[i]].get("residue") == "self"}
-
-            return (resmatch, nammatch)
+            return self._get_names_from_match(graph, match)
 
         # Try to print out a helpful error message here if matching failed
         if print_warning:
@@ -165,6 +161,9 @@ class AmberMatcher(MoleculeMatcher):
             else:
                 print("\tI couldn't find any residues with that name. Did you "
                       "forget to provide a topology file?")
+            print("\tDumping debug information as 'nomatch.dot'")
+            self.write_dot(graph, "nomatch.dot")
+
 
         return (None, None)
 
@@ -233,7 +232,7 @@ class AmberMatcher(MoleculeMatcher):
 
         # Create a subgraph with no externally bonded atoms for matching
         # Otherwise, extra bonded atom will prevent matches from happening
-        noext,_ = self.parse_vmd_graph(selection)
+        noext, _ = self.parse_vmd_graph(selection)
         noext.remove_nodes_from([i for i in noext.nodes()
                                  if noext.node[i].get("residue") != "self"])
 
@@ -256,13 +255,15 @@ class AmberMatcher(MoleculeMatcher):
             return (None, None, None)
 
         # Want minimumally different thing, ie fewest _join atoms different
-        def difference(res): return len(self.known_res[res]) - len(noext)
+        def difference(res):
+            return len(self.known_res[res]) - len(noext)
+
         minscore = min(difference(_) for _ in matches)
         possible_matches = [_ for _ in matches if difference(_) == minscore]
 
         # Prefer canonical amino acids here over weird other types
         if len(possible_matches) > 1:
-            canonicals = [_ for _ in possible_matches if _ in self._acids]
+            canonicals = [_ for _ in possible_matches if _ in self.amino_acids]
             if len(canonicals) == 1:
                 print("\tPreferring canonical acid %s" % canonicals[0])
                 matchname = canonicals.pop()
@@ -293,7 +294,7 @@ class AmberMatcher(MoleculeMatcher):
             ch = atomsel("index %d" % num, molid=molid).chain[0]
             if ch != chain:
                 partners.append(num)
-            elif rid != residue+1 and rid != residue-1:
+            elif rid not in (residue+1, residue-1):
                 partners.append(num)
         if len(partners) != 1:
             return (None, None, None)
@@ -339,13 +340,8 @@ class AmberMatcher(MoleculeMatcher):
         else:
             return (None, None, None)
 
-        # Generate naming dictionaries to return
-        nammatch = {i: graph.node[match[i]].get("atomname")
-                    for i in match.keys()
-                    if graph.node[match[i]].get("residue") == "self"}
-        resmatch = {i: graph.node[match[i]].get("resname")
-                    for i in match.keys()
-                    if graph.node[match[i]].get("residue") == "self"}
+        # Get naming dictionaries to return
+        resmatch, nammatch = self._get_names_from_match(graph, match)
 
         # Now we know it's a cysteine in a disulfide bond
         # Identify which resid and fragment corresponds to the other cysteine
@@ -354,7 +350,7 @@ class AmberMatcher(MoleculeMatcher):
                             molid=molid).element[0] == "S"]
         if not partners:
             raise DabbleError("3 bonded Cys %d isn't a valid disulfide!"
-                             % selection.resid[0])
+                              % selection.resid[0])
         osel = atomsel("index %d" % partners[0], molid=molid)
         conect = osel.residue[0]
 
@@ -402,13 +398,8 @@ class AmberMatcher(MoleculeMatcher):
         match = matches[matchname]
         graph = self.known_res.get(matchname)
 
-        # Generate naming dictionaries to return
-        nammatch = {i: graph.node[match[i]].get("atomname")
-                    for i in match.keys()
-                    if graph.node[match[i]].get("residue") == "self"}
-        resmatch = {i: graph.node[match[i]].get("resname")
-                    for i in match.keys()
-                    if graph.node[match[i]].get("residue") == "self"}
+        # Get naming dictionaries to return
+        resmatch, nammatch = self._get_names_from_match(graph, match)
 
         # Find atom index on non-truncated graph that corresponds to the
         # - direction join atom. Necessary to figure out the order in which
@@ -472,12 +463,7 @@ class AmberMatcher(MoleculeMatcher):
                 if matcher.is_isomorphic():
                     matched = True
                     match = next(matcher.match())
-                    nammatch = {i: graph.node[match[i]].get("atomname")
-                                for i in match.keys()
-                                if graph.node[match[i]].get("residue") == "self"}
-                    resmatch = {i: graph.node[match[i]].get("resname")
-                                for i in match.keys()
-                                if graph.node[match[i]].get("residue") == "self"}
+                    resmatch, nammatch = self._get_names_from_match(graph, match)
                     taildicts.append((resmatch, nammatch))
                     break
             if not matched:
@@ -503,7 +489,6 @@ class AmberMatcher(MoleculeMatcher):
 
         Raises:
             DabbleError if topology file is malformed in various ways
-            DabbleError if AMBERHOME is unset
         """
         if ".off" in filename or ".lib" in filename:
             self._load_off(filename)
@@ -514,8 +499,6 @@ class AmberMatcher(MoleculeMatcher):
                               "Can't read topology '%s'" % filename)
 
         # Set AMBER search path for lib files
-        if not os.environ.get("AMBERHOME"):
-            raise DabbleError("AMBERHOME is unset!")
         leapdir = os.path.join(os.environ["AMBERHOME"], "dat", "leap")
 
         incmd = ""
@@ -523,10 +506,10 @@ class AmberMatcher(MoleculeMatcher):
             for line in fileh:
                 if "#" in line:
                     line = line[:line.index("#")]
-                if not len(line):
+                if not line:
                     continue
                 tokens = [i.strip(" \t'\"\n") for i in line.split()]
-                if not len(tokens):
+                if not tokens:
                     continue
 
                 # addAtomTypes adds more atoms
@@ -608,10 +591,10 @@ class AmberMatcher(MoleculeMatcher):
 
         with open(filename, 'r') as fileh:
             for line in fileh:
-                if not len(line):
+                if not line:
                     continue
                 tokens = [i.strip(" \t\"\n") for i in line.split()]
-                if not len(tokens) or not len(tokens[0]):
+                if not tokens or not tokens[0]:
                     continue
 
                 # Find the MASS lines
@@ -654,10 +637,10 @@ class AmberMatcher(MoleculeMatcher):
 
         with open(filename, 'r') as fileh:
             for line in fileh:
-                if not len(line):
+                if not line:
                     continue
                 tokens = [i.strip(" \t\"\n") for i in line.split()]
-                if not len(tokens) or not len(tokens[0]):
+                if not tokens or not tokens[0]:
                     continue
 
                 # If we find a command, pull out the unit name then figure
@@ -762,15 +745,17 @@ class AmberMatcher(MoleculeMatcher):
         # so a match just needs to be the same type of join atom
         if node1.get('residue') != "self" or node2.get('residue') != "self":
             return node1.get('residue') == node2.get('residue')
-        elif node1.get('element') == "Other":
+
+        if node1.get('element') == "Other":
             return (node2.get('element') not in AmberMatcher.LEAP_ELEMENTS.values()) \
                    and (node1.get('residue') == node2.get('residue'))
-        elif node2.get('element') == "Other":
+
+        if node2.get('element') == "Other":
             return (node1.get('element') not in AmberMatcher.LEAP_ELEMENTS.values()) \
                    and (node1.get('residue') == node2.get('residue'))
-        else:
-            return (node1.get('element') == node2.get('element')) and \
-                   (node1.get('residue') == node2.get('residue'))
+
+        return (node1.get('element') == node2.get('element')) and \
+               (node1.get('residue') == node2.get('residue'))
 
     #=========================================================================
 

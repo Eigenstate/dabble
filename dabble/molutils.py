@@ -181,7 +181,7 @@ def get_num_salt_ions_needed(molid,
                                   for i in range(len(cations)) \
                                   if len(cations.bonds[i]) == 0]
 
-        if len(nonbonded_cation_index) == 0:
+        if not nonbonded_cation_index:
             cations = atomsel('none')
         else:
             cations = atomsel_remaining(molid,
@@ -196,7 +196,7 @@ def get_num_salt_ions_needed(molid,
         nonbonded_anion_index = [anions.index[i] \
                                  for i in range(len(anions)) \
                                  if len(anions.bonds[i]) == 0]
-        if len(nonbonded_anion_index) == 0:
+        if not nonbonded_anion_index:
             anions = atomsel('none')
         else:
             anions = atomsel_remaining(molid,
@@ -262,12 +262,14 @@ def lipid_composition(lipid_sel, molid):
         """
         Returns the composition in one selected leaflet
         """
-        sel = atomsel_remaining(molid, 'not element H C and (%s) and (%s)'
-                                % (lipid_sel, leaflet_sel))
+        selstr = "not element H C and (%s) and (%s)" % (lipid_sel, leaflet_sel)
+        sel = atomsel_remaining(molid, selstr)
         resnames = set(sel.resname)
-        dct = dict([(s, len(set(atomsel_remaining(molid, "not element H C and " \
-             "resname '%s' and (%s) and (%s)" % (s, lipid_sel, leaflet_sel) \
-             ).fragment))) for s in resnames])
+
+        dct = {s : len(set(atomsel_remaining(molid,
+                                             "%s and resname '%s'"
+                                             % (sel, s)).fragment))
+               for s in resnames}
         return dct
 
     inner, outer = leaflet('z < 0'), leaflet('not (z < 0)')
@@ -369,7 +371,7 @@ def set_ion(molid, atom_id, element):
     """
 
     sel = atomsel('index %d' % atom_id, molid=molid)
-    if len(sel) == 0:
+    if not sel:
         raise ValueError("Index %d does not exist" % atom_id)
 
     resname = dict(Na='SOD', K='POT', Cl='CLA')[element]
@@ -554,7 +556,7 @@ def num_waters_remaining(molid, water_sel='water and element O'):
       ValueError if empty water selection
       ValueError if non-existent molecule given
     """
-    if not len(water_sel):
+    if not water_sel:
         raise ValueError("Empty water selection string")
     if not molecule.exists(molid):
         raise ValueError("Invalid molecule %d" % molid)
@@ -581,7 +583,7 @@ def num_lipids_remaining(molid, lipid_sel):
       ValueError if non-existent molecule given
     """
 
-    if not len(lipid_sel):
+    if not lipid_sel:
         raise ValueError("Empty lipid selection string")
     if not molecule.exists(molid):
         raise ValueError("Invalid molecule %d" % molid)
@@ -589,4 +591,3 @@ def num_lipids_remaining(molid, lipid_sel):
     return np.unique(atomsel_remaining(molid, lipid_sel).fragment).size
 
 #++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
-

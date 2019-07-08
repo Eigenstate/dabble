@@ -1,14 +1,14 @@
 # Tests multiple ligands, all forcefield combinations
 import os
-from vmd import atomsel, molecule
+from vmd import atomsel, evaltcl, molecule
 import pytest
+import re
 
 dir = os.path.dirname(__file__) + "/"
 
 #==============================================================================
 
-def check_gro(filename):
-    import re
+def check_gro(filename, lipid=True):
 
     with open(filename, 'r') as fn:
         lines = fn.read()
@@ -19,8 +19,9 @@ def check_gro(filename):
     # Check there are 91 POPC molecules
     # Look for moleculename    91
     # General because molecule can have any name
-    popc_mol = re.findall(r'\b\S+\s+91\b', lines)
-    assert len(popc_mol) == 1
+    if lipid:
+        popc_mol = re.findall(r'\b\S+\s+91\b', lines)
+        assert len(popc_mol) == 1
 
     # Check there are 10 DALP molecules
     lig_mol = re.findall(r'\b\S+\s+10\b', lines)
@@ -28,7 +29,29 @@ def check_gro(filename):
 
 #==============================================================================
 
-def check_result(format, outdir):
+def check_lammps(filename):
+
+    evaltcl("package require topotools 1.6")
+    evaltcl("topo readlammpsdata %s" % filename)
+
+    assert len(set(atomsel("same fragment as protein").resid)) == 284
+    assert len(set(atomsel("resname ACE NMA NME").resid)) == 4
+    assert len(atomsel("water")) == 32106
+    assert len(atomsel("same fragment as lipid")) == 12194
+
+    # Check for the corrrect number of alprenolols
+    assert len(atomsel("resname ALP")) == 420
+    assert len(set(atomsel("resname ALP").resid)) == 10
+    assert "OG301" in set(atomsel("resname ALP").name)
+    assert "O1" not in set(atomsel("resname ALP").name)
+
+    # Check coordinates are unique (not zero)
+    assert len(atomsel("resname ALP")) == 420
+    assert 0.0 not in atomsel("resname ALP").x
+
+#==============================================================================
+
+def check_result(format, outdir, solvent=True, lipid=True):
     if format == "prmtop":
         m2 = molecule.load("parm7", os.path.join(outdir, "test.prmtop"),
                            "rst7", os.path.join(outdir, "test.inpcrd"))
@@ -38,25 +61,28 @@ def check_result(format, outdir):
     # Check by reading .top file, as VMD won't parse it and .gro doesn't
     # have bond information
     elif format == "gro":
-        return check_gro(os.path.join(outdir, "test.top"))
+        return check_gro(os.path.join(outdir, "test.top"), lipid=lipid)
+
+    elif format == "lammps":
+        return check_lammps(os.path.join(outdir, "test.dat"))
 
     molecule.set_top(m2)
 
     assert len(set(atomsel("protein").resid)) == 282
     assert len(set(atomsel("resname ACE NMA NME").resid)) == 4
-    assert len(atomsel("water")) == 32106
-    assert len(atomsel("same fragment as lipid")) == 12194
+    if solvent:
+        assert len(atomsel("water")) == 32106
+        assert len(atomsel("same fragment as lipid")) == 12194
 
     # Check for the corrrect number of alprenolols
     assert len(atomsel("resname ALP")) == 420
     assert len(set(atomsel("resname ALP").resid)) == 10
-    assert "OX" in set(atomsel("resname ALP").name)
+    assert any(_ in set(atomsel("resname ALP").name) for _ in ["O09", "OX"])
     assert "O1" not in set(atomsel("resname ALP").name)
 
     # Check coordinates are unique (not zero)
-    # It's 419 because two of them have the same x
     assert len(atomsel("resname ALP")) == 420
-    assert len(set(atomsel("resname ALP").x)) == 419
+    assert 0.0 not in atomsel("resname ALP").x
 
     molecule.delete(m2)
 
@@ -95,24 +121,6 @@ def test_multiligand_building(tmpdir):
 
 #==============================================================================
 
-def test_multiligand_psf_charmm(tmpdir):
-    """
-    Checks the parameterization of a system with multiple ligands
-    """
-    from dabble.param import CharmmWriter
-    p = str(tmpdir)
-
-    # Parameterize the multiple ligand system with charmm parameters
-    molid = molecule.load("mae", os.path.join(dir, "test_multiligand_correct.mae"))
-    w = CharmmWriter(tmp_dir=p, molid=molid, lipid_sel="lipid",
-                     extra_topos=[os.path.join(dir, "alprenolol.rtf")])
-    w.write(os.path.join(p, "test"))
-
-    # Check result
-    check_result("psf", p)
-
-#==============================================================================
-
 def test_multiligand_prmtop_amber(tmpdir):
     """
     Checks that multiple ligands work with AMBER.
@@ -135,7 +143,7 @@ def test_multiligand_prmtop_amber(tmpdir):
 
 def test_multiligand_prmtop_charmm(tmpdir):
     """
-    Checks that multiple ligands work with AMBER.
+    Checks that multiple ligands work with AMBER w/CHARMM params.
     Should rename some atoms in matching
     """
     from dabble.param import AmberWriter
@@ -150,6 +158,26 @@ def test_multiligand_prmtop_charmm(tmpdir):
 
     # Check results
     check_result("psf", p)
+
+#==============================================================================
+
+def test_multiligand_prmtop_opls(tmpdir):
+    """
+    Checks that multiple ligands work with AMBER w/OPLS params.
+    Should rename some atoms in matching
+    """
+    from dabble.param import AmberWriter
+    p = str(tmpdir)
+
+    # Parameterize the system. One atom name will be changed.
+    molid = molecule.load("mae", os.path.join(dir, "B2AR_10ALPs.mae"))
+    w = AmberWriter(tmp_dir=p, molid=molid, forcefield="opls",
+                    extra_topos=[os.path.join(dir, "dalp_opls.rtf")],
+                    extra_params=[os.path.join(dir, "dalp_opls.prm")])
+    w.write(os.path.join(p, "test"))
+
+    # Check results
+    check_result("psf", p, lipid=False, solvent=False)
 
 #==============================================================================
 
@@ -168,6 +196,51 @@ def test_multiligand_psf_amber(tmpdir):
     w.write(os.path.join(p, "test"))
 
     check_result("psf", p)
+
+#==============================================================================
+
+def test_multiligand_psf_charmm(tmpdir):
+    """
+    Checks the parameterization of a system with multiple ligands
+    """
+    from dabble.param import CharmmWriter
+    p = str(tmpdir)
+
+    # Parameterize the multiple ligand system with charmm parameters
+    molid = molecule.load("mae", os.path.join(dir, "test_multiligand_correct.mae"))
+    w = CharmmWriter(tmp_dir=p, molid=molid, lipid_sel="lipid",
+                     extra_topos=[os.path.join(dir, "alprenolol.rtf")])
+    w.write(os.path.join(p, "test"))
+
+    # Check result
+    check_result("psf", p)
+
+#==============================================================================
+
+def test_multiligand_psf_opls(tmpdir):
+    """
+    Charmm parameters, OPLS AA/M format
+    """
+    from dabble.param import CharmmWriter
+    p = str(tmpdir)
+
+    molid = molecule.load("mae", os.path.join(dir, "test_multiligand_correct.mae"))
+
+    # lipid unsupported
+    w = CharmmWriter(tmp_dir=p, molid=molid, forcefield="opls",
+                     extra_topos=[os.path.join(dir, "dalp_opls.rtf")],
+                     extra_params=[os.path.join(dir, "dalp_opls.prm")])
+    with pytest.raises(ValueError):
+        w.write(os.path.join(p, "test"))
+
+    # No lipid should work
+    molecule.delete(molid)
+    molid = molecule.load("mae", os.path.join(dir, "B2AR_10ALPs.mae"))
+    w = CharmmWriter(tmp_dir=p, molid=molid, forcefield="opls",
+                     extra_topos=[os.path.join(dir, "dalp_opls.rtf")],
+                     extra_params=[os.path.join(dir, "dalp_opls.prm")])
+    w.write(os.path.join(p, "test"))
+    check_result("psf", p, solvent=False, lipid=False)
 
 #==============================================================================
 
@@ -205,3 +278,37 @@ def test_multiligand_gro_charmm(tmpdir):
     check_result("gro", p)
 
 #==============================================================================
+
+def test_multiligand_gro_opls(tmpdir):
+    """
+    CHARMM parameters, GROMACS format
+    """
+    from dabble.param import GromacsWriter
+    p = str(tmpdir)
+
+    molid = molecule.load("mae", os.path.join(dir, "B2AR_10ALPs.mae"))
+    w = GromacsWriter(tmp_dir=p, molid=molid, forcefield="opls",
+                      extra_topos=[os.path.join(dir, "dalp_opls.rtf")],
+                      extra_params=[os.path.join(dir, "dalp_opls.prm")])
+
+    w.write(os.path.join(p, "test"))
+
+    check_result("gro", p, lipid=False, solvent=False)
+
+#==============================================================================
+
+def test_multiligand_lammps_charmm(tmpdir):
+
+    from dabble.param import LammpsWriter
+    p = str(tmpdir)
+
+    molid = molecule.load("mae", os.path.join(dir, "test_multiligand_correct.mae"))
+    w = LammpsWriter(tmp_dir=p, molid=molid, forcefield="charmm",
+                     extra_topos=[os.path.join(dir, "alprenolol.rtf")],
+                     extra_params=[os.path.join(dir, "alprenolol.prm")])
+    w.write(os.path.join(p, "test"))
+
+    check_result("lammps", p)
+
+#==============================================================================
+

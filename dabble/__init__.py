@@ -14,6 +14,7 @@ supported_formats = {
     "charmm": ".psf and .pdb Protein Structure File and PDB coordinates",
     "desmond": "",
     "gromacs": ".top and .gro GROMACS topology and coordinate files",
+    "lammps": ".dat file suitable for input to LAMMPS",
     "pdb": "Protein Data Bank PDB file. Will not contain explicit bonds."
 }
 
@@ -25,6 +26,7 @@ class DabbleError(Exception):
     """
 
     def __init__(self, msg):
+        super(DabbleError, self).__init__()
         try:
             ln = sys.exc_info()[-1].tb_lineno
         except AttributeError:

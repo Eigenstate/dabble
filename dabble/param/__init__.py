@@ -9,14 +9,17 @@ __author__ = 'Robin Betz'
 supported_forcefields = {
     "charmm": "CHARMM36m, July 2018 update",
     "amber": "AMBER 14",
-    "opls": "OPLS AA/M"
+    "opls": "OPLS AA/M, 2001 aminoacid dihedrals",
 }
 
 from dabble.param.moleculematcher import MoleculeMatcher
-from dabble.param.charmmmatcher import CharmmMatcher, Patch
 from dabble.param.ambermatcher import AmberMatcher
+from dabble.param.charmmmatcher import CharmmMatcher, Patch
+from dabble.param.gromacsmatcher import GromacsMatcher
+
 from dabble.param.writer import MoleculeWriter
-from dabble.param.charmm import CharmmWriter
 from dabble.param.amber import AmberWriter
+from dabble.param.charmm import CharmmWriter
 from dabble.param.gromacs import GromacsWriter
+from dabble.param.lammps import LammpsWriter
 
