@@ -20,7 +20,7 @@ scripts = ['get_restraint_mask.py', 'convert_step5_to_dabble.py',
            'amber_rst2cms_v_noparams.py']
 
 setup(name='dabble',
-      version='2.7.10',
+      version='2.7.11',
       description='Membrane protein system builder',
       author='Robin Betz',
       author_email='robin@robinbetz.com',
