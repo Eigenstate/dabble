@@ -27,13 +27,11 @@ from __future__ import print_function
 import os
 import logging
 import tempfile
-import subprocess
 
-from vmd import atomsel, evaltcl, molecule
+from vmd import evaltcl, molecule
 
 from dabble import DabbleError
-from dabble.param import (AmberWriter, CharmmWriter, MoleculeWriter,
-                          GromacsMatcher)
+from dabble.param import (AmberWriter, CharmmWriter, MoleculeWriter)
 
 logger = logging.getLogger(__name__) # pylint: disable=invalid-name
 

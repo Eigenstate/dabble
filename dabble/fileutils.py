@@ -26,7 +26,7 @@ import tempfile
 
 from vmd import molecule, atomsel
 from dabble import DabbleError
-from dabble.param import AmberWriter, CharmmWriter, GromacsWriter
+from dabble.param import AmberWriter, CharmmWriter, GromacsWriter, LammpsWriter
 
 #++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
 
@@ -243,6 +243,11 @@ def write_final_system(out_fmt, out_name, molid, **kwargs):
                                 forcefield=kwargs['forcefield'])
         writeit.write(mae_name.replace(".mae", ""))
 
+    # LAMMPS has its own writer
+    elif out_fmt == "lammps":
+        writeit = LammpsWriter(molid=temp_mol, *kwargs)
+        writeit.write(mae_name.replace(".mae", ""))
+
     molecule.delete(temp_mol)
     return out_name
 
@@ -326,6 +331,8 @@ def check_out_type(value, outformat, forcefield, hmr=False):
         out_fmt = 'pdb'
     elif ext == 'dms':
         out_fmt = 'dms'
+    elif ext == 'dat':
+        out_fmt = 'lammps'
     elif ext == 'psf' and forcefield in ["amber", "charmm", "opls"]:
         out_fmt = 'charmm'
     elif ext == 'prmtop' and forcefield in ["amber", "charmm", "opls"]:

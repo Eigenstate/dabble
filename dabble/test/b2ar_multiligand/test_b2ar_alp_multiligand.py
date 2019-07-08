@@ -1,6 +1,6 @@
 # Tests multiple ligands, all forcefield combinations
 import os
-from vmd import atomsel, molecule
+from vmd import atomsel, evaltcl, molecule
 import pytest
 import re
 
@@ -29,6 +29,28 @@ def check_gro(filename, lipid=True):
 
 #==============================================================================
 
+def check_lammps(filename):
+
+    evaltcl("package require topotools 1.6")
+    evaltcl("topo readlammpsdata %s" % filename)
+
+    assert len(set(atomsel("same fragment as protein").resid)) == 284
+    assert len(set(atomsel("resname ACE NMA NME").resid)) == 4
+    assert len(atomsel("water")) == 32106
+    assert len(atomsel("same fragment as lipid")) == 12194
+
+    # Check for the corrrect number of alprenolols
+    assert len(atomsel("resname ALP")) == 420
+    assert len(set(atomsel("resname ALP").resid)) == 10
+    assert "OG301" in set(atomsel("resname ALP").name)
+    assert "O1" not in set(atomsel("resname ALP").name)
+
+    # Check coordinates are unique (not zero)
+    assert len(atomsel("resname ALP")) == 420
+    assert 0.0 not in atomsel("resname ALP").x
+
+#==============================================================================
+
 def check_result(format, outdir, solvent=True, lipid=True):
     if format == "prmtop":
         m2 = molecule.load("parm7", os.path.join(outdir, "test.prmtop"),
@@ -40,6 +62,9 @@ def check_result(format, outdir, solvent=True, lipid=True):
     # have bond information
     elif format == "gro":
         return check_gro(os.path.join(outdir, "test.top"), lipid=lipid)
+
+    elif format == "lammps":
+        return check_lammps(os.path.join(outdir, "test.dat"))
 
     molecule.set_top(m2)
 
@@ -269,6 +294,21 @@ def test_multiligand_gro_opls(tmpdir):
     w.write(os.path.join(p, "test"))
 
     check_result("gro", p, lipid=False, solvent=False)
+
+#==============================================================================
+
+def test_multiligand_lammps_charmm(tmpdir):
+
+    from dabble.param import LammpsWriter
+    p = str(tmpdir)
+
+    molid = molecule.load("mae", os.path.join(dir, "test_multiligand_correct.mae"))
+    w = LammpsWriter(tmp_dir=p, molid=molid, forcefield="charmm",
+                     extra_topos=[os.path.join(dir, "alprenolol.rtf")],
+                     extra_params=[os.path.join(dir, "alprenolol.prm")])
+    w.write(os.path.join(p, "test"))
+
+    check_result("lammps", p)
 
 #==============================================================================
 
