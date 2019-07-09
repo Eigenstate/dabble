@@ -414,39 +414,24 @@ class CharmmWriter(MoleculeWriter):
         old_top = molecule.get_top()
         molecule.set_top(self.molid)
 
-        # Get ion resids that aren't associated w other molecules
-        # because some ligands have Na, Cl, K
-        total = atomsel('element Na Cl K')
-        if total:
-            not_ions = atomsel("(same fragment as element Na Cl K)  and (not index %s)"
-                               % " ".join([str(s) for s in set(total.index)]))
-            ions = set(total.residue) - set(not_ions.residue)
-        else:
-            ions = set(total.residue)
+        # Select all ions
+        allions = []
+        for resname in set(atomsel("ions").resname):
+            # Rename ions
+            residues = self._find_single_residue_names(resname, self.molid)
 
-        if not ions:
-            return
-        ionstr = "residue " + " ".join([str(s) for s in ions])
+            # Set resid of renamed ions
+            ressel = atomsel("residue %s" % " ".join(str(_) for _ in residues))
+            ressel.resid = range(len(ressel))
+            allions += ressel
 
-        # Fix the names
-        atomsel('%s and name NA' % ionstr).name = "SOD"
-        atomsel('%s and name CL' % ionstr).name = "CLA"
-        atomsel('%s and name K' % ionstr).name = "POT"
-        atomsel('%s and name NA' % ionstr).resname = "SOD"
-        atomsel('%s and name CL' % ionstr).resname = "CLA"
-        atomsel('%s and name K' % ionstr).resname = "POT"
-
-        # Renumber the residues since some may be above 10k
-        residues = atomsel('name SOD CLA POT').residue
-        batch = atomsel('residue %s' % ' '.join([str(s) for s in set(residues)]))
-        batch.resid = [k for k in range(1, len(batch)+1)]
-
-        # Save the temporary ions file
-        _, temp = tempfile.mkstemp(suffix='.pdb', prefix='psf_ions_',
+        # Save ions as pdb
+        allsel = atomsel("residue %s" % " ".join(str(_) for _ in allions))
+        allsel.user = 0.0
+        _, temp = tempfile.mkstemp(suffix=".pdb", prefix="psf_ions_",
                                    dir=self.tmp_dir)
         os.close(_)
-        atomsel('name SOD CLA POT').user = 0.0
-        atomsel('name SOD CLA POT').write('pdb', temp)
+        allsel.write("pdb", temp)
 
         self.psfgen.add_segment(segid="I", pdbfile=temp)
         self.psfgen.read_coords(segid="I", filename=temp)
