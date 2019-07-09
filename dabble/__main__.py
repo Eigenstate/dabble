@@ -184,11 +184,13 @@ def main(argv=None):
                       )
 
     group = parser.add_argument_group('Ion Options')
-# TODO is this being ignored
-    group.add_argument('-c', '--cation',
+    group.add_argument('--cation',
                        default='Na', type=str,
-                       help='specify cation "Na" or "K"'
-                            '[default: "Na"]'
+                       help='Specify element of cation. Defaults to "Na"'
+                      )
+    group.add_argument('--anion',
+                       default='Cl', type=str,
+                       help='Specify element of anion. Defaults to "Cl"'
                       )
     group.add_argument('-s', '--salt-concentration', dest='salt_conc',
                        type=float,

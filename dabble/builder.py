@@ -79,6 +79,8 @@ class DabbleBuilder(object):
             self.opts['lipid_sel'] = "lipid or resname POPS POPG"
         if 'cation' not in self.opts:
             self.opts['cation'] = 'Na'
+        if 'anion' not in self.opts:
+            self.opts['anion'] = 'Cl'
         if 'salt_conc' not in self.opts:
             self.opts['salt_conc'] = 0.150
         if 'wat_buffer' not in self.opts:
@@ -226,8 +228,7 @@ class DabbleBuilder(object):
 
         # Add ions as necessary
         self.convert_ions(self.opts.get('salt_conc'),
-                          self.opts.get('cation'),
-                          self.molids['combined'])
+                          molid=self.molids['combined'])
 
         # System is now built
         return self.molids['combined']
@@ -311,14 +312,15 @@ class DabbleBuilder(object):
 
     #==========================================================================
 
-    def convert_ions(self, salt_conc, cation, molid):
+    def convert_ions(self, salt_conc, molid):
         """
         Calculates the charge of the molecule and adds salt ions to get the
         desired concentration by converting water molecules to salt
 
         Args:
           salt_conc (float): Desired salt concentration in M
-          cation (str): Cation to add, either Na or K
+          cation (str): Cation to add
+          anion (str): Anion to add
           molid (int): VMD molecule id to consider
 
         Returns:
@@ -327,32 +329,34 @@ class DabbleBuilder(object):
         Raises:
           ValueError if invalid cation is specified
         """
-        # Check cation
-        if self.opts.get('cation') not in ['Na', 'K']:
-            raise DabbleError("Invalid cation '%s'" % self.opts.get('cation'))
+        anion = self.opts["anion"]
+        cation = self.opts["cation"]
 
         # Give existing cations correct nomenclature
-        molutils.set_cations(molid, cation)
+        # TODO: I think this is where the bug with ions getting renamed is
+        # molutils.set_cations(molid, cation)
 
         # Calculate number of salt ions needed
+        # TODO: Handle non-1 charges here
         pos_ions_needed, neg_ions_needed, num_wat, total_cations, total_anions, \
         cation_conc, anion_conc = molutils.get_num_salt_ions_needed(molid,
                                                                     salt_conc,
-                                                                    cation=cation)
+                                                                    cation=cation,
+                                                                    anion=anion)
 
-        print("Solvent will be %d waters, %d %s (%.3f M), %d Cl (%.3f M)" %
-              (num_wat, total_cations, self.opts.get('cation'), cation_conc,
-               total_anions, anion_conc))
+        print("Solvent will be %d waters, %d %s (%.3f M), %d %s (%.3f M)" %
+              (num_wat, total_cations, cation, cation_conc,
+               total_anions, anion, anion_conc))
 
-        print("Converting %d waters to %d %s ions and %d Cl ions..." %
+        print("Converting %d waters to %d %s ions and %d %s ions..." %
               (pos_ions_needed + neg_ions_needed,
-               pos_ions_needed, cation, neg_ions_needed))
+               pos_ions_needed, cation, neg_ions_needed, anion))
 
         # Add the ions
         for _ in range(pos_ions_needed):
             add_salt_ion(cation, molid)
         for _ in range(neg_ions_needed):
-            add_salt_ion('Cl', molid)
+            add_salt_ion(anion, molid)
 
         return pos_ions_needed + neg_ions_needed
 
@@ -983,20 +987,17 @@ def _convert_water_molecule_to_ion(molid, atom_id, element):
     Args:
       molid (int): VMD molecule to operate on
       atom_id (int): Atom index of water oxygen to change to ion
-      element (str in Na, K, Cl): Ion to apply
+      element (str): Ion to apply
 
     Raises:
       ValueError: if invalid element specified
       ValueError: if atom id is not of an oxygen water
     """
 
-    if element not in ['Na', 'K', 'Cl']:
-        raise ValueError("Ion must be Na, K, or Cl. Was '%s'" % element)
-
     element_received = atomsel('index %d' % atom_id).element[0]
     if element_received != 'O':
-        raise ValueError("Received non-water oxygen to convert, id %d element %s"
-                         % (atom_id, element_received))
+        raise ValueError("Received non-water oxygen to convert, id %d "
+                         "element %s" % (atom_id, element_received))
 
     molutils.set_ion(molid, atom_id, element)
     _remove_atoms('element H and same residue as index %d' % atom_id, molid)
@@ -1056,7 +1057,6 @@ def add_salt_ion(element, molid):
     Returns:
       (int) the index of the water molecule that was replaced
     """
-    assert element in ['Na', 'K', 'Cl'], 'element must be Na, K, or Cl'
     atom_id = _find_convertible_water_molecule(molid)
     _convert_water_molecule_to_ion(molid, atom_id, element)
     return atom_id
