@@ -32,7 +32,8 @@ setup(name='dabble',
       install_requires=["numpy",
                         "networkx>=1.11",
                         "vmd-python>=2.0.4",
-                        "parmed"],
+                        "parmed",
+                        "psfgen"],
       entry_points={
           "console_scripts": [
               "dabble = dabble.__main__:main"
