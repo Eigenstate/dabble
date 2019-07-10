@@ -254,7 +254,7 @@ class AmberMatcher(MoleculeMatcher):
             self.write_dot(noext, "noext.dot")
             return (None, None, None)
 
-        # Want minimumally different thing, ie fewest _join atoms different
+        # Want minimally different thing, ie fewest _join atoms different
         def difference(res):
             return len(self.known_res[res]) - len(noext)
 

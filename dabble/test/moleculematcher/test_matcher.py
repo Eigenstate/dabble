@@ -132,9 +132,10 @@ def test_patches():
     assert patch == "PSEP"
 
     # Oxygens are interchangeable so don't compare them
-    correct = {5: '-C', 16: 'N', 17: 'CA', 18: 'CB', 19: 'OG', 20: 'C', 21:
-               'O', 22: 'P', 26: 'HN', 27: 'HA', 28: 'HB1', 29: 'HB2', 30:
-               '+N'}
+    correct = {
+        16: 'N', 17: 'CA', 18: 'CB', 19: 'OG', 20: 'C', 21: 'O', 22: 'P',
+        26: 'HN', 27: 'HA', 28: 'HB1', 29: 'HB2'
+               }
     for i, n in correct.items():
         assert mdict[i] == n
 
