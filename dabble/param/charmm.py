@@ -424,7 +424,7 @@ class CharmmWriter(MoleculeWriter):
             # Set resid of renamed ions
             ressel = atomsel("residue %s" % " ".join(str(_) for _ in residues))
             ressel.resid = range(len(ressel))
-            allions += ressel
+            allions += ressel.residue
 
         # Save ions as pdb
         allsel = atomsel("residue %s" % " ".join(str(_) for _ in allions))
@@ -469,23 +469,26 @@ class CharmmWriter(MoleculeWriter):
 
         # Sanity check that there is no discrepancy between defined resids and
         # residues as interpreted by VMD.
+        residues = set(atomsel("user 1.0 and resname '%s'" % resname).residue)
+
         for chain in set(atomsel("user 1.0 and resname '%s'" % resname).chain):
-            residues = list(set(atomsel("user 1.0 and resname '%s' and chain %s"
-                                        % (resname, chain)).residue))
-            resids = list(set(atomsel("user 1.0 and resname '%s' and chain %s"
-                                      % (resname, chain)).resid))
-            if len(residues) != len(resids):
+            tempres = set(atomsel("user 1.0 and resname '%s' and chain %s"
+                                        % (resname, chain)).residue)
+            resids = set(atomsel("user 1.0 and resname '%s' and chain %s"
+                                      % (resname, chain)).resid)
+            if len(tempres) != len(resids):
                 raise DabbleError("VMD found %d residues for resname '%s', "
-                                  "but there are %d resids! Check input."
-                                  % (len(residues), resname,
-                                     len(resids)))
+                                  "but there are %d resids in chain %s! "
+                                  "Check input."
+                                  % (len(tempres), resname, len(resids), chain))
 
         for residue in residues:
-            sel = atomsel("residue %s and resname '%s' and user 1.0" % (residue, resname))
+            sel = atomsel("residue %s and resname '%s' and user 1.0"
+                          % (residue, resname))
 
-            (newname, atomnames) = self.matcher.get_names(sel, print_warning=True)
+            newname, atomnames = self.matcher.get_names(sel, print_warning=True)
             if not newname:
-                (resname, patch, atomnames) = self.matcher.get_patches(sel)
+                resname, patch, atomnames = self.matcher.get_patches(sel)
 
                 if not newname:
                     print("ERROR: Could not find a residue definition for %s:%s"
@@ -501,7 +504,7 @@ class CharmmWriter(MoleculeWriter):
 
         molecule.set_top(old_top)
 
-        return residues
+        return list(residues)
 
     #==========================================================================
 
