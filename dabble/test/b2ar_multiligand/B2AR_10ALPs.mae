@@ -30,6 +30,15 @@ f_m_ct {
  b_ppw_capped_termini
  b_ppw_deleted_far_waters
  i_m_ct_format
+ r_chorus_box_ax
+ r_chorus_box_ay
+ r_chorus_box_az
+ r_chorus_box_bx
+ r_chorus_box_by
+ r_chorus_box_bz
+ r_chorus_box_cx
+ r_chorus_box_cy
+ r_chorus_box_cz
  :::
  "2RH1_prepped_noCLR_aligned 2RH1_prepped_noCLR_aligned_merged11" 
   69 
@@ -56,6 +65,15 @@ f_m_ct {
   1
   1
   2
+  60
+  0
+  0
+  0
+  65
+  0
+  0
+  0
+  100
  m_atom[5035] { 
   # First column is atom index #
   i_m_mmod_type
