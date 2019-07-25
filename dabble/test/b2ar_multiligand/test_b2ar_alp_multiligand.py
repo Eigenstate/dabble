@@ -4,7 +4,38 @@ from vmd import atomsel, evaltcl, molecule
 import pytest
 import re
 
-dir = os.path.dirname(__file__) + "/"
+dir = os.path.dirname(__file__)
+
+#==============================================================================
+
+def run_minimization(filename):
+    # Check that this file will minimise
+    import subprocess
+
+    if not os.environ.get("AMBERHOME"):
+        raise FileNotFoundError("AMBER installation not in AMBERHOME")
+
+    tmpdir = os.path.dirname(filename)
+    inpcrd = filename.replace(".prmtop", ".inpcrd")
+    subprocess.check_call([os.path.join(os.environ["AMBERHOME"], "bin",
+                                        "sander"),
+                               "-i", os.path.join(dir, "min.in"),
+                               "-o", os.path.join(tmpdir, "test_min.mdout"),
+                               "-p", filename,
+                               "-c", inpcrd,
+                               "-r", os.path.join(tmpdir, "test_min.rst"),
+                               "-ref", inpcrd,
+                               ])
+
+    # Open mdout and look for NaN
+    with open(os.path.join(tmpdir, "test_min.mdout"), 'r') as fn:
+        data = fn.read()
+    if "NaN" in data:
+        raise ValueError("NaN in minimization")
+
+    # Check restart exists
+    if not os.path.isfile(os.path.join(tmpdir, "test_min.rst")):
+        raise FileNotFoundError("No minimization restart file")
 
 #==============================================================================
 
@@ -138,6 +169,7 @@ def test_multiligand_prmtop_amber(tmpdir):
 
     # Load the built system and see if it works
     check_result("prmtop", p)
+    run_minimization(os.path.join(p, "test.prmtop"))
 
 #==============================================================================
 
@@ -158,6 +190,7 @@ def test_multiligand_prmtop_charmm(tmpdir):
 
     # Check results
     check_result("psf", p)
+    run_minimization(os.path.join(p, "test.prmtop"))
 
 #==============================================================================
 
@@ -178,6 +211,7 @@ def test_multiligand_prmtop_opls(tmpdir):
 
     # Check results
     check_result("psf", p, lipid=False, solvent=False)
+    run_minimization(os.path.join(p, "test.prmtop"))
 
 #==============================================================================
 
