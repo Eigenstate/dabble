@@ -295,9 +295,10 @@ class CharmmWriter(MoleculeWriter):
                 self.psfgen.read_coords(segid="W%d" % i, filename=temp)
 
         # Now write the problem waters
-        updb = self._write_unorderedindex_waters(problems, self.molid)
-        self.psfgen.add_segment(segid="W%d" % (num_written+1), pdbfile=updb)
-        self.psfgen.read_coords(segid="W%d" % (num_written+1), filename=updb)
+        if problems:
+            updb = self._write_unorderedindex_waters(problems, self.molid)
+            self.psfgen.add_segment(segid="W%d" % (num_written+1), pdbfile=updb)
+            self.psfgen.read_coords(segid="W%d" % (num_written+1), filename=updb)
 
         molecule.set_top(old_top)
 
@@ -416,7 +417,7 @@ class CharmmWriter(MoleculeWriter):
 
         # Select all ions
         allions = []
-        for resname in set(atomsel("ions").resname):
+        for resname in set(atomsel("element Na K Cl and numbonds is 0").resname):
             # Rename ions
             residues = self._find_single_residue_names(resname, self.molid)
 
@@ -529,9 +530,10 @@ class CharmmWriter(MoleculeWriter):
         alig.write('pdb', temp)
         alig.user = 0.0
 
-        self.psfgen.add_segment(segid="B%s" % residues[0], pdbfile=temp)
-        self.psfgen.read_coords(segid="B%s" % residues[0],
-                                filename=temp)
+        # Segment name should be 4 or fewer characters
+        segname = ("B%s" % residues[0])[:3]
+        self.psfgen.add_segment(segid=segname, pdbfile=temp)
+        self.psfgen.read_coords(segid=segname, filename=temp)
 
         if old_top != -1:
             molecule.set_top(old_top)
@@ -823,13 +825,13 @@ class CharmmWriter(MoleculeWriter):
         atomsel('all', molid=self.molid).user = 1.0
         check_atom_names(molid=self.molid)
 
-        # Now ions if present, changing the atom names
-        if atomsel('ions', molid=self.molid):
-            self._write_ion_blocks()
-
         # Save water 10k molecules at a time
         if atomsel('water', molid=self.molid):
             self._write_water_blocks()
+
+        # Now ions if present, changing the atom names
+        if atomsel('ions', molid=self.molid):
+            self._write_ion_blocks()
 
         # Now lipid
         if atomsel(self.lipid_sel):
