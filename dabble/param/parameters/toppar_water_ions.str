@@ -1,6 +1,6 @@
 * Toplogy and parameter information for water and ions.
 *
-
+! Some lines that make psfgen complain have been commented out
 !Testcase
 !test_water_ions.inp
 
@@ -32,14 +32,14 @@
 
 !test "append" to determine if previous toppar files have been read and
 !add append to "read rtf card" if true
-set nat ?NATC
-set app
+!set nat ?NATC
+!set app
 !We're exploiting what is arguably a bug in the parser. On the left hand side,
 !the quotes have priority, so NAT is correctly substituted. On the right hand
 !side, the ? has priority and NATC" (sic) is not a valid substitution...
-if "@NAT" ne "?NATC" if @nat ne 0 set app append
+!if "@NAT" ne "?NATC" if @nat ne 0 set app append
 
-read rtf card @app
+!read rtf card @app
 * Topology for water and ions
 *
 31  1
@@ -282,16 +282,16 @@ END
 ! want the NBFixes to apply. A more elegant solution would require new
 ! features to be added to CHARMM.
 ! parallel fix, to avoid duplicated messages in the log
-set para
-if ?NUMNODE gt 1 set para node 0
+!set para
+!if ?NUMNODE gt 1 set para node 0
 
-set wrn ?WRNLEV
+!set wrn ?WRNLEV
 ! Some versions of CHARMM don't seem to initialize wrnlev...
-if "@WRN" eq "?WRNLEV" set wrn 5
-set bom ?bomlev
-WRNLEV -1 @PARA
-BOMLEV -1 @PARA
-read para card flex append
+!if "@WRN" eq "?WRNLEV" set wrn 5
+!set bom ?bomlev
+!WRNLEV -1 @PARA
+!BOMLEV -1 @PARA
+!read para card flex append
 * NBFix between carboxylate and sodium
 *
 
@@ -328,8 +328,8 @@ CLA    SOD      -0.0839     3.7310 ! Savelyev and MacKerell, JPCB 2015
 CLA    POT      -0.1142     4.0810 ! Savelyev and MacKerell, JPCB 2015
 
 END
-BOMLEV @bom @PARA
-WRNLEV @wrn @PARA
+!BOMLEV @bom @PARA
+!WRNLEV @wrn @PARA
 
 return
 
