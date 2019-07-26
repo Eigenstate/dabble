@@ -112,6 +112,9 @@ class CharmmWriter(MoleculeWriter):
         if "charmm" in self.forcefield or "opls" in self.forcefield:
             self.matcher = CharmmMatcher(self.topologies)
 
+        # Keep track of segment numbers for protein and other
+        self.segint = 0
+
     #=========================================================================
 
     def write(self, filename):
@@ -534,8 +537,9 @@ class CharmmWriter(MoleculeWriter):
         alig.write('pdb', temp)
         alig.user = 0.0
 
-        # Segment name should be 4 or fewer characters
-        segname = ("B%s" % residues[0])[:3]
+        # Get next available segment name
+        segname = "B%d" % self.segint
+        self.segint += 1
         self.psfgen.add_segment(segid=segname, pdbfile=temp)
         self.psfgen.read_coords(segid=segname, filename=temp)
 
@@ -565,8 +569,10 @@ class CharmmWriter(MoleculeWriter):
         molecule.set_top(molid)
         patches = set()
         extpatches = set()
-        # Truncate segment names. Use last 3 digits of fragment so they're unique.
-        seg = "P%s" % str(frag)[-3:]
+
+        # Get next available segment number
+        seg = "P%d" % self.segint
+        self.segint += 1
         fragsel = atomsel("fragment '%s'" % frag)
 
         residues = list(set(fragsel.residue))
