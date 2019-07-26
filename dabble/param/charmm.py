@@ -418,16 +418,13 @@ class CharmmWriter(MoleculeWriter):
         # Select all ions
         allions = []
         for resname in set(atomsel("element Na K Cl and numbonds is 0").resname):
-            # Rename ions
+            # Rename ions and gather residue numbers
             residues = self._find_single_residue_names(resname, self.molid)
-
-            # Set resid of renamed ions
-            ressel = atomsel("residue %s" % " ".join(str(_) for _ in residues))
-            ressel.resid = range(len(ressel))
-            allions += ressel.residue
+            allions += residues
 
         # Save ions as pdb
         allsel = atomsel("residue %s" % " ".join(str(_) for _ in allions))
+        allsel.resid = range(len(allsel))
         allsel.user = 0.0
         _, temp = tempfile.mkstemp(suffix=".pdb", prefix="psf_ions_",
                                    dir=self.tmp_dir)
@@ -564,7 +561,8 @@ class CharmmWriter(MoleculeWriter):
         molecule.set_top(molid)
         patches = set()
         extpatches = set()
-        seg = "P%s" % frag
+        # Truncate segment names. Use last 3 digits of fragment so they're unique.
+        seg = "P%s" % str(frag)[-3:]
         fragsel = atomsel("fragment '%s'" % frag)
 
         residues = list(set(fragsel.residue))
