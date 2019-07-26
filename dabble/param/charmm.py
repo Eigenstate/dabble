@@ -422,6 +422,10 @@ class CharmmWriter(MoleculeWriter):
             residues = self._find_single_residue_names(resname, self.molid)
             allions += residues
 
+        # Stop if no ions were found
+        if not allions:
+            return
+
         # Save ions as pdb
         allsel = atomsel("residue %s" % " ".join(str(_) for _ in allions))
         allsel.resid = range(len(allsel))
