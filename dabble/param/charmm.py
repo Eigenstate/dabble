@@ -570,9 +570,8 @@ class CharmmWriter(MoleculeWriter):
         patches = set()
         extpatches = set()
 
-        # Get next available segment number
-        seg = "P%d" % self.segint
-        self.segint += 1
+        # Get a unique and reliabe segment name
+        seg = self.matcher.get_protein_segname(molid, frag)
         fragsel = atomsel("fragment '%s'" % frag)
 
         residues = list(set(fragsel.residue))

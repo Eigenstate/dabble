@@ -247,8 +247,10 @@ class CharmmMatcher(MoleculeMatcher):
                 second = osel
 
         patch = Patch(name="DISU",
-                      segids=["P%d" % first.fragment[0],
-                              "P%d" % second.fragment[0]],
+                      segids=[
+                          self.get_protein_segname(molid, first.fragment[0]),
+                          self.get_protein_segname(molid, second.fragment[0])
+                      ],
                       resids=[first.resid[0],
                               second.resid[0]])
 
@@ -291,6 +293,19 @@ class CharmmMatcher(MoleculeMatcher):
                                selection.resid[0]))
 
         return (resname.pop(), atomnames)
+
+    #==========================================================================
+
+    def get_protein_segname(self, molid, fragment):
+        """
+        Gets the segment name from a given protein fragment.
+        Sometimes fragment numbers for protein can be quite large if there
+        are a lot of other molecules in the system. This method returns a
+        consistent segment name for a given protein fragment.
+        """
+        allfrags = sorted(set(atomsel("resname %s" % " ".join(self.amino_acids),
+                                      molid=molid).fragment))
+        return "P%d" % allfrags.index(fragment)
 
     #=========================================================================
     #                           Private methods                              #
