@@ -58,6 +58,7 @@ class AmberWriter(MoleculeWriter):
             molid (int): VMD molecule ID of system to write
             tmp_dir (str): Directory for temporary files. Defaults to "."
             forcefield (str): charmm, or amber
+            water_model (str): Water model to use
             lipid_sel (str): Lipid selection string. Defaults to "lipid"
             hmr (bool): If hydrogen masses should be repartitioned. Defaults
                 to False.
@@ -73,6 +74,7 @@ class AmberWriter(MoleculeWriter):
 
         # Set forcefield default topologies and parameters
         self.forcefield = kwargs.get("forcefield", "amber")
+        self.water_model = kwargs.get("water_model", "TIP3")
 
         if self.forcefield == "charmm":
             # Import CharmmWriter as needed to avoid circular imports
@@ -456,15 +458,14 @@ class AmberWriter(MoleculeWriter):
 
     def _write_solvent(self):
         """
-        Renumbers the waters into different chains to bypass pdb file format
-        issues with more than 10000 waters in a chain. Also writes ions.
+        Writes ions. Renames waters according to the water model and writes
+        multiple PDB files to bypass PDB file format issues.
 
         Returns:
             (list of str): PDB filenames that were written
         """
-        written = []
-
         # Match up ion names to topology templates
+        written = []
         allions = []
         for resname in set(atomsel("numbonds 0").resname):
             allions.extend(self._rename_by_resname(resname, renumber=True))
@@ -479,85 +480,11 @@ class AmberWriter(MoleculeWriter):
             ionsel.user = 0.0
             written.append(temp)
 
-        # Select all the unwritten waters, using the user field to track which
-        # ones have been written.
-        allw = atomsel('water and user 1.0')
-
-        # Find the problem waters with unordered indices
-        problems = []
-        for r in set(allw.residue):
-            widx = atomsel('residue %s' % r).index
-            if max(widx) - min(widx) != 2:
-                problems.append(r)
-                atomsel('residue %s' % r).user = 0.0 # get it out of allw
-
-        allw.update()
-        num_written = int(len(allw)/(9999*3))+1
-
-        # Pull out and write 10k waters at a time if we have normal waters
-        if allw:
-            print("Going to write %d files for %d water atoms"
-                  % (num_written, len(allw)))
-            for i in range(num_written):
-                _, temp = tempfile.mkstemp(suffix='_%d.pdb' % i,
-                                           prefix='amber_wat_',
-                                           dir=self.tmp_dir)
-                os.close(_)
-                written.append(temp)
-                residues = list(set(allw.residue))[:9999]
-
-                batch = atomsel('residue %s'
-                                % ' '.join([str(x) for x in residues]))
-                try:
-                    batch.resid = [k for k in range(1, int(len(batch)/3)+1)
-                                   for _ in range(3)]
-                except ValueError:
-                    raise DabbleError("\nERROR! You have some waters missing "
-                                      "hydrogens!\nFound %d water residues, but"
-                                      " %d water atoms. Check your crystal "
-                                      "waters in the input structure."
-                                      % (len(residues), len(batch)))
-                batch.user = 0.0
-                batch.write('pdb', temp)
-                allw.update()
-
-        # Now write the problem waters
-        if problems:
-            written.append(self._write_unorderedindex_waters(problems))
+        # Now rename and write water PDBs
+        self._set_water_names()
+        written.extend(self._write_water_pdbs())
 
         return written
-
-    #==========================================================================
-
-    def _write_unorderedindex_waters(self, residues):
-        """
-        Renumbers and sorts the specified waters manually. This is much less
-        efficient but is necessary in cases where atoms within a water molecule
-        are not sequential in index, preventing quick renaming with VMD.
-        Identify problem waters, then call this on them. It'll write its own
-        psf_wat_* file with just those waters, minimizing inefficiency.
-
-        Args:
-            residues (list of int): Problem water molecules
-        Returns:
-            (str) Name of the pdb file written
-        """
-        f, temp = tempfile.mkstemp(suffix='_indexed.pdb', prefix='amber_wat_',
-                                   dir=self.tmp_dir)
-
-        idx = 1
-        with os.fdopen(f, 'w') as fileh:
-            for residx, residue in enumerate(residues):
-                res = atomsel('residue %d' % residue)
-                res.user = 0.0
-
-                for i in res.index:
-                    a = atomsel('index %d' % i) # pylint: disable=invalid-name
-                    fileh.write(self.get_pdb_line(a, idx, residx+1))
-                    idx += 1
-
-            fileh.write('END\n')
-        return temp
 
     #==========================================================================
 
