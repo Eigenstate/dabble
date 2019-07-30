@@ -28,6 +28,7 @@ import os
 import logging
 
 from abc import ABC, abstractmethod
+from dabble import DabbleError
 from pkg_resources import resource_filename
 from vmd import atomsel
 
@@ -94,6 +95,94 @@ class MoleculeWriter(ABC):
 
     #==========================================================================
 
+    def _rename_by_resname(self, resname, renumber=False):
+        """
+        Tries to match up all of one resname in one go, by getting an
+        isomorphism to one residue in the selection and applying the resulting
+        name matching to all other residues. Lots of error checking, will
+        refuse to rename residues that don't have the same original atom
+        names. Only one isomorphism will be  performed, non-matching residues
+        with this resname will be left alone.
+
+        Args:
+            resname (str): Residue name to rename
+            renumber (bool): Whether to renumber the resids of renamed residues
+
+        Returns:
+            (list of int): Residues that were successfully matched
+        """
+        residues = set(atomsel("resname '%s'" % resname,
+                               molid=self.molid).residue)
+        matched = []
+
+        # Gather info about first residue. We'll check the others against this.
+        firstres = residues.pop()
+        sel = atomsel('residue %s' % firstres)
+        resid = 1
+
+        # Find a name match for the first residue
+        newresname, atomnames = self.matcher.get_names(sel, print_warning=True)
+        if not newresname:
+            raise DabbleError("No residue definition for residue %s:%s, "
+                              "residue %d"
+                              % (sel.name[0], sel.resid[0], sel.residue[0]))
+
+        refnames = sel.name # Correct names, before renaming
+
+        # Do the renaming for this residue
+        self._apply_naming_dictionary(atomnames=atomnames,
+                                      resnames=newresname,
+                                      verbose=False)
+        newnames = sel.name # New names, after renaming
+        newresname = sel.resname[0]
+        matched.append(firstres)
+
+        if renumber:
+            sel.resid = resid
+            resid += 1
+
+        # Now loop through all other residues in the selection
+        for res in residues:
+            sel = atomsel("residue %s" % res)
+
+            # Check original atom names are the same
+            if sel.name != refnames:
+                logger.warning("Resid %s doesn't appear to be a standard "
+                               "'%s' residue. Will attempt to match another "
+                               "topology definition." % (sel.resid[0], resname))
+                continue
+
+            # Match up atom names. Since we know atoms are in the same
+            # order as the reference residue, we can safely assign refatoms
+            # to our names without more atom selections
+            sel.name = newnames
+            sel.resname = newresname
+            matched.append(res)
+
+            if renumber:
+                sel.resid = resid
+                resid += 1
+
+        return matched
+
+    #==========================================================================
+
+    @abstractmethod
+    def write(self, filename):
+        pass
+
+    @abstractmethod
+    def get_topologies(self, forcefield):
+        pass
+
+    @abstractmethod
+    def get_parameters(self, forcefield):
+        pass
+
+    #==========================================================================
+    #                              Static methods
+    #==========================================================================
+
     @staticmethod
     def _apply_naming_dictionary(resnames, atomnames, verbose=False):
         """
@@ -130,27 +219,12 @@ class MoleculeWriter(ABC):
 
     #==========================================================================
 
-    @abstractmethod
-    def write(self, filename):
-        pass
-
-    @abstractmethod
-    def get_topologies(self, forcefield):
-        pass
-
-    @abstractmethod
-    def get_parameters(self, forcefield):
-        pass
-
-    #==========================================================================
-    #                              Static methods
-    #==========================================================================
-
     @staticmethod
     def get_pdb_line(atom, index, resindex, hetatom=False):
         """
         Get the PDB-formatted line corresponding to this atom, with a newline
         at the end.
+
         Args:
             atom (VMD atomsel): Atom selected
             index (int): Index in PDB file.

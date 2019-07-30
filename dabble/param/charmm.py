@@ -359,11 +359,10 @@ class CharmmWriter(MoleculeWriter):
         # Collect lipid residues up
         alll = atomsel('(%s) and user 1.0' % self.lipid_sel)
         residues = list(set(alll.residue))
-        residues.sort()
 
         # Lipids not compatible with AMBER parameters, CHARMM format
-        if residues and ("amber" in self.forcefield or
-                         "opls" in self.forcefield):
+        if alll and ("amber" in self.forcefield or
+                     "opls" in self.forcefield):
             raise ValueError("AMBER or OPLS parameters not supported for lipids"
                              " in CHARMM output format")
 
@@ -372,32 +371,18 @@ class CharmmWriter(MoleculeWriter):
             raise NotImplementedError("More than 10k lipids found")
 
         # Loop through all residues and renumber and correctly name them
-        counter = 1
-        for res in residues:
-            sel = atomsel('residue %s' % res)
-
-            # Find a name match for this residue
-            (newname, atomnames) = self.matcher.get_names(sel, print_warning=True)
-            if not newname:
-                raise DabbleError("No residue definition for lipid %s:%s, "
-                                  "residue %d"
-                                  % (sel.name[0], sel.resid[0], sel.residue[0]))
-
-            # Do the renaming
-            self._apply_naming_dictionary(atomnames=atomnames,
-                                          resnames=newname,
-                                          verbose=False)
-            # Renumber residue
-            sel.resid = counter
-            counter = counter + 1
-
+        lipress = []
+        for resname in set(alll.resname):
+            lipress.extend(self._rename_by_resname(resname, renumber=True))
 
         # Write temporary lipid pdb
         _, temp = tempfile.mkstemp(suffix='.pdb', prefix='psf_lipid_',
                                    dir=self.tmp_dir)
         os.close(_)
-        alll.user = 0.0
-        alll.write('pdb', temp)
+
+        saved_lips = atomsel("residue %s" % ' '.join(str(_) for _ in lipress))
+        saved_lips.user = 0.0
+        saved_lips.write('pdb', temp)
 
         # Generate lipid segment
         self.psfgen.add_segment(segid="L", pdbfile=temp)
@@ -420,10 +405,8 @@ class CharmmWriter(MoleculeWriter):
 
         # Select all ions
         allions = []
-        for resname in set(atomsel("element Na K Cl and numbonds is 0").resname):
-            # Rename ions and gather residue numbers
-            residues = self._find_single_residue_names(resname, self.molid)
-            allions += residues
+        for resname in set(atomsel("numbonds 0").resname):
+            allions.extend(self._rename_by_resname(resname, renumber=True))
 
         # Stop if no ions were found
         if not allions:

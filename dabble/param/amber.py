@@ -462,19 +462,21 @@ class AmberWriter(MoleculeWriter):
         Returns:
             (list of str): PDB filenames that were written
         """
-
         written = []
-        # First write all the ions using just vmd
-        _, temp = tempfile.mkstemp(suffix='.pdb', prefix='amber_ion',
-                                   dir=self.tmp_dir)
-        os.close(_)
-        ionnames = [_ for _ in self.matcher.known_res.keys() if '+' in _ or '-' in _]
-        ions = atomsel("resname NA CL %s and user 1.0"
-                       % ' '.join("'%s'" % _ for _ in ionnames))
-        if ions:
-            ions.resid = range(1, len(ions) + 1)
-            ions.write('pdb', temp)
-            ions.user = 0.0
+
+        # Match up ion names to topology templates
+        allions = []
+        for resname in set(atomsel("numbonds 0").resname):
+            allions.extend(self._rename_by_resname(resname, renumber=True))
+
+        # Dump to a temporary PDB file
+        if allions:
+            _, temp = tempfile.mkstemp(suffix='.pdb', prefix='amber_ion',
+                                       dir=self.tmp_dir)
+            os.close(_)
+            ionsel = atomsel("residue %s" % ' '.join(str(_) for _ in allions))
+            ionsel.write('pdb', temp)
+            ionsel.user = 0.0
             written.append(temp)
 
         # Select all the unwritten waters, using the user field to track which
