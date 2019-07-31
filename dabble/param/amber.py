@@ -607,6 +607,11 @@ class AmberWriter(MoleculeWriter):
                     raise DabbleError("Unknown topology type: %s" % i)
             fileh.write('\n')
 
+            # Alias for water resnames (already done in water leaprc, but
+            # we do it here explicitly). This makes visualization easier since
+            # the water resname is wat
+            fileh.write("WAT = %s\n" % self.WATER_NAMES[self.water_model])
+
             # Add off files here
             for i in [_ for _ in self.topologies + self.parameters if ".off" in _]:
                 fileh.write("loadoff %s\n" %i)

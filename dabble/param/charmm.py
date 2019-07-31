@@ -274,6 +274,10 @@ class CharmmWriter(MoleculeWriter):
         self._set_water_names()
         pdbs = self._write_water_pdbs()
 
+        # Use an alias so resname is still WAT, for easier visualization in VMD
+        self.psfgen.alias_residue(top_resname=self.WATER_NAMES[self.water_model],
+                                  pdb_resname="WAT")
+
         for i, pdb in enumerate(pdbs):
             self.psfgen.add_segment(segid="W%d" % i, pdbfile=pdb)
             self.psfgen.read_coords(segid="W%d" % i, filename=pdb)
