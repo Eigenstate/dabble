@@ -29,7 +29,7 @@ import signal
 import sys
 import tempfile
 from dabble import VmdSilencer, DabbleBuilder, supported_formats
-from dabble.param import supported_forcefields
+from dabble.param import supported_forcefields, supported_water_models
 from pkg_resources import resource_filename
 
 __version__ = '2.7.11'
@@ -136,6 +136,15 @@ def main(argv=None):
                        help="Force field to use for parameterization. Currently"
                             " supported values: %s"
                              % ", ".join(supported_forcefields.keys())
+                      )
+    group.add_argument('--water', dest='water_model',
+                       type=str, metavar='<water model>',
+                       default='tip3',
+                       choices=supported_water_models.keys(),
+                       required=False, action="store",
+                       help="Water model to use for paramterization. Currently"
+                            " supported values: %s"
+                            % ", ".join(supported_water_models.keys())
                       )
     group.add_argument('--hmr', dest='hmassrepartition',
                        default=False,

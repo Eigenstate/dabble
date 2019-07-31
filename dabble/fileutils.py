@@ -171,6 +171,8 @@ def write_final_system(out_fmt, out_name, molid, **kwargs):
       lipid_sel (str): Lipid selection
       hmassrepartition (bool): Whether or not to repartition hydrogen
         masses
+      forcefield (str): Force field to use, defaults to charmm
+      water_model (str): Water model to use, defaults to tip3
       debug_verbose (bool): Extra debug output from tleap
 
     Returns:
@@ -185,6 +187,8 @@ def write_final_system(out_fmt, out_name, molid, **kwargs):
         kwargs['lipid_sel'] = "lipid or resname POPS POPG"
     if kwargs.get('forcefield') is None:
         kwargs['forcefield'] = "charmm"
+    if kwargs.get('water_model') is None:
+        kwargs['water_model'] = "tip3"
     if kwargs.get('debug_verbose') is None:
         kwargs['debug_verbose'] = False
 
@@ -208,6 +212,7 @@ def write_final_system(out_fmt, out_name, molid, **kwargs):
         writer = CharmmWriter(molid=temp_mol,
                               tmp_dir=kwargs['tmp_dir'],
                               forcefield=kwargs['forcefield'],
+                              water_model=kwargs['water_model'],
                               lipid_sel=kwargs['lipid_sel'],
                               extra_topos=kwargs.get('extra_topos', []),
                               debug_verbose=kwargs.get('debug_verbose', False))
@@ -221,6 +226,7 @@ def write_final_system(out_fmt, out_name, molid, **kwargs):
         writeit = AmberWriter(molid=temp_mol,
                               tmp_dir=kwargs['tmp_dir'],
                               forcefield=kwargs['forcefield'],
+                              water_model=kwargs['water_model'],
                               lipid_sel=kwargs.get('lipid_sel'),
                               hmr=kwargs.get('hmassrepartition'),
                               extra_topos=kwargs.get('extra_topos', []),
@@ -240,7 +246,8 @@ def write_final_system(out_fmt, out_name, molid, **kwargs):
 
         writeit = GromacsWriter(molid=temp_mol,
                                 tmp_dir=kwargs['tmp_dir'],
-                                forcefield=kwargs['forcefield'])
+                                forcefield=kwargs['forcefield'],
+                                water_model=kwargs['water_model'])
         writeit.write(mae_name.replace(".mae", ""))
 
     # LAMMPS has its own writer
