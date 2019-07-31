@@ -111,7 +111,7 @@ class CharmmMatcher(MoleculeMatcher):
 
         # Create dictionary of patched amino acids that we know about
         for res in [s for s in self.known_res.keys()
-                    if s in self.amino_acids]:
+                    if s in self.AMINO_ACIDS]:
 
             # Also add the +C -N linkages in amino acids. There's no reliable
             # way to add these using the info in the psf files (impropers and
@@ -200,7 +200,7 @@ class CharmmMatcher(MoleculeMatcher):
         truncated.remove_nodes_from([n for n in rgraph.nodes() if \
                                      rgraph.node[n]["residue"] != "self"])
         matches = {}
-        for matchname in self.amino_acids:
+        for matchname in self.AMINO_ACIDS:
             graph = self.known_res.get(matchname)
             if not graph:
                 continue
@@ -303,7 +303,7 @@ class CharmmMatcher(MoleculeMatcher):
         are a lot of other molecules in the system. This method returns a
         consistent segment name for a given protein fragment.
         """
-        allfrags = sorted(set(atomsel("resname %s" % " ".join(self.amino_acids),
+        allfrags = sorted(set(atomsel("resname %s" % " ".join(self.AMINO_ACIDS),
                                       molid=molid).fragment))
         return "P%d" % allfrags.index(fragment)
 

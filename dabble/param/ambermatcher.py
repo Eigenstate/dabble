@@ -68,9 +68,9 @@ class AmberMatcher(MoleculeMatcher):
         self._load_off(resource_filename(__name__, "parameters/hoh.lib"))
 
 
-    #++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
-    #                                CONSTANTS                                    #
-    #++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+    #+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+    #                               CONSTANTS                                  #
+    #+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
 
     # pylint: disable=bad-whitespace,bad-continuation
     # All the elements leap knows about. Any other elements will be marked
@@ -92,8 +92,8 @@ class AmberMatcher(MoleculeMatcher):
                    85: 'At', 86: 'Rn', 88: 'Ra', 90: 'Th', 92: 'U', 94: 'Pu'}
     # pylint: enable=bad-whitespace,bad-continuation
 
-    lipid_heads = ["PC", "PE", "PS", "PH-", "H2-", "PGR", "PGS"]
-    lipid_tails = ["LA", "MY", "PA", "ST", "OL", "LEO", "LEN", "AR", "DHA"]
+    LIPID_HEADS = ["PC", "PE", "PS", "PH-", "H2-", "PGR", "PGS"]
+    LIPID_TAILS = ["LA", "MY", "PA", "ST", "OL", "LEO", "LEN", "AR", "DHA"]
 
     #=========================================================================
     #                            Public methods                              #
@@ -263,7 +263,7 @@ class AmberMatcher(MoleculeMatcher):
 
         # Prefer canonical amino acids here over weird other types
         if len(possible_matches) > 1:
-            canonicals = [_ for _ in possible_matches if _ in self.amino_acids]
+            canonicals = [_ for _ in possible_matches if _ in self.AMINO_ACIDS]
             if len(canonicals) == 1:
                 print("\tPreferring canonical acid %s" % canonicals[0])
                 matchname = canonicals.pop()
@@ -382,7 +382,7 @@ class AmberMatcher(MoleculeMatcher):
         # Remove _join residues from the head so that subgraph match can
         # be successfully completed
         matches = {}
-        for matchname in (_ for _ in self.lipid_heads if self.known_res.get(_)):
+        for matchname in (_ for _ in self.LIPID_HEADS if self.known_res.get(_)):
             graph = self.known_res.get(matchname)
             truncated = nx.Graph(graph)
             truncated.remove_nodes_from([n for n in graph.nodes() if \
@@ -451,7 +451,7 @@ class AmberMatcher(MoleculeMatcher):
         for t in nx.connected_components(rgraph):
             tgraph = rgraph.subgraph(t)
             matched = False
-            for matchname in (_ for _ in self.lipid_tails if \
+            for matchname in (_ for _ in self.LIPID_TAILS if \
                               self.known_res.get(_)):
                 graph = self.known_res.get(matchname)
                 truncated = nx.Graph(graph)

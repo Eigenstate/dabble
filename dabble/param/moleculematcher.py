@@ -25,6 +25,7 @@ Copyright (C) 2019 Robin Betz
 from __future__ import print_function
 import logging
 from abc import ABC, abstractmethod
+from dabble import DabbleError
 from itertools import product
 
 import networkx as nx
@@ -74,7 +75,7 @@ class MoleculeMatcher(ABC): # pylint: disable=too-few-public-methods
 
     # For checking which residues can have patchs
     # pylint: disable=invalid-name
-    amino_acids = "ALA ARG ASN ASP CYS CYX GLN GLU GLY HSD HSE HSP ILE LEU " \
+    AMINO_ACIDS = "ALA ARG ASN ASP CYS CYX GLN GLU GLY HSD HSE HSP ILE LEU " \
                   "LYS MET PHE PRO SER THR TRP TYR VAL".split()
     # pylint: enable=invalid-name
 
