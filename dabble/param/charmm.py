@@ -63,6 +63,18 @@ class CharmmWriter(MoleculeWriter):
     charmm naming conventions.
     """
 
+    #+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+    #                               CONSTANTS                                  #
+    #+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+
+    WATER_NAMES = {
+                   "tip3"  : "TIP3",
+                   "tip4e" : "TP4E",
+                   "spce"  : "SPCE",
+                  }
+    WATER_O_NAME  = "OH2"
+    WATER_H_NAMES = ["H1", "H2"]
+
     #==========================================================================
 
     def __init__(self, molid, **kwargs):
@@ -94,8 +106,8 @@ class CharmmWriter(MoleculeWriter):
         self.forcefield = kwargs.get("forcefield", "charmm")
         self.water_model = kwargs.get("water_model", "TIP3")
 
-        self.topologies = self.get_topologies(self.forcefield)
-        self.parameters = self.get_parameters(self.forcefield)
+        self.topologies = self.get_topologies(self.forcefield, self.water_model)
+        self.parameters = self.get_parameters(self.forcefield, self.water_model)
 
         if "charmm" in self.forcefield:
             if self.hmr:
@@ -140,6 +152,7 @@ class CharmmWriter(MoleculeWriter):
             prmtopgen = AmberWriter(molid=self.molid,
                                     tmp_dir=self.tmp_dir,
                                     forcefield=self.forcefield,
+                                    water_model=self.water_model,
                                     hmr=self.hmr,
                                     lipid_sel=self.lipid_sel,
                                     extra_topos=self.extra_topos,
@@ -173,7 +186,7 @@ class CharmmWriter(MoleculeWriter):
     #=========================================================================
 
     @classmethod
-    def get_topologies(cls, forcefield):
+    def get_topologies(cls, forcefield, water_model):
 
         if forcefield == "charmm":
             topos = [
@@ -183,34 +196,41 @@ class CharmmWriter(MoleculeWriter):
                 "top_all36_lipid.rtf",
                 "top_all36_carb.rtf",
                 "top_all36_na.rtf",
-                "toppar_water_ions.str",
                 "toppar_all36_prot_na_combined.str",
                 "toppar_all36_prot_fluoro_alkanes.str"
             ]
+            if water_model == "tip3":
+                topos.append("toppar_water_ions.str")
+            elif water_model == "tip4e":
+                topos.append("toppar_water_ions_tip4p_ew.str")
+            elif water_model == "spce":
+                topos.append("toppar_water_ions_spc_e.str")
 
         elif forcefield == "opls":
             topos = [
                 "opls_aam.rtf",
                 "opls_aam_caps.rtf"
             ]
+            if water_model != "tip3":
+                raise DabbleError("Only TIP3 water model supported for OPLS")
 
         elif forcefield == "amber":
             from dabble.param import AmberWriter # avoid circular dependency
-            return AmberWriter.get_topologies(forcefield)
+            return AmberWriter.get_topologies(forcefield, water_model)
 
         else:
             raise ValueError("Invalid forcefield: '%s'" % forcefield)
+
 
         return [cls._get_forcefield_path(top) for top in topos]
 
     #=========================================================================
 
     @classmethod
-    def get_parameters(cls, forcefield):
+    def get_parameters(cls, forcefield, water_model):
 
         if forcefield == "charmm":
             prms = [
-                "toppar_water_ions.str",
                 "par_all36m_prot.prm",
                 "par_all36_cgenff.prm",
                 "par_all36_lipid.prm",
@@ -218,15 +238,23 @@ class CharmmWriter(MoleculeWriter):
                 "par_all36_na.prm",
                 "toppar_all36_prot_na_combined.str"
             ]
+            if water_model == "tip3":
+                prms.append("toppar_water_ions.str")
+            elif water_model == "tip4e":
+                prms.append("toppar_water_ions_tip4p_ew.str")
+            elif water_model == "spce":
+                prms.append("toppar_water_ions_spc_e.str")
 
         elif forcefield == "amber":
             from dabble.param import AmberWriter # avoid circular dependency
-            return AmberWriter.get_parameters(forcefield)
+            return AmberWriter.get_parameters(forcefield, water_model)
 
         elif forcefield == "opls":
             prms = [
                 "opls_aam.prm"
             ]
+            if water_model != "tip3":
+                raise DabbleError("Only TIP3 water model supported for OPLS")
 
         else:
             raise ValueError("Invalid forcefield: '%s'" % forcefield)
@@ -249,6 +277,14 @@ class CharmmWriter(MoleculeWriter):
         for i, pdb in enumerate(pdbs):
             self.psfgen.add_segment(segid="W%d" % i, pdbfile=pdb)
             self.psfgen.read_coords(segid="W%d" % i, filename=pdb)
+
+        # If water model includes dummy atoms, guess the coordinates
+        # This is safe as only waters have been added to the psfgen state
+        # so far, so actually broken atoms won't be fixed on accident.
+        if self.water_model != "tip3":
+            self.psfgen.guess_coords()
+            self.psfgen.regenerate_angles()
+            self.psfgen.regenerate_dihedrals()
 
     #==========================================================================
 
@@ -724,7 +760,6 @@ class CharmmWriter(MoleculeWriter):
         for top in self.topologies:
             print("  - %s" % os.path.split(top)[1])
             self.psfgen.read_topology(top)
-
 
         # Mark all atoms as unsaved with the user field
         atomsel('all', molid=self.molid).user = 1.0

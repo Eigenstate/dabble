@@ -48,6 +48,19 @@ class AmberWriter(MoleculeWriter):
     lipid conversion script to create leap input files.
     """
 
+    #+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+    #                               CONSTANTS                                  #
+    #+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+
+    # Leaprc handles water name translation for us
+    WATER_NAMES = {
+                   "tip3"  : "TP3",
+                   "tip4e" : "T4E",
+                   "spce"  : "SPC",
+                  }
+    WATER_O_NAME  = "O"
+    WATER_H_NAMES = ["H1", "H2"]
+
     #==========================================================================
 
     def __init__(self, molid, **kwargs):
@@ -81,19 +94,25 @@ class AmberWriter(MoleculeWriter):
             from dabble.param import CharmmWriter
 
             # Topologies used will be found and returned by CharmmWriter
-            self.topologies = CharmmWriter.get_topologies(self.forcefield)
-            self.parameters = CharmmWriter.get_parameters(self.forcefield)
+            self.topologies = CharmmWriter.get_topologies(self.forcefield,
+                                                          self.water_model)
+            self.parameters = CharmmWriter.get_parameters(self.forcefield,
+                                                          self.water_model)
 
         # Duplicate code here for clarity
         elif self.forcefield == "opls":
             from dabble.param import CharmmWriter
-            self.topologies = CharmmWriter.get_topologies(self.forcefield)
-            self.parameters = CharmmWriter.get_parameters(self.forcefield)
+            self.topologies = CharmmWriter.get_topologies(self.forcefield,
+                                                          self.water_model)
+            self.parameters = CharmmWriter.get_parameters(self.forcefield,
+                                                          self.water_model)
 
         elif self.forcefield == "amber":
             # This will raise DabbleError if AMBERHOME is unset
-            self.topologies = self.get_topologies(self.forcefield)
-            self.parameters = self.get_parameters(self.forcefield)
+            self.topologies = self.get_topologies(self.forcefield,
+                                                  self.water_model)
+            self.parameters = self.get_parameters(self.forcefield,
+                                                  self.water_model)
             self.parameters = []
 
         else:
@@ -129,6 +148,7 @@ class AmberWriter(MoleculeWriter):
             charmmw = CharmmWriter(molid=self.molid,
                                    tmp_dir=self.tmp_dir,
                                    forcefield=self.forcefield,
+                                   water_model=self.water_model,
                                    lipid_sel=self.lipid_sel,
                                    extra_topos=self.extra_topos,
                                    extra_params=self.extra_params,
@@ -501,7 +521,7 @@ class AmberWriter(MoleculeWriter):
         """
         pdbinfos = []
         psel = atomsel("user 1.0 and resname %s"
-                       % " ".join(self.matcher.amino_acids))
+                       % " ".join(self.matcher.AMINO_ACIDS))
 
         # Start the protein numbering from 1, as it's lost in the prmtop anyway.
         # Make resids increase across chains/fragments too, so that bond section
@@ -665,7 +685,7 @@ class AmberWriter(MoleculeWriter):
         # Do a quick sanity check that all the protein is present.
         mademol = molecule.load("parm7", self.outprefix+ ".prmtop",
                                 "rst7", self.outprefix+ ".inpcrd")
-        checkacids = " ".join(self.matcher.amino_acids)
+        checkacids = " ".join(self.matcher.AMINO_ACIDS)
         if len(atomsel("resname %s" % checkacids, molid=mademol)) \
            != len(atomsel("resname %s" % checkacids, molid=self.molid)):
             print(out)
@@ -717,7 +737,7 @@ class AmberWriter(MoleculeWriter):
     #========================================================================#
 
     @classmethod
-    def get_topologies(cls, forcefield):
+    def get_topologies(cls, forcefield, water_model):
 
         if forcefield == "amber":
             if not os.environ.get("AMBERHOME"):
@@ -729,9 +749,17 @@ class AmberWriter(MoleculeWriter):
         topologies = [
             "leaprc.protein.ff14SB",
             "leaprc.lipid14",
-            "leaprc.water.tip3p",
             "leaprc.gaff2",
         ]
+        if water_model == "tip3":
+            topologies.append("leaprc.water.tip3p")
+        elif water_model == "tip4e":
+            topologies.append("leaprc.water.tip4pew")
+        elif water_model == "spce":
+            topologies.append("leaprc.water.spce")
+        else:
+            raise DabbleError("Water model '%s' not supported with AMBER"
+                              % water_model)
 
         for i, top in enumerate(topologies):
             topologies[i] = os.path.abspath(os.path.join(ambpath, top))
@@ -743,9 +771,9 @@ class AmberWriter(MoleculeWriter):
     #========================================================================#
 
     @classmethod
-    def get_parameters(cls, forcefield):
+    def get_parameters(cls, forcefield, water_model):
         # AMBER topologies and parameters use the same leaprcs
-        return cls.get_topologies(forcefield)
+        return cls.get_topologies(forcefield, water_model)
 
     #========================================================================#
 

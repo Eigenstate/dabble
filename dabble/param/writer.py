@@ -48,6 +48,14 @@ class MoleculeWriter(ABC):
         output_prefix (str): Prefix for output file names. Appropriate suffix
             will be added depending on the file type.
     """
+    #++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+    #                                CONSTANTS                                    #
+    #++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+
+    # Will be populated by appropriate writer
+    WATER_NAMES = {}
+    WATER_O_NAME = None
+    WATER_H_NAMES = None
 
     #==========================================================================
 
@@ -80,6 +88,9 @@ class MoleculeWriter(ABC):
         self.debug = kwargs.get("debug_verbose", False)
         self.override = kwargs.get("override_defaults", False)
         self.hmr = kwargs.get("hmr", False)
+
+        self.forcefield = kwargs.get("forcefield")
+        self.water_model = kwargs.get("water_model")
 
         self.extra_topos = kwargs.get("extra_topos")
         self.extra_params = kwargs.get("extra_params")
@@ -175,21 +186,24 @@ class MoleculeWriter(ABC):
         water model. We do it this way instead of with the GraphMatcher because
         waters can have a fake bond
         """
+        # Sanity check
+        if self.water_model not in self.WATER_NAMES:
+            raise DabbleError("Unsupported water model '%s' with forcefield "
+                              "'%s'" % (self.water_model, self.forcefield))
+
+        watres = self.WATER_NAMES[self.water_model]
+        if watres not in self.matcher.known_res:
+            raise DabbleError("Water resname '%s' for model '%s' not defined "
+                              "in topology files" % (watres, self.water_model))
 
         # Set consistent residue and atom names, crystal waters
         # can be named HOH, etc
-        atomsel('water').resname = "TIP3"
-        atomsel('resname TIP3').chain = "W"
-        atomsel('resname TIP3 and element O').name = "OH2"
+        residues = set(atomsel("water").residue)
+        watsel = "residue %s" % ' '.join(str(_) for _ in residues)
+        atomsel(watsel).resname = watres
 
-        # Dowser can name water hydrogens strangely
-        atomsel('resname TIP3 and name HW1').name = "H1"
-        atomsel('resname TIP3 and name HW2').name = "H2"
-
-        # Select all the waters. We'll use the user field to track which
-        # ones have been written
-        allw = atomsel('water and user 1.0')
-        print("Found %d water residues" % len(set(allw.residue)))
+        atomsel("%s and element O" % watsel).name = self.WATER_O_NAME
+        atomsel("%s and not noh" % watsel).name = self.WATER_H_NAMES * len(residues)
 
     #==========================================================================
 
