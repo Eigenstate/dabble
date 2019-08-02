@@ -200,9 +200,9 @@ class MoleculeWriter(ABC):
         # can be named HOH, etc
         residues = set(atomsel("water").residue)
         watsel = "residue %s" % ' '.join(str(_) for _ in residues)
-        atomsel(watsel).resname = "WAT"
 
-        atomsel("%s and element O" % watsel).name = self.WATER_O_NAME
+        atomsel(watsel).resname = self.WATER_NAMES[self.water_model]
+        atomsel("%s and noh" % watsel).name = self.WATER_O_NAME
         atomsel("%s and not noh" % watsel).name = self.WATER_H_NAMES * len(residues)
 
     #==========================================================================

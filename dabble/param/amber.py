@@ -221,7 +221,8 @@ class AmberWriter(MoleculeWriter):
             ValueError if a residue definition could not be found
         """
 
-        nonlips = set(atomsel("not (%s)" % self.lipid_sel,
+        self._set_water_names()
+        nonlips = set(atomsel("not (water or %s)" % self.lipid_sel,
                               molid=self.molid).residue)
         n_res = len(nonlips)
         conect = set() # Atom indices bound to noncanonical residues
@@ -500,8 +501,7 @@ class AmberWriter(MoleculeWriter):
             ionsel.user = 0.0
             written.append(temp)
 
-        # Now rename and write water PDBs
-        self._set_water_names()
+        # Now write water PDBs, waters are already named
         written.extend(self._write_water_pdbs())
 
         return written
@@ -640,8 +640,10 @@ class AmberWriter(MoleculeWriter):
 
             # Need to combine before creating bond lines since can't create
             # bonds between UNITs
-            fileh.write("p = combine { %s }\n"
-                        % ' '.join(["pp%d" % i for i in range(len(prot_pdbseqs))]))
+            if prot_pdbseqs:
+                fileh.write("p = combine { %s }\n"
+                            % ' '.join(["pp%d" % i
+                                        for i in range(len(prot_pdbseqs))]))
 
             # Create bond lines
             while conect:
