@@ -95,7 +95,7 @@ class DabbleBuilder(object):
                                                          "popc.mae"))
 
         # Process input arguments
-        if self.opts.get('membrane_system') == 'TIP3':
+        if self.opts.get('membrane_system') == 'water':
             self.opts['membrane_system'] = resource_filename(__name__, \
                     "lipid_membranes/tip3pbox.mae")
 
@@ -951,7 +951,7 @@ class DabbleBuilder(object):
 #+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
 
 def _find_convertible_water_molecule(molid, # pylint: disable=invalid-name
-                                     water_sel='resname TIP3',
+                                     water_sel='resname HOH WAT TIP3',
                                      min_ion_dist=5.0):
     """
     Finds a water molecule that can be converted to an ion
