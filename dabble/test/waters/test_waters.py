@@ -13,7 +13,7 @@ def general_water(tmpdir, writerclass, forcefield, water_model):
     """
     Tests water generally
     """
-    m = molecule.load("pdb", "tip3.pdb")
+    m = molecule.load("pdb", os.path.join(dir, "tip3.pdb"))
     p = str(tmpdir)
 
     w = writerclass(molid=m, tmp_dir=p,
