@@ -34,7 +34,7 @@ def test_amber_custom_residues(tmpdir):
     from dabble.param import AmberWriter
 
     # Generate the file
-    p = str(tmpdir.mkdir("3nob_custom"))
+    p = str(tmpdir)
     molid = molecule.load("mae", os.path.join(dir, "prepped.mae"))
     w = AmberWriter(molid, tmp_dir=p, forcefield="amber", hmr=False,
                     extra_topos=[os.path.join(dir, "glx.off"),
@@ -56,7 +56,7 @@ def test_amber_custom_residues(tmpdir):
 def test_pdb_amber_custom_residues(tmpdir):
     from dabble.param import AmberWriter
 
-    p = str(tmpdir.mkdir("3nob_pdb"))
+    p = str(tmpdir)
     molid = molecule.load("pdb", os.path.join(dir, "prepped.pdb"))
     w = AmberWriter(molid, tmp_dir=p, forcefield="amber", hmr=False,
                     extra_topos=[os.path.join(dir, "glx.off"),
@@ -103,7 +103,7 @@ def test_pdb_commandline(tmpdir):
 def test_gromacs_amber(tmpdir):
     from dabble.param import GromacsWriter
 
-    p = str(tmpdir.mkdir("3nob_gromacs"))
+    p = str(tmpdir)
     molid = molecule.load("mae", os.path.join(dir, "prepped.mae"))
     w = GromacsWriter(molid, tmp_dir=p,
                       forcefield="amber",

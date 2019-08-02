@@ -43,7 +43,7 @@ def test_water_box(tmpdir):
     from vmd import molecule
 
     # Build a system with well defined dimensions
-    p = str(tmpdir.mkdir("po4_hmr"))
+    p = str(tmpdir)
     filename = os.path.join(dir, "rho_test.mae")
     b = DabbleBuilder(solute_filename=filename,
                       output_filename=os.path.join(p, "test.mae"),
@@ -69,7 +69,7 @@ def test_hmr_param_amber(tmpdir):
     from vmd import molecule
 
     # Build system
-    p = str(tmpdir.mkdir("hmr_amber"))
+    p = str(tmpdir)
     molid = molecule.load("mae", os.path.join(dir, "rho_test.mae"))
     w = AmberWriter(tmp_dir=p, molid=molid, hmr=True, forcefield="amber",
                     extra_topos=[os.path.join(os.environ.get("AMBERHOME"),
@@ -89,7 +89,7 @@ def test_hmr_param(tmpdir):
     from vmd import molecule
 
     # Build the system with HMR
-    p = str(tmpdir.mkdir("hmr_param"))
+    p = str(tmpdir)
     molid = molecule.load("mae", os.path.join(dir, "rho_test.mae"))
     w = AmberWriter(tmp_dir=p, molid=molid, hmr=True, forcefield="charmm")
     w.write(os.path.join(p, "test"))

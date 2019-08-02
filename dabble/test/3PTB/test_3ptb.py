@@ -10,7 +10,7 @@ def test_multiple_insertion_codes(tmpdir):
     from dabble.param import CharmmWriter
 
     # Generate the file
-    p = str(tmpdir.mkdir("3ptb"))
+    p = str(tmpdir)
     molid = molecule.load("mae", os.path.join(dir, "3PTB_1lig_prepped.mae"))
     w = CharmmWriter(molid=molid, tmp_dir=p, forcefield="charmm", hmr=False,
                      override_defaults=False)

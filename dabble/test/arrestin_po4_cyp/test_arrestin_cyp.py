@@ -15,7 +15,7 @@ def test_covalent_ligand_patches(tmpdir):
     from dabble.param import CharmmWriter
 
     # Parameterize with charmm parameters
-    p = str(tmpdir.mkdir("multiligand_rename"))
+    p = str(tmpdir)
     molid = molecule.load("mae",
                           os.path.join(dir,
                                        "rho_arr_CYP_prepped_aligned_dowsered.mae"))
@@ -82,7 +82,7 @@ def test_covalent_ligand_amber(tmpdir):
     from dabble.param import AmberWriter
 
     # Parameterize with charmm parameters
-    p = str(tmpdir.mkdir("multiligand_rename"))
+    p = str(tmpdir)
     molid = molecule.load("mae",
                           os.path.join(dir,
                                        "rho_arr_CYP_prepped_aligned_dowsered.mae"))
@@ -150,7 +150,7 @@ def test_covalent_ligand_gromacs_charmm(tmpdir):
     from dabble.param import GromacsWriter
 
     # Parameterize with charmm parameters
-    p = str(tmpdir.mkdir("multiligand_gromacs"))
+    p = str(tmpdir)
     molid = molecule.load("mae",
                           os.path.join(dir,
                                        "rho_arr_CYP_prepped_aligned_dowsered.mae"))

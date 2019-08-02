@@ -12,7 +12,7 @@ def test_amber_params(tmpdir):
     from dabble.param import AmberWriter
 
     # Parameterize with amber parameters
-    p = str(tmpdir.mkdir("multiligand_rename"))
+    p = str(tmpdir)
     molid = molecule.load("mae", os.path.join(dir, "07HT2B_WT.mae"))
     w = AmberWriter(molid, tmp_dir=p, forcefield="amber", hmr=False,
                     extra_topos=[os.path.join(dir,"lsd.lib")],

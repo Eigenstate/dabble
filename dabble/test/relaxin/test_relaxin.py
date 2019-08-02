@@ -42,7 +42,7 @@ def test_relaxin_disulfides_charmm(tmpdir):
     from vmd import  molecule
 
     # Build the system
-    p = str(tmpdir.mkdir("charmm_disu"))
+    p = str(tmpdir)
     molid = molecule.load("mae", os.path.join(dir, "2MV1_dowserwat.mae"))
     w = CharmmWriter(tmp_dir=p, molid=molid)
     w.write(os.path.join(p, "test"))
@@ -61,7 +61,7 @@ def test_relaxin_disulfides_amber(tmpdir):
     from vmd import molecule
 
     # Build the system
-    p = str(tmpdir.mkdir("amber_disu"))
+    p = str(tmpdir)
     molid = molecule.load("mae", os.path.join(dir, "2MV1_dowserwat.mae"))
     w = AmberWriter(molid=molid, tmp_dir=p, forcefield="amber")
     w.write(os.path.join(p, "test"))

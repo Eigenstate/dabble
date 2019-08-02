@@ -17,7 +17,7 @@ def test_absolute_box(tmpdir):
     from dabble import DabbleBuilder
 
     # Build the system
-    p = str(tmpdir.mkdir("absolute_box"))
+    p = str(tmpdir)
     b = DabbleBuilder(solute_filename=os.path.join(dir, "dor_ligs.mae"),
                       output_filename=os.path.join(p, "test.mae"),
                       user_x=75., user_y=75., user_z=115.,
@@ -42,7 +42,7 @@ def test_absolute_box(tmpdir):
 #    from vmd import atomsel, molecule
 #
 #    from dabble import DabbleBuilder
-#    p = str(tmpdir.mkdir("absolute_box"))
+#    p = str(tmpdir)
 #
 #    # Building the system should raise a valueerror in sanity check
 #    # as resids are duplicated in protein chain
