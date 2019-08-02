@@ -87,7 +87,7 @@ class AmberWriter(MoleculeWriter):
 
         # Set forcefield default topologies and parameters
         self.forcefield = kwargs.get("forcefield", "amber")
-        self.water_model = kwargs.get("water_model", "TIP3")
+        self.water_model = kwargs.get("water_model", "tip3")
 
         if self.forcefield == "charmm":
             # Import CharmmWriter as needed to avoid circular imports

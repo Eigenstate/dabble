@@ -104,7 +104,7 @@ class CharmmWriter(MoleculeWriter):
 
         # Set forcefield default topologies and parameters
         self.forcefield = kwargs.get("forcefield", "charmm")
-        self.water_model = kwargs.get("water_model", "TIP3")
+        self.water_model = kwargs.get("water_model", "tip3")
 
         self.topologies = self.get_topologies(self.forcefield, self.water_model)
         self.parameters = self.get_parameters(self.forcefield, self.water_model)
