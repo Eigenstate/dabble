@@ -108,24 +108,26 @@ def main(argv=None):
                        "Currently supported extensions: .pdb, .mae, .psf, .dms,"
                        " .prmtop"
                       )
-    group.add_argument('-format', '--format', dest='format',
+    group.add_argument('--format', dest='format',
                        metavar='<format>', type=str,
                        default=None,
                        choices=supported_formats.keys(),
                        help="Format of output file. Supported: %s"
                        % ", ".join(supported_formats.keys())
                       )
-    group.add_argument('-M', '--membrane-system', dest='membrane_system',
-                       type=str, metavar='<solvent>',
-                       default=resource_filename(__name__, "lipid_membranes/popc.mae"),
-                       help="Path to pre-built membrane + solvent block. Must "
-                       "be a .mae file. See documentation to create your own. "
-                       "Defaults to a POPC membrane",
-                       )
     group.add_argument('-O', '--overwrite', dest='overwrite',
                        action='store_true',
                        help="Overwrite existing files with requested output",
                       )
+
+    group.add_argument('-M', '--membrane', dest='membrane_system',
+                       type=str, metavar='<solvent>',
+                       default=resource_filename(__name__, "lipid_membranes/popc.mae"),
+                       help="Path to pre-built membrane + solvent block. Must "
+                       "be a .mae file. See documentation to create your own. "
+                       "Defaults to a POPC membrane. Specify 'water' for no "
+                       "membrane."
+                       )
 
     group = parser.add_argument_group('Parameterization Options')
     group.add_argument('-ff', '--forcefield', dest='forcefield',

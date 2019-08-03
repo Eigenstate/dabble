@@ -15,6 +15,7 @@ supported_formats = {
     "desmond": "",
     "gromacs": ".top and .gro GROMACS topology and coordinate files",
     "lammps": ".dat file suitable for input to LAMMPS",
+    "mae": ".mae structure file, no parameters or atom types",
     "pdb": "Protein Data Bank PDB file. Will not contain explicit bonds."
 }
 

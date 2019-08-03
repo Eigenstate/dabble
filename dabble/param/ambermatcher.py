@@ -495,8 +495,9 @@ class AmberMatcher(MoleculeMatcher):
         elif "frcmod" in filename:
             return self._load_params(filename)
         elif "leaprc" not in filename:
-            raise DabbleError("AmberMatcher only parses leaprc or frcmod topologies!"
-                              "Can't read topology '%s'" % filename)
+            raise DabbleError("AmberMatcher only parses .leaprc, .off, or "
+                              ".frcmod topologies! Can't read topology '%s'"
+                              % filename)
 
         # Set AMBER search path for lib files
         leapdir = os.path.join(os.environ["AMBERHOME"], "dat", "leap")

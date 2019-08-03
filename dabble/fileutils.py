@@ -292,6 +292,8 @@ def check_write_ok(filename, out_fmt, overwrite=False):
         suffixes.extend(['prmtop', 'inpcrd'])
     elif out_fmt == 'gromacs':
         suffixes.extend(['.gro', '.top'])
+    elif out_fmt == 'lammps':
+        suffixes.extend(['.dat'])
 
     exists = []
     for sfx in suffixes:

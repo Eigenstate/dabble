@@ -16,7 +16,7 @@ supported_water_models = {
     "tip3": "TIP3 model, from W.L. Jorgensen, J.Chandrasekhar, J.D. Madura; "
             "R.W. Impey, M.L. Klein; Comparison of simple potential functions "
             "for simulating liquid water; J. Chem. Phys. 79 926-935 (1983).",
-    "tip4p": "TIP4P-Ewald, from H.W. Horn, W.C Swope, J.W. Pitera, J.D. Madura,"
+    "tip4e": "TIP4P-Ewald, from H.W. Horn, W.C Swope, J.W. Pitera, J.D. Madura,"
              " T.J. Dick, G.L. Hura, T. Head-Gordon; J. Chem. Phys. "
              "120: 9665-9678 (2004)",
     "spce": "SPC/E model, from H.J.C. Berendsen, J. R. Grigera, "
