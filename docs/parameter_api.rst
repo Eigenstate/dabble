@@ -137,8 +137,9 @@ Maestro).
     :show-inheritance:
 
 The VMD plugin `psfgen <http://www.ks.uiuc.edu/Research/vmd/plugins/psfgen/>`_ is
-used to generate parameterized files with CHARMM parameters. Dabble writes an
-input file for psfgen, and handles all its quirks (such as not allowing segments
+used to generate parameterized files with CHARMM parameters. Dabble uses the
+`Python interface to psfgen <https://psfgen.robinbetz.com>`_ to invoke this
+code, and handles all its quirks (such as not allowing segments
 to have more than 10,000 atoms because its PDB parser is the worst).
 
 .. autoclass:: Dabble.param.CharmmWriter
