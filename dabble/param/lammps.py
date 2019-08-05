@@ -74,8 +74,8 @@ class LammpsWriter(MoleculeWriter):
         self.hmr = kwargs.get("hmr", False)
 
         # Our get_ method handles all forcefield combinations
-        self.topologies = self.get_topologies(self.forcefield)
-        self.parameters = self.get_parameters(self.forcefield)
+        self.topologies = self.get_topologies(self.forcefield, self.water_model)
+        self.parameters = self.get_parameters(self.forcefield, self.water_model)
 
         # Handle override
         if self.override:
@@ -168,40 +168,40 @@ class LammpsWriter(MoleculeWriter):
     #==========================================================================
 
     @classmethod
-    def get_topologies(cls, forcefield):
+    def get_topologies(cls, forcefield, water_model):
         """
         Gets topologies depending on the forcefield
         """
 
         # Amber, Charmm, and OPLS handled by conversion
         if forcefield == "charmm":
-            return CharmmWriter.get_topologies(forcefield)
+            return CharmmWriter.get_topologies(forcefield, water_model)
 
         if forcefield == "amber":
-            return AmberWriter.get_topologies(forcefield)
+            return AmberWriter.get_topologies(forcefield, water_model)
 
         if forcefield == "opls":
-            return CharmmWriter.get_topologies(forcefield)
+            return CharmmWriter.get_topologies(forcefield, water_model)
 
         raise DabbleError("Unsupported forcefield %s" % forcefield)
 
     #==========================================================================
 
     @classmethod
-    def get_parameters(cls, forcefield):
+    def get_parameters(cls, forcefield, water_model):
         """
         Gets the parameters depending on the forcefield
         """
 
-        # Amber and Charmm handled by converstion
+        # Amber and Charmm handled by conversion
         if forcefield == "charmm":
-            return CharmmWriter.get_parameters(forcefield)
+            return CharmmWriter.get_parameters(forcefield, water_model)
 
         if forcefield == "amber":
-            return AmberWriter.get_parameters(forcefield)
+            return AmberWriter.get_parameters(forcefield, water_model)
 
         if forcefield == "opls":
-            return CharmmWriter.get_parameters(forcefield)
+            return CharmmWriter.get_parameters(forcefield, water_model)
 
         raise DabbleError("Unsupported forcefield %s" % forcefield)
 

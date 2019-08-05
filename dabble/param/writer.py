@@ -308,11 +308,11 @@ class MoleculeWriter(ABC):
         pass
 
     @abstractmethod
-    def get_topologies(self, forcefield):
+    def get_topologies(self, forcefield, water_model):
         pass
 
     @abstractmethod
-    def get_parameters(self, forcefield):
+    def get_parameters(self, forcefield, water_model):
         pass
 
     #==========================================================================
