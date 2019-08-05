@@ -199,6 +199,11 @@ class MoleculeWriter(ABC):
         # Set consistent residue and atom names, crystal waters
         # can be named HOH, etc
         residues = set(atomsel("water").residue)
+
+        # If no water, nothing to do
+        if not residues:
+            return
+
         watsel = "residue %s" % ' '.join(str(_) for _ in residues)
 
         atomsel(watsel).resname = self.WATER_NAMES[self.water_model]
