@@ -90,7 +90,7 @@ class MoleculeWriter(ABC):
         self.hmr = kwargs.get("hmr", False)
 
         self.forcefield = kwargs.get("forcefield")
-        self.water_model = kwargs.get("water_model")
+        self.water_model = kwargs.get("water_model", "tip3")
 
         self.extra_topos = kwargs.get("extra_topos")
         self.extra_params = kwargs.get("extra_params")
