@@ -47,7 +47,7 @@ def test_water_box(tmpdir):
     filename = os.path.join(dir, "rho_test.mae")
     b = DabbleBuilder(solute_filename=filename,
                       output_filename=os.path.join(p, "test.mae"),
-                      membrane_system="TIP3",
+                      membrane_system="water",
                       user_x=40.0, user_y=35.0, user_z = 65.0,
                       tmp_dir=p)
     b.write()
