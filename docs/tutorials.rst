@@ -16,7 +16,10 @@ Covalently modified amino acids
 
 `Amber format <https://robinbetz.com/blog/2016/11/28/parameterizing-an-isopeptide-bond/>`_
 ~~~~~~~~~~~~~~~~
-See this blog post to get started.
+This blog post will help you parameterize and set up a system with an
+isopeptide bond between two distant amino acids, using AMBER parameters.
 
 :ref:`Charmm format`
 ~~~~~~~~~~~~~
+This tutorial will walk you through parameterizing adipocyte lipid binding
+protein with a covalently linked phenanthroline, using CHARMM patches.
