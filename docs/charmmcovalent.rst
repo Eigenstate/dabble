@@ -1,9 +1,10 @@
-.. _Charmm format:
-
 Covalent modifications with CHARMM parameters
 =============================================
 
-.. contents:: :local:
+.. contents::
+   :local:
+   :backlinks: top
+
 
 In this tutorial, we will prepare to set up a simulation of murine adipocyte
 lipid-binding protein (ALBP) with a covalently attached phenanthroline, from
@@ -97,7 +98,9 @@ Other information about this residue, such as ``GROUP``, ``DONOR``,
 work today. Groups are used to track partial charges, and internal
 coordinates used to assign locations for missing atoms. Donor and acceptor is
 used for some types of calculation in CHARMM, but are not necessary for running
-traditional MD simulation with the CHARMM forcefield.
+traditional MD simulation with the CHARMM forcefield. A more rigorous
+explanation of ``.rtf`` files can be found in `this NAMD tutorial
+<https://www.ks.uiuc.edu/Training/Tutorials/namd/namd-tutorial-unix-html/node24.html>`_.
 
 One thing you might notice about this definition is that some atoms listed in
 the bonded terms (bonds, impropers, cmaps, etc) are not present in the ASCII
@@ -207,30 +210,15 @@ on the molecule using the CHARMM philosophy. We'll therefore use a computer
 program, ParamChem, that is part of the CHARMM workflow, to help us with
 atom typing and other parameter assignment.
 
-:ref:`top`
-
 Preparing the system
 --------------------
 
-.. todo::
-   This doesn't work bc pdbfixer won't operate on nonstandard residues
-
 We'll have to add hydrogens to the PDB structure so that the residue we
 submit to the parameterization server is exactly the one that will be simulated.
-We'll use `pdbfixer <https://github.com/pandegroup/pdbfixer>`_ for this in the
-tutorial as it's freely available.
 
-We'll add hydrogens only, and not add a water box or ions as Dabble will do
-this later.
-
-.. code-block:: bash
-
-   pdbfixer 1A18.pdb --output=1A18_h.pdb --ph=7.0
-
-
-Visualize the result and check that all titrateable residues are correct,
-and that the NPH residue remains part of the protein chain and has the correct
-hydrogens.
+The nonstandard NPH residue somewhat complicates additions of hydrogens, as
+many tools (like the very useful `pdbfixer <https://github.com/pandegroup/pdbfixer>`_)
+only support standard amino acids.
 
 .. note::
 
@@ -238,13 +226,18 @@ hydrogens.
    Catching a missing hydrogen now is much easier than having to redo the
    entire process after analyzing simulations that were of an incorrect system.
 
-Preparing the system
---------------------
+Schrödinger makes an excellent molecular manipulation called Maestro. A
+restricted version of the program is available `free for academic use
+<https://schrodinger.com/freemaestro>`_. This was used for the preparation
+in this tutorial.
 
 Using your workflow of choice, add hydrogens and capping groups to the protein.
-Here, we used Maestro to add ACE and NMA caps, as well as hydrogens.
+Here, we used Maestro to add ACE and NMA caps, as well as hydrogens. The
+resulting prepared structure is in ``.mae`` format, which includes explicit
+integer charges and bond information. For a full tutorial on this process, read
+:ref:`maestro`.
 
-:download:`1A18_h.pdb <files/1A18_h.pdb>`
+:download:`1A18_h.mae <files/1A18_h.mae>`
 
 .. note::
 
@@ -273,7 +266,7 @@ understands the atom types in the output ``mol2`` file.
 .. code-block:: python
 
    from vmd import atomsel, molecule
-   m = molecule.load("pdb", "1A18_h.pdb")
+   m = molecule.load("mae", "1A18_h.mae")
    nph = atomsel("resname NPH")
    nph.type = nph.element
    nph.write("mol2", "nph.mol2")
@@ -321,7 +314,17 @@ hydrogens.
    This will produce a NPH residue that only includes the alpha carbon and
    sidechain, to make ParamChem happy.
 
-Returning to python, let's make some changes to ``nph.mol2``.
+.. note::
+
+   There are many correct ways to truncate your residue when solving these kinds
+   of problem. Keep in mind that you want to preserve as much as possible of
+   the chemical context of the sidechain and modification together. Later in
+   this tutorial when we integrate the protein parameters, you'll get a better
+   idea of what's needed.
+
+You can do this in Free Maestro, but can do this any way you like, including
+using the vmd-python API. Returning to python, let's make some changes to
+``nph.mol2``.
 
 .. code-block:: python
 
@@ -340,101 +343,14 @@ Visualise this file and you'll see there is a nice methyl carbon at the CA
 position, and the valency of all atoms makes more sense.
 
 .. note::
-
-   There are many correct ways to truncate your residue when solving these kinds
-   of problem. Keep in mind that you want to preserve as much as possible of
-   the chemical context of the sidechain and modification together. Later in
-   this tutorial when we integrate the protein parameters, you'll get a better
-   idea of what's needed.
-
-Adding bond information
-~~~~~~~~~~~~~~~~~~~~~~~
-
-Run ``nph_sidechain.mol2`` through ParamChem and this time we get a new error::
-
-   Now processing molecule generate ...
-   attype warning: carbon radical, carbocation or carbanion not supported;
-   skipped molecule.
-
-What? This is weird, as there's no charged carbons in the file.
-What happened is when writing ``1A18_h.pdb``, bond order information was omitted
-from the file, and all ``mol2`` files were generated from this file and as such,
-also don't have this infomration. Without knowing that the phenantholine is
-a conjugated ring system, ParamChem thinks the carbons must be charged, which
-is unsupported.
-
-.. note::
-
-   If you did this workflow of clipping out the NPH sidechain with correct
-   valency in another program, you may not have these problems. This tutorial
-   is designed to use commonly available tools and teach the debugging process
-   as well, so not all steps may apply to your system.
-
-Let's add the bond information back to the ``mol2`` file. We can't add this
-information to the ``pdb`` file, as that file format can't contain bond order
-information.
-
-Open up the molecule in VMD to figure out which atoms need to be double bonded.
-We'll use the `topology <https://vmd.robinbetz.com/topology.html>`_ module in
-vmd-python to delete the incorrect single bonds, and replace them with
-double bonds.
-
-.. code-block:: python
-
-   from vmd import atomsel, molecule, topology
-   m = molecule.load("mol2", "nph_sidechain.mol2")
-
-   # List pairs to be bonded, by atom name (picked using VMD GUI)
-   to_double = [("C10", "N10"), ("C8", "C9"), ("C7", "C6A"), # Ring 1
-                ("C1A", "N1"), ("C2", "C3"), ("C4", "C4A"),  # Ring 2
-                ("C6", "C5"), ("OZ", "CE")] # Center ring, carbamoyl
-
-   # For each pair, find atom indices, delete the bond, and add it as a double
-   for atoms in to_double:
-      i, j = atomsel("name %s %s" % atoms).index
-      topology.delbond(i, j, molid=m)
-      topology.addbond(i, j, molid=m, order=2.0)
-
-   # Save as a mol2
-   atomsel().write("mol2", "nph_double.mol2")
-
-:download:`nph_double.mol2 <files/nph_double.mol2>`
-
-Visualize this file in VMD to check that the molecule still looks correct.
-The double bonds don't display, so check they're there by opening
-``nph_double.mol2`` in a text editor and looking at the bond section,
-beginning with ``@<TRIPOS>BOND``::
-
-   @<TRIPOS>BOND
-       1     1     2  1
-       2     2     3  1
-       3     2    23  1
-       4     2    31  1
-       5     3     4  1
-       6     3    32  1
-       7     3    33  1
-       8     4     5  1
-       9     5     6  1
-      10     5    34  1
-      11     5    35  1
-      12     6     8  1
-      13     6     7  2
-      <snip>
-
-The columns here are bond number, index of first atom, index of second atom,
-and bond order (technically, SYBL bond type). Compare this last column between
-``nph_sidechain.mol2`` and ``nph_double.mol2`` and you'll see the double bond
-information has been added.
-
-
-.. note::
    Bond orders may not display correctly in VMD. Always check the file itself
    to be completely sure the data you expect are present.
+
 
 Running ParamChem
 ~~~~~~~~~~~~~~~~~
 
-Upload ``nph_double.mol2`` to the ParamChem server, and we finally get output!
+Upload ``nph_sidechain.mol2`` to the ParamChem server, and we finally get output!
 Save it as ``nph.str``.
 
 :download:`nph.str <files/nph.str>`
@@ -536,6 +452,12 @@ atoms are listed on the same line.
      - CA
      - CG331
      - -0.270
+   * - HA
+     - HB1
+     - 0.090
+     - HA
+     - HGA3
+     - 0.090
    * - CB
      - CT2
      - -0.110
@@ -559,9 +481,19 @@ atoms are listed on the same line.
 question, consider both how the CGenFF forcefield works and the differences in
 chemical context between cysteine and the residue we inputted to ParamChem.
 
+.. note::
+
+   In the case of this molecule, the CYS and ParamChem atom names are identical.
+   This won't always be the case for your input molecule, so make sure to
+   check what the mapping is and when to use which atom name. As the patch is
+   applied on top of a residue, you always want to use names referring to
+   atoms in the original residue, otherwise it will look like you're adding
+   an extra atom.
+
 The charges on the hydrogens is unchanged. The charge on ``CA`` is significantly
 different, but the context of this atom for ParamChem doesn't match a real
-cysteine, so we'll keep the cysteine charge for that atom. The ``CB`` and
+cysteine, so we'll keep the cysteine charge for that atom. Same thing for
+its hydrogen ``HA``; we'll keep the name and type the same. The ``CB`` and
 ``SG`` atoms do gave changes in their partial charge, so we'll add those to
 our patch.
 
@@ -616,7 +548,6 @@ Copy the lines defining these atoms into ``nph_patch.str``::
    ATOM H2     HGR62   0.124 !    0.000
    ATOM H4     HGR61   0.115 !    0.000
    ATOM H3     HGR61   0.115 !    0.000
-   ATOM HA     HGA3    0.090 !    0.000
    ATOM HB1    HGA2    0.090 !    0.000
    ATOM HB2    HGA2    0.090 !    0.000
    ATOM HD1    HGA2    0.090 !    0.000
@@ -631,7 +562,8 @@ Below the atom information in ``nph.str`` are many lines beginning with
 into ``nph_patch.str``, then delete any bonds that refer to atoms that aren't
 included in the final file (like ``BOND CA HA3``). Also delete bonds that
 are already present in the definition of cysteine (like ``BOND CA CB``).
-Keep the improper term ParamChem generated, too.::
+Keep the improper term ParamChem generated, too, as it applies to atoms that
+are part of the phenanthroline::
 
    BOND SG   CD
    BOND CD   CE
@@ -669,11 +601,11 @@ Keep the improper term ParamChem generated, too.::
 .. note::
 
    Atom names will not necessarily match between the original CHARMM amino acid
-   and the file ran through ParamChem. Bonds are indicated by atom name.
-   Filling out the table above is a critical step for establishing a
-   correspondence between atoms with different names in the two files. Bonds
-   to the original amino acid should use atom names from the CHARMM
-   ``top_all36_prot.rtf`` to refer to atoms there.
+   and the file ran through ParamChem. Filling out the table above is a
+   critical step for establishing a correspondence between atoms with different
+   names in the two files. Bonds to the original amino acid should use atom
+   names from the CHARMM ``top_all36_prot.rtf`` to refer
+   to atoms there.
 
 Make sure there is a bond line that connects the added patch atoms to the
 original residue. In this case, the sulfur atoms in our ParamChem input and
@@ -683,15 +615,295 @@ included above handles this.
 Now we have a patch that, when applied to a cysteine, adds the covalent NPH
 modification.
 
-Add new parameters
-~~~~~~~~~~~~~~~~~~
-Now that the topology of the NPH residue is determined, let's try to run
-Dabble to see if things will work:
+However, our patch only gets the topology, atom types, and partial charges
+correct. The parameters between the backbone atoms, which have Charmm36m
+protein atom types, and the added phenanthroline atoms, which have CGenFF
+atom types, are undefined.
 
+Indeed, if you try to parameterize the system with the Dabble API, you'll
+get an error like::
 
-:download:`nph_patch.str <files/nph_patch.str>`
+   Traceback (most recent call last):
+     File "/home/robin/miniconda/lib/python3.7/site-packages/parmed/charmm/psf.py", line 542, in load_parameters
+       bond.type = parmset.bond_types[key]
+   KeyError: ('CG321', 'CT1')
+
+   During handling of the above exception, another exception occurred:
+
+   Traceback (most recent call last):
+     File "try_dabble.py", line 12, in <module>
+       w.write("test")
+     File "/home/robin/miniconda/lib/python3.7/site-packages/dabble-2.7.12-py3.7.egg/dabble/param/charmm.py", line 181, in write
+       self._check_psf_parameters()
+     File "/home/robin/miniconda/lib/python3.7/site-packages/dabble-2.7.12-py3.7.egg/dabble/param/charmm.py", line 625, in _check_psf_parameters
+       psf.load_parameters(params)
+     File "/home/robin/miniconda/lib/python3.7/site-packages/parmed/charmm/psf.py", line 544, in load_parameters
+       raise ParameterError('Missing bond type for %r' % bond)
+   parmed.exceptions.ParameterError: Missing bond type for <Bond <Atom CB [1940]; In CYS 155>--<Atom CA [1938]; In CYS 155>; type=None>
+
+Parameters for the ``CB - CA`` bond (that is, a bond between atom types
+``CG321 - CT1``) are missing.
 
 
 Integrating protein and small molecule forcefields
 --------------------------------------------------
 
+This step is the most challenging in the tutorial, and also requires the most
+subjective judgement. We'll combine the protein and small molecule force fields
+to find parameters to bridge the gap between atom types in the molecule.
+
+We'll use parameters from the general force field to describe the missing
+terms, even if they're also available in the protein force field. This is
+because usually the protein parameters are a subset of the general ones, and
+the sidechain we've added doesn't necessarily have "protein character".
+
+.. figure:: _static/charmmcovalent/atom_types.svg
+   :align: center
+   :width: 800px
+   :alt: NPH backbone and beginning of sidechain region, with atom types labeled.
+
+   The backbone and beginning of sidechain region for NPH are shown, with
+   atom elements, names, and types shown as Dabble interprets them. CGenFF
+   atom types are shown in red, and apply to the part of the molecule that
+   is not shown as well. We need to obtain forcefield parameters between
+   these types and the protein atom types that descibe the backbone region.
+
+First, copy the parameters ParamChem generated by analogy in our ``nph.str``
+to ``nph_patch.str`` as a starting point to which we will add the missing
+ones.
+
+Equivalency between CGenFF and Charmm36 types
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+When we ran our truncated molecule through ParamChem, we did include the
+alpha carbon, which was assigned a CGenFF type of ``CG331``. In the Charmm36m
+protein forcefield, alpha carbons are given a type of ``CT1``.
+
+Atom types are defined with a ``MASS`` line at the beginning of force field
+files. These definitions usually include a comment that describes the intended
+chemical context of the type. Looking at ``top_all36_prot.rtf`` (`here
+<https://github.com/Eigenstate/dabble/blob/master/dabble/param/parameters/top_all36_prot.rtf>`_),
+we see that the protein ``CT1`` type is "*aliphatic sp3 C for CH*". Similarly,
+``top_all36_cgenff.rtf`` (`here <https://github.com/Eigenstate/dabble/blob/master/dabble/param/parameters/top_all36_cgenff.rtf>`_) defines the general ``CG331`` type
+as "*aliphatic C for methyl group*". These atom types are clearly **not
+equivalent**.
+
+However, looking around the CGenFF atom types, the ``CG311`` type, "*aliphatic
+C with 1H, CH*" **is equivalent** to the ``CT1`` protein atom type.
+
+You'll need to determine equivalencies for the atom types for all atoms with
+protein types that are **three or fewer** bonds away from the CGenFF typed atoms.
+
+.. note::
+
+   In addition to reading the description of the atom types, you can look at
+   the residues defined in ``top_all36_cgenff.rtf`` for examples of the atom
+   types in action. For example, looking at the topology of N-methylacetamide,
+   there is a peptide backbone-like series of atoms from which you can infer
+   several atom type equivalencies.
+
+This results in the following table:
+
+.. list-table::
+   :header-rows: 1
+   :align: center
+
+   * - Name
+     - Charmm36m type
+     - CGenFF type
+     - Description
+   * - CA
+     - CT1
+     - CG311
+     - Aliphatic C with 1H, CH
+   * - N
+     - NH1
+     - NG2S1
+     - Peptide nitrogen
+   * - C
+     - C
+     - CG2O1
+     - Carbonyl C, peptide backbone / amides
+   * - HA
+     - HB1
+     - HGA1
+     - Backbone hydrogen
+   * - O
+     - O
+     - OG2D1
+     - Carbonyl O, amides
+   * - H
+     - HN
+     - HGP1
+     - Polar hydrogen
+
+Making parameter analogies
+~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+Now that we know which CGenFF types are applicable to our molecule, we'll get
+all of the CGenFF parameters for the NPH residue from ParamChem, and change
+the types of the parameters that apply across the gap to use the appropriate
+types.
+
+Start with the bonds. Looking at the picture, we need to define bond parameters
+for ``CG321 - CT1``. Using the table of atom equivalencies, that's ``CG321 -
+CG311``. However, this parameter is nowhere to be found in the ``BONDS``
+section of the file. That's because the ``CA`` atom was assigned a different
+type by ParamChem. We'll have to look in the full CGenFF parameter file,
+`par_all36_cgenff.prm
+<https://github.com/Eigenstate/dabble/blob/master/dabble/param/parameters/par_all36_cgenff.prm>`_
+for the bond parameter::
+
+   CG311  CG321   222.50     1.5380 ! PROT alkane update, adm jr., 3/2/92
+
+Indeed, the comment says this parameter originally come from the protein
+force field.
+
+.. note::
+
+   The order of atoms in bond, angle, and dihedral (not improper) terms can
+   be reversed without consequence, so make sure to check for both orders
+   when looking in the ``.str`` file.
+
+We can now add this parameter to the ``BONDS`` section of ``nph_patch.str``.
+As the NPH patch contains an atom type of ``CT1`` instead of ``CG311``, replace
+the type (and add a comment to make things clear)::
+
+   CT1    CG321   222.50     1.5380 ! Equivalent to CG311-CG321
+
+Repeat this process for any remaining bonds, angles, and dihedral terms.
+Use the drawing with atom types and the table of type equivalencies to help
+you.
+
+Don't forget that dihedrals can have multiple terms (up to 6 in CHARMM),
+each defined on a separate line of the ``.prm`` file. You'll copy all of these
+lines to get the correct overall parameters for each dihedral term needed.
+
+.. note::
+
+   While it may be tempting to use ``sed`` or similar to change atom types in
+   bulk, this will mess up parameters where there are multiple atoms of the
+   same type. For example, ``s/NG2S1/NH1  /g`` will result in missing
+   parameters for the ``NZ`` atom in the carbamoyl region. It's always best to
+   take extra time to be sure the parameters in your molecule are exactly what
+   they should be, as debugging related problems in simulation is nearly
+   impossible.
+
+Dabble will output an error message when parameters are missing, meaning you
+can do your best at gathering them, attempt to Dabble, then fill in any more
+that you missed that it errors on.
+
+
+.. code-block:: python
+
+   from dabble.param import CharmmWriter
+   from vmd import molecule
+
+   m = molecule.load("mae", "1A18_h.mae")
+   w = CharmmWriter(molid=m,
+                    extra_topos=["nph_patch.str"],
+                    extra_params=["nph_patch.str"])
+   w.write("test")
+
+There is one parameter not present in CGenFF at all: the ``CT1 - CG321 - SG311
+- CG321`` dihedral that captures rotation about the ``CB - SG`` bond. There are
+several ways to handle this situation, but the simplest is to browse the
+parameter list for one that is similar enough.
+
+Indeed, there are parameters for ``CG321 - CG321 - SG311 - CG321``, which only
+differs in type for the first atom (``CG321``, a carbon with two hydrogens,
+instead of ``CG311``, a carbon with one hydrogen). This feels like a reasonable
+analogy thinking about the chemical context of this dihedral.
+
+Another strategy is generating a molecule that ParamChem will assign the
+correct atom types to and using the analogies the server makes.
+
+.. note::
+
+   **This takes practice.** Knowing which atom types are available helps a lot
+   when making analogies yourself, and the only way to do that is to get a lot
+   of experience working with the parameter files. Give yourself lots of time
+   for this step, and it will get easier the more molecules you work with.
+
+We end up with the following table of **newly defined** parameter lines::
+
+   BONDS
+   ! CGenFF-Charmm36m combination parameters follow
+   CT1    CG321   222.50     1.5380 ! PROT alkane update, adm jr., 3/2/92
+
+   ANGLES
+   ! CGenFF-Charmm36m combination parameters follow
+   CT1    CG321  HGA2     33.43    110.10   22.53   2.17900 ! CG311-CG321-HGA2
+   CT1    CG321  SG311    58.00    112.50 ! CG311-CG321-SG311
+   C      CT1    CG321    52.00    108.00 ! CG2O1-CG311-CG321
+   CG321  CT1    NH1      70.00    113.50 ! CG321-CG321-NG2S1
+   CG321  CT1    HB1      34.50    110.10   22.53   2.17900 ! CG321-CG311-HGA1
+
+   DIHEDRALS
+   ! CGenFF-Charmm36m combination parameters follow
+   CG321  CT1    NH1    C          1.8000  1     0.00 ! CG321-CG311-NG2S1-CG2O1
+   NH1    CT1    CG321  SG311      0.2000  3     0.00 ! NG2S1-CG311-CG321-SG311
+   NH1    CT1    CG321  HGA2       0.2000  3     0.00 ! NG2S1-CG311-CG321-HGA2
+   CG321  CT1    NH1    H          0.0000  1     0.00 ! CG321-CG311-NG2S1-HGP1
+   HB1    CT1    CG321  HGA2       0.1950  3     0.00 ! HGA1-CG311-CG321-HGA2
+   HB1    CT1    CG321  SG311      0.1950  3     0.00 ! HGA1-CG311-CG321-SG311
+   NH1    C      CT1    CG321      0.0000  1     0.00 ! NG2S1-CG2O1-CG311-CG321
+   O      C      CT1    CG321      1.4000  1     0.00 ! OG2D1-CG2O1-CG311-CG321
+   C      CT1    CG321  HGA2       0.2000  3     0.00 ! CG2O1-CG311-CG321-HGA2
+   C      CT1    CG321  SG311      0.2000  3     0.00 ! CG2O1-CG311-CG321-SG311
+   ! Manual analogy, CG321 ~= CG311
+   CT1    CG321  SG311  CG321      0.2400  1   180.00 ! CG321*-CG321-SG311-CG321
+   CT1    CG321  SG311  CG321      0.3700  3     0.00 ! ", second term
+
+:download:`nph_patch.str <files/nph_patch.str>`
+
+Running dabble
+--------------
+
+Now that you have both *topology* and *parameter* information for the NPH patch,
+you can run Dabble and it will figure out the rest.
+
+If you want to add water and ions, you can use the command-line:
+
+.. code-block:: bash
+
+   dabble -i 1A18_h.mae \
+          -o 1A18_solvated.psf \
+          --membrane=none --water-buffer=10 \
+          --forcefield=charmm --water=tip3 \
+          -top nph_patch.str -par nph_patch.str
+
+:download:`1A18_solvated.psf <files/1A18_solvated.psf>`
+:download:`1A18_solvated.pdb <files/1A18_solvated.pdb>`
+
+.. note::
+   Don't forget to visualize the output and verify the protein is as expected,
+   the solvent box is adequate, and the covalent modification is correctly
+   represented. Always load the ``.psf`` file first, then add the ``.pdb``
+   file to the molecule, so the topology information in the psf file is used.
+
+If you just want to parameterize the system as-is (perhaps for an implicit
+solvent simulation), you can use the Dabble API:
+
+.. code-block:: python
+
+   from dabble.param import CharmmWriter
+   from vmd import molecule
+
+   m = molecule.load("mae", "1A18_h.mae")
+   w = CharmmWriter(molid=m, forcefield="charmm",
+                    extra_topos=["nph_patch.str"],
+                    extra_params=["nph_patch.str"])
+   w.write("1A18_nosolvent")
+
+:download:`1A18_nosolvent.psf <files/1A18_nosolvent.psf>`
+:download:`1A18_nosolvent.pdb <files/1A18_nosolvent.pdb>`
+
+.. figure:: _static/charmmcovalent/built.png
+   :align: center
+   :width: 400px
+   :alt: Built 1A18 system with covalent modification
+
+   The modified NPH residue still appears as Cys:117 in the file, but
+   visualizing this residue shows the phenanthroline is present and correctly
+   connected.

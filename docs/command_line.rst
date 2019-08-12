@@ -116,7 +116,7 @@ box, so the distance between protein images is double this value.::
 
 For water-only systems, no need to specify the membrane buffer::
 
-    -M water --water-buffer 15.0
+    -M none --water-buffer 15.0
 
 The X and Y dimensions of the protein are handled separately using the
 buffer-based calculation, so the resulting system may not be square.  If
@@ -185,7 +185,7 @@ The membrane should be oriented on the XY plane and in mae file format.::
 If you don't want a membrane, Dabble solvate the system in just water. The
 water model that will be used is specified elsewhere.::
 
-    -M water
+    -M none
 
 Dabble tries to delete atoms from the membrane that run into the input structure.
 Its default logic works well, but you can provide your own selection strings

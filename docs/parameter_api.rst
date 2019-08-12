@@ -49,7 +49,7 @@ Automatic atom naming
 Atom matching classes inherit from ``MoleculeMatcher``, which
 defines basic functionality for matching:
 
-.. autoclass:: Dabble.param.MoleculeMatcher
+.. autoclass:: dabble.param.MoleculeMatcher
     :members:
     :show-inheritance:
 
@@ -82,7 +82,7 @@ Atom name matching in AMBER has functionality specific to the
 modular head/tail representation of lipids, as well as identification
 of disulfide bonds.
 
-.. autoclass:: Dabble.param.AmberMatcher
+.. autoclass:: dabble.param.AmberMatcher
     :members:
     :show-inheritance:
 
@@ -104,7 +104,7 @@ the ``AmberWriter`` class can also take the molecule ID of a
 CHARMM-parameterized molecule, and invoke ``chamber`` through the ParmEd
 API to convert to the AMBER format.
 
-.. autoclass:: Dabble.param.AmberWriter
+.. autoclass:: dabble.param.AmberWriter
     :members:
     :show-inheritance:
 
@@ -132,7 +132,7 @@ can pose a challenge to recognition of caps, which are applied as
 separate residues in some protein preparation workflows (notably 
 Maestro).
 
-.. autoclass:: Dabble.param.CharmmMatcher
+.. autoclass:: dabble.param.CharmmMatcher
     :members:
     :show-inheritance:
 
@@ -142,7 +142,7 @@ used to generate parameterized files with CHARMM parameters. Dabble uses the
 code, and handles all its quirks (such as not allowing segments
 to have more than 10,000 atoms because its PDB parser is the worst).
 
-.. autoclass:: Dabble.param.CharmmWriter
+.. autoclass:: dabble.param.CharmmWriter
     :members:
     :show-inheritance:
 
