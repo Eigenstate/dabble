@@ -95,7 +95,7 @@ class DabbleBuilder(object):
                                                          "popc.mae"))
 
         # Process input arguments
-        if self.opts.get('membrane_system') == 'water':
+        if self.opts.get('membrane_system') == 'none':
             self.opts['membrane_system'] = resource_filename(__name__, \
                     "lipid_membranes/tip3pbox.mae")
 

@@ -283,9 +283,9 @@ class MoleculeMatcher(ABC): # pylint: disable=too-few-public-methods
             selection (VMD atomsel): Atom selection to verify, modified.
 
         Returns:
-            graph representing the molecule, with nodes named indices
-            bool representing if the selection is covalently bonded to
-              another residue
+            (networkx.Graph, bool): Intermediate representation of the
+            molecule, and True if the selection is covalently bonded to another
+            residue.
 
         Raises:
             ValueError if atom selection is more than one residue

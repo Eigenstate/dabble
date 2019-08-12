@@ -125,7 +125,7 @@ def main(argv=None):
                        default=resource_filename(__name__, "lipid_membranes/popc.mae"),
                        help="Path to pre-built membrane + solvent block. Must "
                        "be a .mae file. See documentation to create your own. "
-                       "Defaults to a POPC membrane. Specify 'water' for no "
+                       "Defaults to a POPC membrane. Specify 'none' for no "
                        "membrane."
                        )
 
