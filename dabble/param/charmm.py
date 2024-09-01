@@ -26,9 +26,7 @@ Copyright (C) 2019 Robin Betz
 from __future__ import print_function
 import os
 import tempfile
-import warnings
 from parmed.formats.registry import load_file
-from parmed.charmm import CharmmParameterSet, CharmmPsfFile
 from psfgen import PsfGen
 from vmd import atomsel, molecule
 
@@ -177,8 +175,7 @@ class CharmmWriter(MoleculeWriter):
                               % self.forcefield)
 
         # Check output and finish up
-        self._check_psf_coordinates()
-        self._check_psf_parameters()
+        self._check_psf_output()
 
         # Reset top molecule
         molecule.set_top(old_top)
@@ -575,7 +572,7 @@ class CharmmWriter(MoleculeWriter):
 
     #==========================================================================
 
-    def _check_psf_coordinates(self):
+    def _check_psf_output(self):
         """
         Scans the output psf from psfgen for atoms where the coordinate
         could not be set, indicating an unmatched atom. This check is necessary
@@ -604,25 +601,6 @@ class CharmmWriter(MoleculeWriter):
 
         print("\nChecked output pdb/psf has all atoms present "
               "and correct.\n")
-
-    #==========================================================================
-
-    def _check_psf_parameters(self):
-        """
-        Checks all parameters are defined in the psf file. Uses ParmEd API.
-        """
-        params = CharmmParameterSet()
-        with warnings.catch_warnings(record=True):
-            for file in self.topologies + self.parameters:
-                if os.path.splitext(file)[1] == ".str":
-                    params.read_stream_file(file)
-                elif os.path.splitext(file)[1] == ".rtf":
-                    params.read_topology_file(file)
-                else:
-                    params.read_parameter_file(file)
-
-        psf = CharmmPsfFile("%s.psf" % self.outprefix)
-        psf.load_parameters(params)
 
     #==========================================================================
 
