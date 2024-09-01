@@ -1,0 +1,41 @@
+[project]
+name="dabble"
+dynamic=["version"]
+authors = [
+  {name = "Robin Betz", email = "robin@robinbetz.com"},
+]
+maintainers = [
+  {name = "Robin Betz", email = "robin@robinbetz.com"},
+]
+readme = "README.md"
+dependencies = [
+    "numpy",
+    "networkx >= 2.4",
+    "vmd-python >= 2.0.4",
+    "parmed >= 4.0.0",
+    "psfgen"
+]
+
+[project.urls]
+Homepage = "https://dabble.robinbetz.com"
+Repository = "https://github.com/Eigenstate/dabble"
+
+[project.optional-dependencies]
+tests = ["pytest"]
+
+[project.scripts]
+"dabble" = "dabble.__main__:main"
+
+[build-system]
+requires = ["setuptools"]
+build-backend = "setuptools.build_meta"
+
+[tool.setuptools.dynamic]
+version = {attr = "dabble.__version__"}
+
+[tool.setuptools]
+script-files = [
+    "get_restraint_mask.py",
+    "convert_step5_to_dabble.py",
+    "amber_rst2cms_v_noparams.py",
+]

@@ -108,7 +108,7 @@ class MoleculeMatcher(ABC): # pylint: disable=too-few-public-methods
             # as it allows more error checking in the parsing.
             for graph in self.known_res.values():
                 graph.remove_nodes_from([i for i in graph.nodes() if
-                                         graph.node[i].get("type") in
+                                         graph.nodes[i].get("type") in
                                          self.pseudoatoms])
 
         elif kwargs.get("matcher"):
@@ -196,7 +196,7 @@ class MoleculeMatcher(ABC): # pylint: disable=too-few-public-methods
         rgraph, _ = self.parse_vmd_graph(selection)
 
         externs = [n for n in rgraph.nodes() if \
-                   rgraph.node[n]["residue"] != "self"]
+                   rgraph.nodes[n]["residue"] != "self"]
 
         return externs
 
@@ -366,13 +366,13 @@ class MoleculeMatcher(ABC): # pylint: disable=too-few-public-methods
         """
         Gets a dictionary from VMD index -> atom name / resname
         """
-        atommatch = {i: graph.node[match[i]].get("atomname")
+        atommatch = {i: graph.nodes[match[i]].get("atomname")
                      for i in match.keys()
-                     if graph.node[match[i]].get("residue") == "self"}
+                     if graph.nodes[match[i]].get("residue") == "self"}
 
-        resmatch = {i: graph.node[match[i]].get("resname")
+        resmatch = {i: graph.nodes[match[i]].get("resname")
                     for i in match.keys()
-                    if graph.node[match[i]].get("residue") == "self"}
+                    if graph.nodes[match[i]].get("residue") == "self"}
 
         return (resmatch, atommatch)
 
@@ -397,7 +397,7 @@ class MoleculeMatcher(ABC): # pylint: disable=too-few-public-methods
         with open(output, 'w') as fn:
             fn.write("strict graph {\n")
             for nodename in graph.nodes():
-                node = graph.node[nodename]
+                node = graph.nodes[nodename]
                 ele = node.get("element")
                 oth = "" if node.get("residue") == "self" else "+-"
 
