@@ -234,7 +234,7 @@ class AmberMatcher(MoleculeMatcher):
         # Otherwise, extra bonded atom will prevent matches from happening
         noext, _ = self.parse_vmd_graph(selection)
         noext.remove_nodes_from([i for i in noext.nodes()
-                                 if noext.node[i].get("residue") != "self"])
+                                 if noext.nodes[i].get("residue") != "self"])
 
         # Find all possible subgraph matches, only amino acids for now, otherwise
         # weird terminal versions like NLYS instead of LYS could be chosen
@@ -242,7 +242,7 @@ class AmberMatcher(MoleculeMatcher):
         for names in self.known_res:
             graph = self.known_res.get(names).copy()
             graph.remove_nodes_from([i for i in graph.nodes()
-                                     if graph.node[i].get("residue") != "self"])
+                                     if graph.nodes[i].get("residue") != "self"])
 
             matcher = isomorphism.GraphMatcher(noext, graph, \
                         node_match=super(AmberMatcher, self)._check_atom_match)
@@ -278,12 +278,12 @@ class AmberMatcher(MoleculeMatcher):
         graph = self.known_res.get(matchname)
 
         # Generate naming dictionaries to return
-        nammatch = {i: graph.node[mapping[i]].get("atomname")
+        nammatch = {i: graph.nodes[mapping[i]].get("atomname")
                     for i in mapping.keys()
-                    if graph.node[mapping[i]].get("residue") == "self"}
-        resmatch = {i: graph.node[mapping[i]].get("resname")
+                    if graph.nodes[mapping[i]].get("residue") == "self"}
+        resmatch = {i: graph.nodes[mapping[i]].get("resname")
                     for i in mapping.keys()
-                    if graph.node[mapping[i]].get("residue") == "self"}
+                    if graph.nodes[mapping[i]].get("residue") == "self"}
 
         # Find resid and fragment for other molecule
         partners = []
@@ -386,7 +386,7 @@ class AmberMatcher(MoleculeMatcher):
             graph = self.known_res.get(matchname)
             truncated = nx.Graph(graph)
             truncated.remove_nodes_from([n for n in graph.nodes() if \
-                                         graph.node[n]["residue"] != "self"])
+                                         graph.nodes[n]["residue"] != "self"])
             matcher = isomorphism.GraphMatcher(rgraph, truncated,
                                                node_match=self._check_atom_match)
             if matcher.subgraph_is_isomorphic():
@@ -456,7 +456,7 @@ class AmberMatcher(MoleculeMatcher):
                 graph = self.known_res.get(matchname)
                 truncated = nx.Graph(graph)
                 truncated.remove_nodes_from([n for n in graph.nodes() if \
-                                             graph.node[n]["residue"] != "self"])
+                                             graph.nodes[n]["residue"] != "self"])
                 matcher = isomorphism.GraphMatcher(tgraph, truncated,
                                                    node_match=self._check_atom_match)
 
@@ -682,11 +682,11 @@ class AmberMatcher(MoleculeMatcher):
 
                 # Add bonds command
                 elif incmd == "addbonds":
-                    node1 = graph.node.get(tokens[0])
-                    node2 = graph.node.get(tokens[1])
+                    node1 = graph.nodes.get(tokens[0])
+                    node2 = graph.nodes.get(tokens[1])
                     if not node1 or not node2:
                         print(node1, node2)
-                        print(graph.node.keys())
+                        print(graph.nodes.keys())
                         raise DabbleError("Can't parse bond for unit %s, file %s\n"
                                           "Line was: %s" % (unit, filename, line))
                     graph.add_edge(tokens[0], tokens[1])
@@ -701,7 +701,7 @@ class AmberMatcher(MoleculeMatcher):
                         node1 = "+"
                     graph.add_node(node1, atomname=node1, type="", residue=node1,
                                    element="_join")
-                    if not graph.node.get(tokens[0]):
+                    if not graph.nodes.get(tokens[0]):
                         raise DabbleError("Can't parse extra residue bond for "
                                           "unit %s, file %s\nLine was: %s"
                                           % (unit, filename, line))
@@ -709,7 +709,7 @@ class AmberMatcher(MoleculeMatcher):
 
                 elif incmd == "name":
                     for nod in (n for n in graph.nodes() if \
-                              graph.node[n].get("residue") == tokens[1]):
+                              graph.nodes[n].get("residue") == tokens[1]):
 
                         # Sanity check residue name here
                         if "*" in tokens[0]:
@@ -718,8 +718,8 @@ class AmberMatcher(MoleculeMatcher):
                                               "is invalid. Please check the first "
                                               "field in the unit.residue section."
                                               % filename)
-                        graph.node[nod]["resname"] = tokens[0]
-                        graph.node[nod]["residue"] = "self"
+                        graph.nodes[nod]["resname"] = tokens[0]
+                        graph.nodes[nod]["residue"] = "self"
 
                 cmdidx += 1
 

@@ -55,21 +55,21 @@ def test_residue_parsing(tmpdir):
     ala = a.known_res.get("ALA")
 
     # Check names and types
-    print(ala.node.keys())
-    assert "CB" in [ala.node[x].get("atomname") for x in ala.nodes()]
-    cbs = [x for x in ala.nodes() if ala.node[x].get("atomname") == "CB"]
+    print(ala.nodes.keys())
+    assert "CB" in [ala.nodes[x].get("atomname") for x in ala.nodes()]
+    cbs = [x for x in ala.nodes if ala.nodes[x].get("atomname") == "CB"]
     assert len(cbs) == 1
     assert cbs[0] == "5"
-    assert ala.node[cbs[0]].get("type") and ala.node[cbs[0]].get("type") == "CT"
-    assert set([ala.node[x].get("resname") for x in ala.nodes()]) == set(["HALLO", None])
+    assert ala.nodes[cbs[0]].get("type") and ala.nodes[cbs[0]].get("type") == "CT"
+    assert set([ala.nodes[x].get("resname") for x in ala.nodes()]) == set(["HALLO", None])
 
     # Check connectivity
-    C = [x for x in ala.nodes() if ala.node[x].get("atomname") == "C"][0]
-    CA = [x for x in ala.nodes() if ala.node[x].get("atomname") == "CA"][0]
-    CB = [x for x in ala.nodes() if ala.node[x].get("atomname") == "CB"][0]
-    HB1 = [x for x in ala.nodes() if ala.node[x].get("atomname") == "HB1"][0]
-    HB2 = [x for x in ala.nodes() if ala.node[x].get("atomname") == "HB2"][0]
-    HB3 = [x for x in ala.nodes() if ala.node[x].get("atomname") == "HB3"][0]
+    C = [x for x in ala.nodes() if ala.nodes[x].get("atomname") == "C"][0]
+    CA = [x for x in ala.nodes() if ala.nodes[x].get("atomname") == "CA"][0]
+    CB = [x for x in ala.nodes() if ala.nodes[x].get("atomname") == "CB"][0]
+    HB1 = [x for x in ala.nodes() if ala.nodes[x].get("atomname") == "HB1"][0]
+    HB2 = [x for x in ala.nodes() if ala.nodes[x].get("atomname") == "HB2"][0]
+    HB3 = [x for x in ala.nodes() if ala.nodes[x].get("atomname") == "HB3"][0]
 
     assert (C, CA) in ala.edges() or (CA, C) in ala.edges()
     assert (CB, HB1) in ala.edges() or (HB1, CB) in ala.edges()

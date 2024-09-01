@@ -301,13 +301,12 @@ class AmberWriter(MoleculeWriter):
 
         # Add box information since it is not in the pdb
         box = molecule.get_periodic(molid=self.molid)
-        args += ["-box", " %f,%f,%f" % (box['a'], box['b'], box['c'])]
+        args += ["-box", "%f,%f,%f" % (box['a'], box['b'], box['c'])]
         args += ["nosettle"]
 
         print("Running chamber. This may take a while...", flush=True)
-        parm = AmberParm()
         with warnings.catch_warnings(record=True) as w:
-            action = chamber(parm, *args)
+            action = chamber(None, *args)
             action.execute()
             w = [i for i in w if issubclass(i.category, ParameterWarning)]
 

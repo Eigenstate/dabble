@@ -198,7 +198,7 @@ class CharmmMatcher(MoleculeMatcher):
         # ie that it this residue is a subgraph of a cysteine
         truncated = nx.Graph(rgraph)
         truncated.remove_nodes_from([n for n in rgraph.nodes() if \
-                                     rgraph.node[n]["residue"] != "self"])
+                                     rgraph.nodes[n]["residue"] != "self"])
         matches = {}
         for matchname in self.AMINO_ACIDS:
             graph = self.known_res.get(matchname)
@@ -437,7 +437,7 @@ class CharmmMatcher(MoleculeMatcher):
                 # Technically re-adding the node will just change the type and
                 # not add a duplicate, but this is more correct and clear.
                 if tokens[1] in graph.nodes():
-                    graph.node[tokens[1]]["type"] = tokens[2]
+                    graph.nodes[tokens[1]]["type"] = tokens[2]
                 else:
                     graph.add_node(tokens[1], type=tokens[2],
                                    atomname=tokens[1],
@@ -592,15 +592,15 @@ def _define_bond(graph, node1, node2, patch):
     # to the atom we are applying a bond to, delete the extraresidue atom.
     # It can be added back later if it was actually needed.
     neighbor_joins = []
-    if graph.node[node1]["patched"] and not graph.node[node2]["patched"]:
+    if graph.nodes[node1]["patched"] and not graph.nodes[node2]["patched"]:
         neighbor_joins = [e[1] for e in graph.edges(nbunch=[node2]) \
-                          if graph.node[e[1]]["residue"] != "self" and \
-                          not graph.node[e[1]]["patched"]]
+                          if graph.nodes[e[1]]["residue"] != "self" and \
+                          not graph.nodes[e[1]]["patched"]]
 
-    elif graph.node[node2]["patched"] and not graph.node[node1]["patched"]:
+    elif graph.nodes[node2]["patched"] and not graph.nodes[node1]["patched"]:
         neighbor_joins = [e[1] for e in graph.edges(nbunch=[node1]) \
-                          if graph.node[e[1]]["residue"] != "self" and \
-                          not graph.node[e[1]]["patched"]]
+                          if graph.nodes[e[1]]["residue"] != "self" and \
+                          not graph.nodes[e[1]]["patched"]]
 
     graph.remove_nodes_from(neighbor_joins)
     graph.add_edge(node1, node2, patched=patch)
@@ -621,15 +621,15 @@ def _prune_joins(graph):
        graph (networkx graph): The residue to prun
     """
 
-    unpatched = [n for n in graph.nodes() if not graph.node[n]["patched"]]
+    unpatched = [n for n in graph.nodes() if not graph.nodes[n]["patched"]]
     for uun in unpatched:
         neighbor_joins = [e[1] for e in graph.edges(nbunch=[uun]) if \
-                          graph.node[e[1]]["residue"] != "self" and \
-                                  not graph.node[e[1]]["patched"]]
+                          graph.nodes[e[1]]["residue"] != "self" and \
+                                  not graph.nodes[e[1]]["patched"]]
         for nei in neighbor_joins:
-            if any(graph.node[e[1]]["element"] == graph.node[nei]["element"] for \
+            if any(graph.nodes[e[1]]["element"] == graph.nodes[nei]["element"] for \
                    e in graph.edges(nbunch=[uun]) if \
-                   graph.node[e[1]]["patched"]):
+                   graph.nodes[e[1]]["patched"]):
                 graph.remove_node(nei)
 
 #=========================================================================

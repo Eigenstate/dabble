@@ -10,9 +10,9 @@ maintainers = [
 readme = "README.md"
 dependencies = [
     "numpy",
-    "networkx >= 1.11",
+    "networkx >= 2.4",
     "vmd-python >= 2.0.4",
-    "parmed",
+    "parmed >= 4.0.0",
     "psfgen"
 ]
 
