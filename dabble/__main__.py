@@ -32,7 +32,7 @@ from dabble import VmdSilencer, DabbleBuilder, supported_formats
 from dabble.param import supported_forcefields, supported_water_models
 from pkg_resources import resource_filename
 
-__version__ = '2.7.12'
+__version__ = '2.8.0'
 __author__ = 'Robin Betz'
 
 #++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
