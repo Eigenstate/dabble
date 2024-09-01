@@ -32,7 +32,7 @@ sys.path.insert(0, os.path.abspath('../dabble/param'))
 extensions = [
     'sphinx.ext.autodoc',
     'sphinx.ext.coverage',
-    'sphinxcontrib.napoleon',
+    'sphinx.ext.napoleon',
     'sphinx.ext.githubpages',
     'sphinx.ext.todo', # Robin testing
     #'sphinx.ext.viewcode',

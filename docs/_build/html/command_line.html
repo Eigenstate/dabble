@@ -1,249 +1,211 @@
-
-
 <!DOCTYPE html>
-<!--[if IE 8]><html class="no-js lt-ie9" lang="en" > <![endif]-->
-<!--[if gt IE 8]><!--> <html class="no-js" lang="en" > <!--<![endif]-->
+<html class="writer-html5" lang="python" data-content_root="./">
 <head>
-  <meta charset="utf-8">
-  
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  
-  <title>Command-line Usage &mdash; Dabble 2.7.6 documentation</title>
-  
+  <meta charset="utf-8" /><meta name="viewport" content="width=device-width, initial-scale=1" />
+
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Command-line Options &mdash; Dabble 2.8.0 documentation</title>
+      <link rel="stylesheet" type="text/css" href="_static/pygments.css?v=fa44fd50" />
+      <link rel="stylesheet" type="text/css" href="_static/css/theme.css?v=19f00094" />
 
   
+    <link rel="canonical" href="https://dabble.robinbetz.com/command_line.html"/>
+  <!--[if lt IE 9]>
+    <script src="_static/js/html5shiv.min.js"></script>
+  <![endif]-->
   
-  
-  
-
-  
-
-  
-  
-    
-
-  
-
-  
-  
-    <link rel="stylesheet" href="_static/css/theme.css" type="text/css" />
-  
-
-  
-
-  
-        <link rel="index" title="Index"
-              href="genindex.html"/>
-        <link rel="search" title="Search" href="search.html"/>
-    <link rel="top" title="Dabble 2.7.6 documentation" href="index.html"/>
-        <link rel="next" title="System Building with Dabble" href="builder_api.html"/>
-        <link rel="prev" title="Dabble" href="index.html"/> 
-
-  
-  <script src="_static/js/modernizr.min.js"></script>
-
+        <script src="_static/documentation_options.js?v=451a52d5"></script>
+        <script src="_static/doctools.js?v=9a2dae69"></script>
+        <script src="_static/sphinx_highlight.js?v=dc90522c"></script>
+    <script src="_static/js/theme.js"></script>
+    <link rel="index" title="Index" href="genindex.html" />
+    <link rel="search" title="Search" href="search.html" />
+    <link rel="next" title="Tutorials" href="tutorials.html" />
+    <link rel="prev" title="Examples" href="examples.html" /> 
 </head>
 
-<body class="wy-body-for-nav" role="document">
-
-   
+<body class="wy-body-for-nav"> 
   <div class="wy-grid-for-nav">
-
-    
     <nav data-toggle="wy-nav-shift" class="wy-nav-side">
       <div class="wy-side-scroll">
-        <div class="wy-side-nav-search">
-          
+        <div class="wy-side-nav-search" >
 
           
-            <a href="index.html" class="icon icon-home"> Dabble
           
-
-          
+          <a href="index.html">
+            
+              <img src="_static/dabblelogosmall.png" class="logo" alt="Logo"/>
           </a>
-
-          
-            
-            
               <div class="version">
-                2.7.6
+                2.8.0
               </div>
-            
-          
-
-          
 <div role="search">
   <form id="rtd-search-form" class="wy-form" action="search.html" method="get">
-    <input type="text" name="q" placeholder="Search docs" />
+    <input type="text" name="q" placeholder="Search docs" aria-label="Search docs" />
     <input type="hidden" name="check_keywords" value="yes" />
     <input type="hidden" name="area" value="default" />
   </form>
 </div>
-
-          
-        </div>
-
-        <div class="wy-menu wy-menu-vertical" data-spy="affix" role="navigation" aria-label="main navigation">
-          
-            
-            
-              
-            
-            
+        </div><div class="wy-menu wy-menu-vertical" data-spy="affix" role="navigation" aria-label="Navigation menu">
               <ul class="current">
-<li class="toctree-l1 current"><a class="current reference internal" href="#">Command-line Usage</a><ul>
-<li class="toctree-l2"><a class="reference internal" href="#the-protein">The protein</a></li>
-<li class="toctree-l2"><a class="reference internal" href="#the-membrane-or-solvent">The membrane or solvent</a></li>
-<li class="toctree-l2"><a class="reference internal" href="#ions">Ions</a></li>
-<li class="toctree-l2"><a class="reference internal" href="#geometry-specification">Geometry specification</a></li>
-<li class="toctree-l2"><a class="reference internal" href="#desired-output">Desired output</a><ul>
-<li class="toctree-l3"><a class="reference internal" href="#structure-only">Structure only</a></li>
-<li class="toctree-l3"><a class="reference internal" href="#using-charmm-parameters">Using CHARMM parameters</a></li>
-<li class="toctree-l3"><a class="reference internal" href="#amber-parameters">AMBER parameters</a></li>
+<li class="toctree-l1"><a class="reference internal" href="installation.html">Installation</a></li>
+<li class="toctree-l1"><a class="reference internal" href="examples.html">Examples</a></li>
+<li class="toctree-l1 current"><a class="current reference internal" href="#">Command-line Options</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="#input-and-output">Input and output</a></li>
+<li class="toctree-l2"><a class="reference internal" href="#builder-options">Builder options</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="#geometry-specification">Geometry specification</a></li>
+<li class="toctree-l3"><a class="reference internal" href="#input-system-orientation">Input system orientation</a></li>
+<li class="toctree-l3"><a class="reference internal" href="#lipid-membrane">Lipid membrane</a></li>
+<li class="toctree-l3"><a class="reference internal" href="#ions">Ions</a></li>
 </ul>
 </li>
-<li class="toctree-l2"><a class="reference internal" href="#less-common-options">Less common options</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="#parameterization-options">Parameterization options</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="#force-field">Force field</a></li>
+<li class="toctree-l3"><a class="reference internal" href="#water-model">Water model</a></li>
+<li class="toctree-l3"><a class="reference internal" href="#additional-parameter-files">Additional parameter files</a></li>
+<li class="toctree-l3"><a class="reference internal" href="#custom-forcefields">Custom forcefields</a></li>
 <li class="toctree-l3"><a class="reference internal" href="#hydrogen-mass-repartitioning">Hydrogen mass repartitioning</a></li>
-<li class="toctree-l3"><a class="reference internal" href="#lipid-protein-interactions">Lipid-protein interactions</a></li>
 </ul>
 </li>
+<li class="toctree-l2"><a class="reference internal" href="#debug-options">Debug options</a></li>
 </ul>
 </li>
-<li class="toctree-l1"><a class="reference internal" href="builder_api.html">System Building with Dabble</a></li>
+<li class="toctree-l1"><a class="reference internal" href="tutorials.html">Tutorials</a></li>
 <li class="toctree-l1"><a class="reference internal" href="parameter_api.html">Parameterization with Dabble</a></li>
-<li class="toctree-l1"><a class="reference internal" href="utility_programs.html">Utility Programs</a></li>
-<li class="toctree-l1"><a class="reference internal" href="api_examples.html">API Examples</a></li>
 </ul>
 
-            
-          
         </div>
       </div>
     </nav>
 
-    <section data-toggle="wy-nav-shift" class="wy-nav-content-wrap">
-
-      
-      <nav class="wy-nav-top" role="navigation" aria-label="top navigation">
-        
+    <section data-toggle="wy-nav-shift" class="wy-nav-content-wrap"><nav class="wy-nav-top" aria-label="Mobile navigation menu" >
           <i data-toggle="wy-nav-top" class="fa fa-bars"></i>
           <a href="index.html">Dabble</a>
-        
       </nav>
 
-
-      
       <div class="wy-nav-content">
         <div class="rst-content">
-          
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-<div role="navigation" aria-label="breadcrumbs navigation">
-
+          <div role="navigation" aria-label="Page navigation">
   <ul class="wy-breadcrumbs">
-    
-      <li><a href="index.html">Docs</a> &raquo;</li>
-        
-      <li>Command-line Usage</li>
-    
-    
+      <li><a href="index.html" class="icon icon-home" aria-label="Home"></a></li>
+      <li class="breadcrumb-item active">Command-line Options</li>
       <li class="wy-breadcrumbs-aside">
-        
-            
             <a href="_sources/command_line.rst.txt" rel="nofollow"> View page source</a>
-          
-        
       </li>
-    
   </ul>
-
-  
   <hr/>
 </div>
           <div role="main" class="document" itemscope="itemscope" itemtype="http://schema.org/Article">
            <div itemprop="articleBody">
-            
-  <div class="section" id="command-line-usage">
-<span id="command-line"></span><h1>Command-line Usage<a class="headerlink" href="#command-line-usage" title="Permalink to this headline">¶</a></h1>
+             
+  <section id="command-line-options">
+<span id="command-line"></span><h1>Command-line Options<a class="headerlink" href="#command-line-options" title="Link to this heading">¶</a></h1>
+<p>Dabble has many command line options. See <a class="reference internal" href="examples.html#examples"><span class="std std-ref">Examples</span></a> for typical usage.</p>
 <p>The command-line tool is <code class="docutils literal notranslate"><span class="pre">dabble</span></code>. Run with no arguments
 to see a list of all arguments, or for help:</p>
-<div class="highlight-bash notranslate"><div class="highlight"><pre><span></span>dabble -h
+<div class="highlight-bash notranslate"><div class="highlight"><pre><span></span>dabble<span class="w"> </span>-h
 </pre></div>
 </div>
-<div class="section" id="the-protein">
-<h2>The protein<a class="headerlink" href="#the-protein" title="Permalink to this headline">¶</a></h2>
+<section id="input-and-output">
+<h2>Input and output<a class="headerlink" href="#input-and-output" title="Link to this heading">¶</a></h2>
 <p>Dabble takes as input a <code class="docutils literal notranslate"><span class="pre">pdb</span></code>, <code class="docutils literal notranslate"><span class="pre">mae</span></code>, or <code class="docutils literal notranslate"><span class="pre">dms</span></code> file containing a prepared protein
 of interest:</p>
-<div class="highlight-bash notranslate"><div class="highlight"><pre><span></span>-i &lt;protein file name&gt;
+<div class="highlight-bash notranslate"><div class="highlight"><pre><span></span>-i<span class="w"> </span>&lt;protein<span class="w"> </span>file<span class="w"> </span>name&gt;
 </pre></div>
 </div>
 <p>&quot;Prepared&quot; in this context means hydrogens are added, caps (if desired) are added
 to the end of protein chains, and missing atoms, residues, or loops have been filled in.
 Dabble will not add or remove atoms from the input protein.</p>
-<p>The protein will be centered in the XY plane and the membrane will be added around
-it on the XY plane. Water will be added in the Z dimension.
-If your protein is not oriented right or you need to move it, there are several ways
-to fix it.</p>
-<p>The simplest is to pre-align to the <a class="reference external" href="http://opm.phar.umich.edu/">Orientation of Proteins in Membranes</a> database when preparing the protein for dabbling.</p>
-<p>Alternatively, Dabble can attempt to perform an alignment. Note that due to the functionality available in the vmd-python backend, the alignment must be done to
-equal numbers of atoms in the reference and target proteins. You can specify which
-atoms should be aligned using a VMD atom selection language, which defaults to <code class="docutils literal notranslate"><span class="pre">protein</span>
-<span class="pre">and</span> <span class="pre">backbone</span></code>.:</p>
-<div class="highlight-bash notranslate"><div class="highlight"><pre><span></span>--opm-pdb &lt;opm pdb file&gt; --opm-align <span class="s2">&quot;protein and backbone&quot;</span>
+<p>Specify the output file name with:</p>
+<div class="highlight-bash notranslate"><div class="highlight"><pre><span></span>-o<span class="w"> </span>&lt;output&gt;
 </pre></div>
 </div>
-<p>You can also manually specify the orientation of the protein relative to the membrane
-in terms of its angle to the membrane and Z offset. The membrane angle is the rotation
-of the membrane relative to the axis of the protein, in degrees, as on the OPM website. Z offset is applied directly to the protein's coordinates. The membrane is always centered in the XY plane.:</p>
-<div class="highlight-bash notranslate"><div class="highlight"><pre><span></span>--move-solute &lt;z offset&gt; --membrane-rotation &lt;degrees&gt;
+<p>The format of the output will be inferred by file extension, with the extension
+referring to that of the topology file. Multiple output files will be produced
+with different extensions, such as , or you can specify
+it manually with the <code class="docutils literal notranslate"><span class="pre">-format</span></code> argument:</p>
+<div class="highlight-bash notranslate"><div class="highlight"><pre><span></span>--format<span class="w"> </span><span class="o">[</span>amber<span class="p">|</span>charmm<span class="p">|</span>desmond<span class="p">|</span>gromacs<span class="p">|</span>lammps<span class="p">|</span>mae<span class="p">|</span>pdb<span class="o">]</span>
 </pre></div>
 </div>
+<div class="admonition note">
+<p class="admonition-title">Note</p>
+<p>Sometimes, Dabble will produce multiple output format files, depending on
+the requested forcefield and format. For example, requesting a system be
+dabbled with the charmm forcefield with output in amber format will produce
+a <code class="docutils literal notranslate"><span class="pre">.psf</span></code>, <code class="docutils literal notranslate"><span class="pre">.pdb</span></code> CHARMM-format files, along with <code class="docutils literal notranslate"><span class="pre">.prmtop</span></code> and
+<code class="docutils literal notranslate"><span class="pre">.inpcrd</span></code> AMBER-format files. The table only shows the files you are
+guaranteed to get regardless of chosen forcefield.</p>
 </div>
-<div class="section" id="the-membrane-or-solvent">
-<h2>The membrane or solvent<a class="headerlink" href="#the-membrane-or-solvent" title="Permalink to this headline">¶</a></h2>
-<p>If no membrane is specified, Dabble will use a POPC membrane. However, you may also specify your own. The membrane should be equilibrated, and can include any amount of water in the +- Z direction, as Dabble will trim excess. If there is insufficient water to solvate your protein, Dabble will add more, but it will require equilibration.</p>
-<p>To build your own membranes for Dabble using CHARMM-GUI, please read
-<span class="xref std std-ref">membranes</span></p>
-<p>The membrane should be oriented on the XY plane and in mae file format.:</p>
-<div class="highlight-bash notranslate"><div class="highlight"><pre><span></span>-M &lt;membrane mae file&gt;
+<p>The relationship between file format, file extension, and format string is:</p>
+<table class="docutils align-default">
+<colgroup>
+<col style="width: 16.7%" />
+<col style="width: 8.3%" />
+<col style="width: 66.7%" />
+<col style="width: 8.3%" />
+</colgroup>
+<thead>
+<tr class="row-odd"><th class="head"><p>Format</p></th>
+<th class="head"><p>Extension</p></th>
+<th class="head"><p>Supported codes</p></th>
+<th class="head"><p>Produced files</p></th>
+</tr>
+</thead>
+<tbody>
+<tr class="row-even"><td><p>amber</p></td>
+<td><p><code class="docutils literal notranslate"><span class="pre">.prmtop</span></code></p></td>
+<td><p>AMBER, NAMD, OpenMM, ACEMD</p></td>
+<td><p><code class="docutils literal notranslate"><span class="pre">.prmtop</span></code>, <code class="docutils literal notranslate"><span class="pre">.inpcrd</span></code></p></td>
+</tr>
+<tr class="row-odd"><td><p>charmm</p></td>
+<td><p><code class="docutils literal notranslate"><span class="pre">.psf</span></code></p></td>
+<td><p>CHARMM, NAMD, OpenMM, ACEMD</p></td>
+<td><p><code class="docutils literal notranslate"><span class="pre">.psf</span></code>, <code class="docutils literal notranslate"><span class="pre">.pdb</span></code></p></td>
+</tr>
+<tr class="row-even"><td><p>desmond</p></td>
+<td><p><code class="docutils literal notranslate"><span class="pre">.dms</span></code></p></td>
+<td><p>Anton (via conversion), Desmond</p></td>
+<td><p><code class="docutils literal notranslate"><span class="pre">.dms</span></code></p></td>
+</tr>
+<tr class="row-odd"><td><p>gromacs</p></td>
+<td><p><code class="docutils literal notranslate"><span class="pre">.gro</span></code></p></td>
+<td><p>GROMACS, OpenMM</p></td>
+<td><p><code class="docutils literal notranslate"><span class="pre">.top</span></code>, <code class="docutils literal notranslate"><span class="pre">.gro</span></code></p></td>
+</tr>
+<tr class="row-even"><td><p>lammps</p></td>
+<td><p><code class="docutils literal notranslate"><span class="pre">.dat</span></code></p></td>
+<td><p>LAMMPS</p></td>
+<td><p><code class="docutils literal notranslate"><span class="pre">.dat</span></code>, <code class="docutils literal notranslate"><span class="pre">.psf</span></code>, <code class="docutils literal notranslate"><span class="pre">.pdb</span></code></p></td>
+</tr>
+<tr class="row-odd"><td><p>mae</p></td>
+<td><p><code class="docutils literal notranslate"><span class="pre">.mae</span></code></p></td>
+<td><p>N/A - unparameterized</p></td>
+<td><p><code class="docutils literal notranslate"><span class="pre">.mae</span></code></p></td>
+</tr>
+<tr class="row-even"><td><p>pdb</p></td>
+<td><p><code class="docutils literal notranslate"><span class="pre">.pdb</span></code></p></td>
+<td><p>N/A - unparameterized</p></td>
+<td><p><code class="docutils literal notranslate"><span class="pre">.pdb</span></code></p></td>
+</tr>
+</tbody>
+</table>
+<div class="admonition note">
+<p class="admonition-title">Note</p>
+<p>If building a system, Dabble will always produce a <code class="docutils literal notranslate"><span class="pre">.mae</span></code> file with the
+build, unparameterized system. This can be useful if testing multiple
+forcefields.</p>
+</div>
+<p>Dabble will never overwrite any existing files with its output. If you wish
+to disable this functionality, you can enable overwriting with::</p>
+<div class="highlight-bash notranslate"><div class="highlight"><pre><span></span>-O
 </pre></div>
 </div>
-<p>If you don't want a membrane, Dabble can also solvate in TIP3 water with the
-following option::</p>
-<div class="highlight-bash notranslate"><div class="highlight"><pre><span></span>-M TIP3
-</pre></div>
-</div>
-</div>
-<div class="section" id="ions">
-<h2>Ions<a class="headerlink" href="#ions" title="Permalink to this headline">¶</a></h2>
-<p>Dabble will add ions in the solvent to the desired salt concentration (defaults
-to 0.150 M, which is approximately physiological). Then, anions or cations will
-be deleted until the system is neutral.</p>
-<p>Currently the supported cations are Na:sub:<cite>+</cite> and K:sub:<cite>+</cite>, with Na:sub:<cite>+</cite>
-being the default.:</p>
-<div class="highlight-bash notranslate"><div class="highlight"><pre><span></span>--cation K
-</pre></div>
-</div>
-<p>To add ions just so the system is neutral::</p>
-<div class="highlight-bash notranslate"><div class="highlight"><pre><span></span>--salt-concentration <span class="m">0</span>.0
-</pre></div>
-</div>
-</div>
-<div class="section" id="geometry-specification">
-<h2>Geometry specification<a class="headerlink" href="#geometry-specification" title="Permalink to this headline">¶</a></h2>
+<p>Or <code class="docutils literal notranslate"><span class="pre">--overwrite</span></code>.</p>
+</section>
+<section id="builder-options">
+<h2>Builder options<a class="headerlink" href="#builder-options" title="Link to this heading">¶</a></h2>
+<section id="geometry-specification">
+<h3>Geometry specification<a class="headerlink" href="#geometry-specification" title="Link to this heading">¶</a></h3>
 <p>Dabble builds the system by inserting the protein into a membrane, then adding
 water and ions. The exact dimensions of the membrane, and amount of water,
 can all be specified.</p>
@@ -251,221 +213,300 @@ can all be specified.</p>
 so that there is the specified amount of padding in the X, Y, and Z dimensions.</p>
 <p>The buffer distance is from the edge of the protein to the edge of the periodic
 box, so the distance between protein images is double this value.:</p>
-<div class="highlight-bash notranslate"><div class="highlight"><pre><span></span>--membrane-buffer-dist <span class="m">17</span>.5 --water-buffer <span class="m">10</span>.0
+<div class="highlight-bash notranslate"><div class="highlight"><pre><span></span>--membrane-buffer-dist<span class="w"> </span><span class="m">17</span>.5<span class="w"> </span>--water-buffer<span class="w"> </span><span class="m">10</span>.0
 </pre></div>
 </div>
 <p>For water-only systems, no need to specify the membrane buffer:</p>
-<div class="highlight-bash notranslate"><div class="highlight"><pre><span></span>-M TIP3 --water-buffer <span class="m">15</span>.0
+<div class="highlight-bash notranslate"><div class="highlight"><pre><span></span>-M<span class="w"> </span>none<span class="w"> </span>--water-buffer<span class="w"> </span><span class="m">15</span>.0
 </pre></div>
 </div>
-<p>The X and Y dimensions of the protein are handled separately using the buffer-based
-calculation, so the resulting system may not be square.
-If instead you want to manually specify your system size, you can use the following
-options. This will produce a system where the periodic box is 50 x 50 x 100 A.:</p>
-<div class="highlight-bash notranslate"><div class="highlight"><pre><span></span>--absolute-x <span class="m">50</span>.0 --absolute-y <span class="m">50</span>.0 --absolute-z <span class="m">100</span>.0
+<p>The X and Y dimensions of the protein are handled separately using the
+buffer-based calculation, so the resulting system may not be square.  If
+instead you want to manually specify your system size, you can use the
+following options. This will produce a system where the periodic box is 50 x 50
+x 100 A.:</p>
+<div class="highlight-bash notranslate"><div class="highlight"><pre><span></span>--absolute-x<span class="w"> </span><span class="m">50</span>.0<span class="w"> </span>--absolute-y<span class="w"> </span><span class="m">50</span>.0<span class="w"> </span>--absolute-z<span class="w"> </span><span class="m">100</span>.0
 </pre></div>
 </div>
 <p>You can mix the buffer-based and absolute system size specifications. Any
 absolute dimensions will take priority.:</p>
-<div class="highlight-bash notranslate"><div class="highlight"><pre><span></span>--membrane-buffer-dist <span class="m">20</span>.0 --absolute-z <span class="m">50</span>.0
+<div class="highlight-bash notranslate"><div class="highlight"><pre><span></span>--membrane-buffer-dist<span class="w"> </span><span class="m">20</span>.0<span class="w"> </span>--absolute-z<span class="w"> </span><span class="m">50</span>.0
 </pre></div>
 </div>
-</div>
-<div class="section" id="desired-output">
-<h2>Desired output<a class="headerlink" href="#desired-output" title="Permalink to this headline">¶</a></h2>
-<p>Dabble aims to be a one stop shop for all your system building and parameterization
-needs, and supports output in a variety of formats, including common structure
-files as well as parameterized input files for CHARMM, Desmond, and AMBER using
-the CHARMM or AMBER force fields.</p>
-<p>All intermediate files are saved, so if you want an AMBER prmtop, you will also get
-the <code class="docutils literal notranslate"><span class="pre">mae</span></code> file made along the way. This can be useful in validating or
-visualizing your structure, and can save you the time of having to run Dabble
-more than once.</p>
-<p>Dabble will refuse to create output files if they would overwrite other files
-with the same name. To allow overwriting to happen::</p>
-<div class="highlight-bash notranslate"><div class="highlight"><pre><span></span>--overwrite
+</section>
+<section id="input-system-orientation">
+<h3>Input system orientation<a class="headerlink" href="#input-system-orientation" title="Link to this heading">¶</a></h3>
+<p>The input system will be centered in the XY plane and the membrane will be
+added around it on the XY plane. Water will be added in the Z dimension.  If
+your protein or input molecule(s) is not oriented right or you need to move it,
+there are several ways to fix it.</p>
+<p>The simplest is to pre-align to the <a class="reference external" href="http://opm.phar.umich.edu/">Orientation of Proteins in Membranes</a> database when preparing the protein for
+dabbling.</p>
+<p>Alternatively, Dabble can attempt to perform an alignment. Note that due to the
+functionality available in the vmd-python backend, the alignment must be done
+to equal numbers of atoms in the reference and target proteins. You can specify
+which atoms should be aligned using a VMD atom selection language, which
+defaults to <code class="docutils literal notranslate"><span class="pre">protein</span> <span class="pre">and</span> <span class="pre">backbone</span></code>.:</p>
+<div class="highlight-bash notranslate"><div class="highlight"><pre><span></span>--opm-pdb<span class="w"> </span>&lt;opm<span class="w"> </span>pdb<span class="w"> </span>file&gt;<span class="w"> </span>--opm-align<span class="w"> </span><span class="s2">&quot;protein and backbone&quot;</span>
 </pre></div>
 </div>
-<div class="section" id="structure-only">
-<h3>Structure only<a class="headerlink" href="#structure-only" title="Permalink to this headline">¶</a></h3>
-<p>If you just want a built structure, Dabble can give you a <code class="docutils literal notranslate"><span class="pre">mae</span></code>, <code class="docutils literal notranslate"><span class="pre">dms</span></code>, or <code class="docutils literal notranslate"><span class="pre">pdb</span></code>
-file.:</p>
-<div class="highlight-bash notranslate"><div class="highlight"><pre><span></span>-o &lt;output.dms/output.mae/output.pdb&gt;
+<p>You can also manually specify the orientation of the protein relative to the
+membrane in terms of its angle to the membrane and Z offset. The membrane angle
+is the rotation of the membrane relative to the axis of the protein, in
+degrees, as on the OPM website. Z offset is applied directly to the protein's
+coordinates. The membrane is always centered in the XY plane.:</p>
+<div class="highlight-bash notranslate"><div class="highlight"><pre><span></span>--move-solute<span class="w"> </span>&lt;z<span class="w"> </span>offset&gt;<span class="w"> </span>--membrane-rotation<span class="w"> </span>&lt;degrees&gt;
 </pre></div>
 </div>
-<p>The file format will be guessed from the extension, and no additional input is needed.</p>
+</section>
+<section id="lipid-membrane">
+<h3>Lipid membrane<a class="headerlink" href="#lipid-membrane" title="Link to this heading">¶</a></h3>
+<p>Dabble can add a lipid membrane to your input structure. If no membrane is
+specified, Dabble will use a POPC membrane. However, you may also specify your
+own. The membrane should be equilibrated, and can include any amount of water
+in the +- Z direction, as Dabble will trim excess. If there is insufficient
+water to solvate your protein, Dabble will add more, but it will require
+equilibration.</p>
+<p>To build your own membranes for Dabble using CHARMM-GUI, please read
+<span class="xref std std-ref">membranes</span></p>
+<div class="admonition-todo admonition" id="id1">
+<p class="admonition-title">Todo</p>
+<p>Support for direct loading of CHARMM-GUI membranes in PDB format will
+be added in the future.</p>
 </div>
-<div class="section" id="using-charmm-parameters">
-<h3>Using CHARMM parameters<a class="headerlink" href="#using-charmm-parameters" title="Permalink to this headline">¶</a></h3>
-<p>Dabble interfaces with <a class="reference external" href="http://www.ks.uiuc.edu/Research/vmd/plugins/psfgen/">psfgen</a>
-to create a protein structure file (<code class="docutils literal notranslate"><span class="pre">psf</span></code>), and coordinate file (<code class="docutils literal notranslate"><span class="pre">pdb</span></code>) describing the system with CHARMM atom types and parameters.</p>
-<p>Dabble does all the heavy lifting, most of which is dealing with the quirks of psfgen
-and handling translation from pdb atom names and types to CHARMM ones. This matching functionality can even detect and apply patches! For more on how
-this is done, please see <span class="xref std std-ref">parameterization</span>.</p>
-<p>By default, the <a class="reference external" href="https://www.nature.com/articles/nmeth.4067">CHARMM36m</a> atom
-names, types, and topologies are used when you specify the <code class="docutils literal notranslate"><span class="pre">-ff</span> <span class="pre">charmm36</span></code>
-flag indicating you want CHARMM parameters. You can also use the older CHARMM36
-parameters with the <code class="docutils literal notranslate"><span class="pre">-ff</span> <span class="pre">charmm36</span></code> flag. You can also use the Dabble API and
-create a <code class="docutils literal notranslate"><span class="pre">CharmmWriter</span></code> instance with <code class="docutils literal notranslate"><span class="pre">override_default=True</span></code> and your own
-forcefield files.</p>
-<p>Provide additional <code class="docutils literal notranslate"><span class="pre">str</span></code>, <code class="docutils literal notranslate"><span class="pre">rtf</span></code>/<code class="docutils literal notranslate"><span class="pre">top</span></code>, or <code class="docutils literal notranslate"><span class="pre">par</span></code>/<code class="docutils literal notranslate"><span class="pre">prm</span></code> files with the appropriate flag. Each flag may used multiple times in case you need to add multiple additional parameter sets.:</p>
-<div class="highlight-bash notranslate"><div class="highlight"><pre><span></span>-o output.psf -ff charmm36m -top ligand1.rtf -top ligand2.rtf -par ligands.prm -str ligand3.str
+<p>The membrane should be oriented on the XY plane and in mae file format.:</p>
+<div class="highlight-bash notranslate"><div class="highlight"><pre><span></span>-M<span class="w"> </span>&lt;membrane<span class="w"> </span>mae<span class="w"> </span>file&gt;
 </pre></div>
 </div>
-<p>If you want to simulate in AMBER with CHARMM parameters, Dabble will invoke the <a class="reference external" href="http://parmed.github.io/ParmEd/html/index.html">ParmEd
-API</a> to produce AMBER input files
-with CHARMM parameters. Just request an AMBER format output topology file <code class="docutils literal notranslate"><span class="pre">(prmtop)</span></code>
-and specify CHARMM parameterization <code class="docutils literal notranslate"><span class="pre">-ff</span> <span class="pre">charmm</span></code>. A coordinate file <code class="docutils literal notranslate"><span class="pre">(inpcrd)</span></code>
-will also be produced in AMBER format.:</p>
-<div class="highlight-bash notranslate"><div class="highlight"><pre><span></span>-o output.prmtop -ff charmm36m -str ligand.str
+<p>If you don't want a membrane, Dabble solvate the system in just water. The
+water model that will be used is specified elsewhere.:</p>
+<div class="highlight-bash notranslate"><div class="highlight"><pre><span></span>-M<span class="w"> </span>none
 </pre></div>
 </div>
-<p><strong>NOTE:</strong> These files may not view correctly in older versions of VMD. There will
-be a complaint about the CTITLE record and no bond will appear. This is due to
-VMD incorrectly parsing the prmtop and not any errors in the process. I have submitted
-a patch to the VMD developers, but in the meantime I recommend loading the
-intermediate <code class="docutils literal notranslate"><span class="pre">psf</span></code> file to check or visualize simulations.</p>
-</div>
-<div class="section" id="amber-parameters">
-<h3>AMBER parameters<a class="headerlink" href="#amber-parameters" title="Permalink to this headline">¶</a></h3>
-<p>If you want to simulate in AMBER using AMBER parameters, Dabble interfaces with your local installation of <a class="reference external" href="http://ambermd.org/#AmberTools">AmberTools</a> to generate
-a topology file (<code class="docutils literal notranslate"><span class="pre">prmtop</span></code>) and coordinates (<code class="docutils literal notranslate"><span class="pre">inpcrd</span></code>) suitable for simulation.
-You will need a local installation of AmberTools in the location specified by the
-environment variable <code class="docutils literal notranslate"><span class="pre">$AMBERHOME</span></code>.</p>
-<p>Request AMBER parameterization with the <code class="docutils literal notranslate"><span class="pre">-ff</span> <span class="pre">amber</span></code> flag. By default,
-the <a class="reference external" href="http://pubs.acs.org/doi/abs/10.1021/acs.jctc.5b00255">ff14SB</a> protein parameter
-set, <a class="reference external" href="http://pubs.acs.org/doi/abs/10.1021/ct4010307">lipid14</a> lipid parameteres,
-and TIP3P water model, and GAFF2 small molecule parameters will be used. To override
-these defaults, use the Dabble API and create an <code class="docutils literal notranslate"><span class="pre">AmberWriter</span></code> instance with
-the <code class="docutils literal notranslate"><span class="pre">override_defaults=True</span></code> option set and your own forcefield files. A command
-line flag may be available soon.</p>
-<p>Provide parameter and residue definition files for ligands (<code class="docutils literal notranslate"><span class="pre">off</span></code> or <code class="docutils literal notranslate"><span class="pre">lib</span></code> files)
-using the <code class="docutils literal notranslate"><span class="pre">-top</span></code> flag, forcefield definition <code class="docutils literal notranslate"><span class="pre">leaprc</span></code> files with the <code class="docutils literal notranslate"><span class="pre">-str</span></code> flag,
-and additional parameters <code class="docutils literal notranslate"><span class="pre">frcmod</span></code> with the <code class="docutils literal notranslate"><span class="pre">-par</span></code> flag. Dabble will look for
-leaprc files in the <code class="docutils literal notranslate"><span class="pre">$AMBERHOME/dat/leap/cmd</span></code> directory as well as the current folder if no explicit path is provided.:</p>
-<div class="highlight-bash notranslate"><div class="highlight"><pre><span></span>-o output.prmtop -ff amber -top ligand.off -par ligand.frcmod -str leaprc.gaff
-</pre></div>
-</div>
-</div>
-</div>
-<div class="section" id="less-common-options">
-<h2>Less common options<a class="headerlink" href="#less-common-options" title="Permalink to this headline">¶</a></h2>
-<p>The following options are helpful, but not required to Dabble your system.</p>
-<div class="section" id="hydrogen-mass-repartitioning">
-<h3>Hydrogen mass repartitioning<a class="headerlink" href="#hydrogen-mass-repartitioning" title="Permalink to this headline">¶</a></h3>
-<p>To run your simulations in AMBER with timesteps up to 4 fs, Dabble can use the ParmEd API to conduct hydrogen mass repartitioning. This only works when requesting output
-in AMBER formats.:</p>
-<div class="highlight-bash notranslate"><div class="highlight"><pre><span></span>-o output.prmtop --hmr
-</pre></div>
-</div>
-</div>
-<div class="section" id="lipid-protein-interactions">
-<h3>Lipid-protein interactions<a class="headerlink" href="#lipid-protein-interactions" title="Permalink to this headline">¶</a></h3>
-<p>Dabble inserts the protein into the membrane by tiling the membrane patch until
-it is of appropriate size, overlapping the protein with it, and deleting any
-lipids that are in the way. There are several ways to alter this behavior.</p>
-<p>Use a &quot;lipid friendly selection&quot; to specify protein or ligand atoms that are
-allowed to be much closer to the lipid atoms than protein atoms normally would
-be. The selection is the VMD's atom select syntax. Usually the &quot;resname&quot; keyword
-works well.:</p>
-<div class="highlight-bash notranslate"><div class="highlight"><pre><span></span>--lipid-friendly-sel <span class="s2">&quot;resname PCYS&quot;</span>
-</pre></div>
-</div>
-<p>To specify atoms that are part of greasy or lipid residues with rings that
-may run into other lipids, use the lipid clash check option. Cholesterol is
-really the prime example of this.:</p>
-<div class="highlight-bash notranslate"><div class="highlight"><pre><span></span>--lipid-clash-check <span class="s2">&quot;resname CLOL&quot;</span>
+<p>Dabble tries to delete atoms from the membrane that run into the input structure.
+Its default logic works well, but you can provide your own selection strings
+if you have an unusual membrane. The defaults are shown here.</p>
+<p>Sometimes Dabble may not recognize your custom membrane as being composed of
+lipids. If this is the case, you can manually specify an atom selection for the
+lipid residues. The default value will pull out the following resnames: <code class="docutils literal notranslate"><span class="pre">DLPE</span>
+<span class="pre">DMPC</span> <span class="pre">DPPC</span> <span class="pre">GPC</span> <span class="pre">LPPC</span> <span class="pre">PALM</span> <span class="pre">PC</span> <span class="pre">PGCL</span> <span class="pre">POPC</span> <span class="pre">POPE</span> <span class="pre">POPG</span> <span class="pre">POPS</span></code>. The following selection
+should correspond to the lipids in the input membrane::</p>
+<div class="highlight-bash notranslate"><div class="highlight"><pre><span></span>--lipid-selection<span class="w"> </span><span class="s2">&quot;resname DOPC&quot;</span>
 </pre></div>
 </div>
 <p>You can also specify the minimum distance between protein and lipid residues
 to move the lipid either closer or farther from the protein. The default
 value is 1.75 A.:</p>
-<div class="highlight-bash notranslate"><div class="highlight"><pre><span></span>--lipid-dist <span class="m">2</span>.0
+<div class="highlight-bash notranslate"><div class="highlight"><pre><span></span>--lipid-dist<span class="w"> </span><span class="m">2</span>.0
 </pre></div>
 </div>
-<p>Sometimes Dabble may not recognize your custom membrane as being composed of
-lipids. If this is the case, you can manually specify an atom selection for
-the lipid residues. The default value will pull out the following resnames:
-<code class="docutils literal notranslate"><span class="pre">DLPE</span> <span class="pre">DMPC</span> <span class="pre">DPPC</span> <span class="pre">GPC</span> <span class="pre">LPPC</span> <span class="pre">PALM</span> <span class="pre">PC</span> <span class="pre">PGCL</span> <span class="pre">POPC</span> <span class="pre">POPE</span> <span class="pre">POPG</span> <span class="pre">POPS</span></code>. Note that these
-are resnames in the original input file provided to Dabble, as lipid selection
-matters during the build phase.:</p>
-<div class="highlight-bash notranslate"><div class="highlight"><pre><span></span>--lipid-selection <span class="s2">&quot;resname DOPC&quot;</span>
+<p>Lipid or integral membrane molecules that have rings that may clash with lipids
+should be represented by the lipid clash selection::</p>
+<div class="highlight-bash notranslate"><div class="highlight"><pre><span></span>--lipid-clash-check<span class="w"> </span><span class="s2">&quot;resname CLR CLOL&quot;</span>
 </pre></div>
 </div>
+<p>Parts of the input system that are &quot;lipid-friendly&quot; and are allowed to be closer
+to the protein are in the lipid friendly selection. This is useful if you have
+a palmitoylation or other post-translational molecules on an input protein::</p>
+<div class="highlight-bash notranslate"><div class="highlight"><pre><span></span>--lipid-friendly-sel<span class="w"> </span><span class="s2">&quot;none&quot;</span>
+</pre></div>
 </div>
+</section>
+<section id="ions">
+<h3>Ions<a class="headerlink" href="#ions" title="Link to this heading">¶</a></h3>
+<p>Dabble will add ions in the solvent to the desired salt concentration (defaults
+to 0.150 M, which is approximately physiological). Then, anions or cations will
+be deleted until the system is neutral.</p>
+<p>Currently the supported cations are Na:sub:<cite>+</cite> and K:sub:<cite>+</cite>, with Na:sub:<cite>+</cite>
+being the default.:</p>
+<div class="highlight-bash notranslate"><div class="highlight"><pre><span></span>--cation<span class="w"> </span>K
+</pre></div>
 </div>
+<p>The default anion is Cl:sub:<cite>-</cite>:</p>
+<div class="highlight-bash notranslate"><div class="highlight"><pre><span></span>--anion<span class="w"> </span>Cl
+</pre></div>
 </div>
+<p>To add ions just so the system is neutral::</p>
+<div class="highlight-bash notranslate"><div class="highlight"><pre><span></span>--salt-concentration<span class="w"> </span><span class="m">0</span>.0
+</pre></div>
+</div>
+<div class="admonition-todo admonition" id="id2">
+<p class="admonition-title">Todo</p>
+<p>Cations and anions with charge more than than 1 have not been tested,
+and the system may not be neutral.</p>
+</div>
+</section>
+</section>
+<section id="parameterization-options">
+<h2>Parameterization options<a class="headerlink" href="#parameterization-options" title="Link to this heading">¶</a></h2>
+<p>After building a system, Dabble can assign parameters from a force field and
+produce parameterized files suitable for input to a simulation code.</p>
+<p>Dabble interfaces with the appropriate parameterization program (<cite>psfgen</cite>,
+<cite>tleap</cite>, or <cite>pdb2gmx</cite>). It is an expert user of the program, setting atom types
+and handling covalent linkages. It can even detect and apply CHARMM patches!</p>
+<section id="force-field">
+<h3>Force field<a class="headerlink" href="#force-field" title="Link to this heading">¶</a></h3>
+<p>Specify the desired force field::</p>
+<div class="highlight-bash notranslate"><div class="highlight"><pre><span></span>--forcefield<span class="w"> </span><span class="s2">&quot;charmm&quot;</span>
+</pre></div>
+</div>
+<p>Currently supported values are:</p>
+<table class="docutils align-default">
+<colgroup>
+<col style="width: 20.0%" />
+<col style="width: 80.0%" />
+</colgroup>
+<thead>
+<tr class="row-odd"><th class="head"><p>Forcefield</p></th>
+<th class="head"><p>Description</p></th>
+</tr>
+</thead>
+<tbody>
+<tr class="row-even"><td><p><code class="docutils literal notranslate"><span class="pre">amber</span></code></p></td>
+<td><p>Amber 14: ff14SB protein, GAFF2 small molecule, lipid14 lipids</p></td>
+</tr>
+<tr class="row-odd"><td><p><code class="docutils literal notranslate"><span class="pre">charmm</span></code></p></td>
+<td><p>CHARMM36m, July 2018 update</p></td>
+</tr>
+<tr class="row-even"><td><p><code class="docutils literal notranslate"><span class="pre">opls</span></code></p></td>
+<td><p>OPLS AA/M, 2001 amino acid dihedrals</p></td>
+</tr>
+</tbody>
+</table>
+<div class="admonition-todo admonition" id="id3">
+<p class="admonition-title">Todo</p>
+<p>Lipids are unsupported with the OPLS AA/M forcefield due to uncertainty
+about parameter files. If you are an expert OPLS user, please contact the
+developers to help.</p>
+</div>
+</section>
+<section id="water-model">
+<h3>Water model<a class="headerlink" href="#water-model" title="Link to this heading">¶</a></h3>
+<p>You can also select which water model to use::</p>
+<div class="highlight-bash notranslate"><div class="highlight"><pre><span></span>--water-model<span class="w"> </span><span class="s2">&quot;tip3&quot;</span>
+</pre></div>
+</div>
+<p>Currently supported values are:</p>
+<table class="docutils align-default">
+<colgroup>
+<col style="width: 20.0%" />
+<col style="width: 80.0%" />
+</colgroup>
+<thead>
+<tr class="row-odd"><th class="head"><p>Model</p></th>
+<th class="head"><p>Description</p></th>
+</tr>
+</thead>
+<tbody>
+<tr class="row-even"><td><p><code class="docutils literal notranslate"><span class="pre">tip3</span></code></p></td>
+<td><p>TIP3 model, from W.L. Jorgensen, J.Chandrasekhar, J.D. Madura;
+R.W. Impey, M.L. Klein; Comparison of simple potential functions
+for simulating liquid water; J. Chem. Phys. 79 926-935 (1983)</p></td>
+</tr>
+<tr class="row-odd"><td><p><code class="docutils literal notranslate"><span class="pre">tip4e</span></code></p></td>
+<td><p>TIP4P-Ewald, from H.W. Horn, W.C Swope, J.W. Pitera, J.D. Madura,
+T.J. Dick, G.L. Hura, T. Head-Gordon; J. Chem. Phys.
+20: 9665-9678 (2004)</p></td>
+</tr>
+<tr class="row-even"><td><p><code class="docutils literal notranslate"><span class="pre">spce</span></code></p></td>
+<td><p>SPC/E model, from H.J.C. Berendsen, J. R. Grigera,
+T. P. Straatsma; The Missing Term in Effective Pair
+Potentials; J. Phys. Chem 1987, 91, 6269-6271 (1987)</p></td>
+</tr>
+</tbody>
+</table>
+<div class="admonition-todo admonition" id="id4">
+<p class="admonition-title">Todo</p>
+<p>TIP4P/Ew will not work with AMBER-format <code class="docutils literal notranslate"><span class="pre">.prmtop</span></code> output using the
+CHARMM forcefield, most likely due to a bug in ParmEd. This is under
+investigation.</p>
+</div>
+</section>
+<section id="additional-parameter-files">
+<h3>Additional parameter files<a class="headerlink" href="#additional-parameter-files" title="Link to this heading">¶</a></h3>
+<p>If you have ligands or other residues that are not represented in the default
+force field, you must provide both a topology and parameter file for these
+residues. See <a class="reference internal" href="tutorials.html#tutorials"><span class="std std-ref">Tutorials</span></a> for how to obtain these files.</p>
+<p>Pass topology files with the <cite>-top</cite> flag, and parameter files with the <cite>-prm</cite>
+flag. You can provide these flags multiple times::</p>
+<div class="highlight-bash notranslate"><div class="highlight"><pre><span></span>-ff<span class="w"> </span>amber<span class="w"> </span>-top<span class="w"> </span>ligand1.off<span class="w"> </span>-par<span class="w"> </span>ligand1.frcmod<span class="w"> </span>-top<span class="w"> </span>ligand2.off<span class="w"> </span>-parm<span class="w"> </span>ligand2.frcmod
+</pre></div>
+</div>
+<p>For AMBER, Dabble can also parse <cite>.leaprc</cite> files that can load multiple other
+topology and parameter files. These are considered a topology file but can
+be also passed as a parameter file::</p>
+<div class="highlight-bash notranslate"><div class="highlight"><pre><span></span>-ff<span class="w"> </span>amber<span class="w"> </span>-top<span class="w"> </span>all_ligands.leaprc
+</pre></div>
+</div>
+<p>Some formats, like CHARMM, will combine the topology and parameter files into
+one. You should pass this file as both::</p>
+<div class="highlight-bash notranslate"><div class="highlight"><pre><span></span>-ff<span class="w"> </span>charmm<span class="w"> </span>-top<span class="w"> </span>ligand.str<span class="w"> </span>-par<span class="w"> </span>ligand.str
+</pre></div>
+</div>
+</section>
+<section id="custom-forcefields">
+<h3>Custom forcefields<a class="headerlink" href="#custom-forcefields" title="Link to this heading">¶</a></h3>
+<p>If you want to use your own force field files and not have Dabble load any for
+you, specify the forcefield flag as usual and pass <code class="docutils literal notranslate"><span class="pre">--override-defaults</span></code>,
+and all your parameter files.</p>
+<p>For example, to use only the old GAFF forcefield in AMBER::</p>
+<div class="highlight-bash notranslate"><div class="highlight"><pre><span></span>-ff<span class="w"> </span>amber<span class="w"> </span>-par<span class="w"> </span><span class="nv">$AMBERHOME</span>/dat/leap/cmd/leaprc.gaff<span class="w"> </span>--override-defaults
+</pre></div>
+</div>
+</section>
+<section id="hydrogen-mass-repartitioning">
+<h3>Hydrogen mass repartitioning<a class="headerlink" href="#hydrogen-mass-repartitioning" title="Link to this heading">¶</a></h3>
+<p>To run your simulations in AMBER with timesteps up to 4 fs, Dabble can use the
+ParmEd API to conduct hydrogen mass repartitioning. This only works when
+requesting output in AMBER formats.:</p>
+<div class="highlight-bash notranslate"><div class="highlight"><pre><span></span>--format<span class="w"> </span>amber<span class="w"> </span>--hmr
+</pre></div>
+</div>
+</section>
+</section>
+<section id="debug-options">
+<h2>Debug options<a class="headerlink" href="#debug-options" title="Link to this heading">¶</a></h2>
+<p>Dabble writes temporary files to a directory that it tries to clean up when
+it's done. To retain this directory in a specific location::</p>
+<div class="highlight-bash notranslate"><div class="highlight"><pre><span></span>--tmp-dir<span class="w"> </span>/tmp/dabble/
+</pre></div>
+</div>
+<p>And to be more verbose:</p>
+<div class="highlight-bash notranslate"><div class="highlight"><pre><span></span>--verbose
+</pre></div>
+</div>
+</section>
+</section>
 
 
-           </div>
-           <div class="articleComments">
-            
            </div>
           </div>
-          <footer>
-  
-    <div class="rst-footer-buttons" role="navigation" aria-label="footer navigation">
-      
-        <a href="builder_api.html" class="btn btn-neutral float-right" title="System Building with Dabble" accesskey="n" rel="next">Next <span class="fa fa-arrow-circle-right"></span></a>
-      
-      
-        <a href="index.html" class="btn btn-neutral" title="Dabble" accesskey="p" rel="prev"><span class="fa fa-arrow-circle-left"></span> Previous</a>
-      
+          <footer><div class="rst-footer-buttons" role="navigation" aria-label="Footer">
+        <a href="examples.html" class="btn btn-neutral float-left" title="Examples" accesskey="p" rel="prev"><span class="fa fa-arrow-circle-left" aria-hidden="true"></span> Previous</a>
+        <a href="tutorials.html" class="btn btn-neutral float-right" title="Tutorials" accesskey="n" rel="next">Next <span class="fa fa-arrow-circle-right" aria-hidden="true"></span></a>
     </div>
-  
 
   <hr/>
 
   <div role="contentinfo">
-    <p>
-        &copy; Copyright 2016, Robin Betz.
-
-    </p>
+    <p>&#169; Copyright 2019, Robin Betz.</p>
   </div>
-  Built with <a href="http://sphinx-doc.org/">Sphinx</a> using a <a href="https://github.com/snide/sphinx_rtd_theme">theme</a> provided by <a href="https://readthedocs.org">Read the Docs</a>. 
+
+  Built with <a href="https://www.sphinx-doc.org/">Sphinx</a> using a
+    <a href="https://github.com/readthedocs/sphinx_rtd_theme">theme</a>
+    provided by <a href="https://readthedocs.org">Read the Docs</a>.
+   
 
 </footer>
-
         </div>
       </div>
-
     </section>
-
   </div>
-  
-
-
-  
-
-    <script type="text/javascript">
-        var DOCUMENTATION_OPTIONS = {
-            URL_ROOT:'./',
-            VERSION:'2.7.6',
-            COLLAPSE_INDEX:false,
-            FILE_SUFFIX:'.html',
-            HAS_SOURCE:  true,
-            SOURCELINK_SUFFIX: '.txt'
-        };
-    </script>
-      <script type="text/javascript" src="_static/jquery.js"></script>
-      <script type="text/javascript" src="_static/underscore.js"></script>
-      <script type="text/javascript" src="_static/doctools.js"></script>
-
-  
-
-  
-  
-    <script type="text/javascript" src="_static/js/theme.js"></script>
-  
-
-  
-  
-  <script type="text/javascript">
+  <script>
       jQuery(function () {
-          SphinxRtdTheme.StickyNav.enable();
+          SphinxRtdTheme.Navigation.enable(true);
       });
-  </script>
-   
+  </script> 
 
 </body>
 </html>

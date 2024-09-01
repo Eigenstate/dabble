@@ -1,0 +1,999 @@
+<!DOCTYPE html>
+<html class="writer-html5" lang="python" data-content_root="./">
+<head>
+  <meta charset="utf-8" /><meta name="viewport" content="width=device-width, initial-scale=1" />
+
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Covalent modifications with CHARMM parameters &mdash; Dabble 2.8.0 documentation</title>
+      <link rel="stylesheet" type="text/css" href="_static/pygments.css?v=fa44fd50" />
+      <link rel="stylesheet" type="text/css" href="_static/css/theme.css?v=19f00094" />
+
+  
+    <link rel="canonical" href="https://dabble.robinbetz.com/charmmcovalent.html"/>
+  <!--[if lt IE 9]>
+    <script src="_static/js/html5shiv.min.js"></script>
+  <![endif]-->
+  
+        <script src="_static/documentation_options.js?v=451a52d5"></script>
+        <script src="_static/doctools.js?v=9a2dae69"></script>
+        <script src="_static/sphinx_highlight.js?v=dc90522c"></script>
+    <script src="_static/js/theme.js"></script>
+    <link rel="index" title="Index" href="genindex.html" />
+    <link rel="search" title="Search" href="search.html" />
+    <link rel="next" title="Parameterization with Dabble" href="parameter_api.html" />
+    <link rel="prev" title="Preparing protein systems with Free Maestro" href="maestro.html" /> 
+</head>
+
+<body class="wy-body-for-nav"> 
+  <div class="wy-grid-for-nav">
+    <nav data-toggle="wy-nav-shift" class="wy-nav-side">
+      <div class="wy-side-scroll">
+        <div class="wy-side-nav-search" >
+
+          
+          
+          <a href="index.html">
+            
+              <img src="_static/dabblelogosmall.png" class="logo" alt="Logo"/>
+          </a>
+              <div class="version">
+                2.8.0
+              </div>
+<div role="search">
+  <form id="rtd-search-form" class="wy-form" action="search.html" method="get">
+    <input type="text" name="q" placeholder="Search docs" aria-label="Search docs" />
+    <input type="hidden" name="check_keywords" value="yes" />
+    <input type="hidden" name="area" value="default" />
+  </form>
+</div>
+        </div><div class="wy-menu wy-menu-vertical" data-spy="affix" role="navigation" aria-label="Navigation menu">
+              <ul class="current">
+<li class="toctree-l1"><a class="reference internal" href="installation.html">Installation</a></li>
+<li class="toctree-l1"><a class="reference internal" href="examples.html">Examples</a></li>
+<li class="toctree-l1"><a class="reference internal" href="command_line.html">Command-line Options</a></li>
+<li class="toctree-l1 current"><a class="reference internal" href="tutorials.html">Tutorials</a><ul class="current">
+<li class="toctree-l2"><a class="reference internal" href="tutorials.html#preparing-protein-systems">Preparing protein systems</a></li>
+<li class="toctree-l2 current"><a class="reference internal" href="tutorials.html#covalently-modified-amino-acids">Covalently modified amino acids</a><ul class="current">
+<li class="toctree-l3 current"><a class="current reference internal" href="#">With CHARMM parameters</a><ul>
+<li class="toctree-l4"><a class="reference internal" href="#introduction">Introduction</a></li>
+<li class="toctree-l4"><a class="reference internal" href="#preparing-the-system">Preparing the system</a></li>
+<li class="toctree-l4"><a class="reference internal" href="#getting-residue-parameters">Getting residue parameters</a></li>
+<li class="toctree-l4"><a class="reference internal" href="#deriving-a-patch">Deriving a patch</a></li>
+<li class="toctree-l4"><a class="reference internal" href="#integrating-protein-and-small-molecule-forcefields">Integrating protein and small molecule forcefields</a></li>
+<li class="toctree-l4"><a class="reference internal" href="#running-dabble">Running dabble</a></li>
+</ul>
+</li>
+<li class="toctree-l3"><a class="reference external" href="https://robinbetz.com/blog/2016/11/28/parameterizing-an-isopeptide-bond/">With AMBER parameters</a></li>
+</ul>
+</li>
+</ul>
+</li>
+<li class="toctree-l1"><a class="reference internal" href="parameter_api.html">Parameterization with Dabble</a></li>
+</ul>
+
+        </div>
+      </div>
+    </nav>
+
+    <section data-toggle="wy-nav-shift" class="wy-nav-content-wrap"><nav class="wy-nav-top" aria-label="Mobile navigation menu" >
+          <i data-toggle="wy-nav-top" class="fa fa-bars"></i>
+          <a href="index.html">Dabble</a>
+      </nav>
+
+      <div class="wy-nav-content">
+        <div class="rst-content">
+          <div role="navigation" aria-label="Page navigation">
+  <ul class="wy-breadcrumbs">
+      <li><a href="index.html" class="icon icon-home" aria-label="Home"></a></li>
+          <li class="breadcrumb-item"><a href="tutorials.html">Tutorials</a></li>
+      <li class="breadcrumb-item active">Covalent modifications with CHARMM parameters</li>
+      <li class="wy-breadcrumbs-aside">
+            <a href="_sources/charmmcovalent.rst.txt" rel="nofollow"> View page source</a>
+      </li>
+  </ul>
+  <hr/>
+</div>
+          <div role="main" class="document" itemscope="itemscope" itemtype="http://schema.org/Article">
+           <div itemprop="articleBody">
+             
+  <section id="covalent-modifications-with-charmm-parameters">
+<h1>Covalent modifications with CHARMM parameters<a class="headerlink" href="#covalent-modifications-with-charmm-parameters" title="Link to this heading">¶</a></h1>
+<nav class="contents local" id="contents">
+<ul class="simple">
+<li><p><a class="reference internal" href="#introduction" id="id5">Introduction</a></p>
+<ul>
+<li><p><a class="reference internal" href="#amino-acids" id="id6">Amino acids</a></p></li>
+<li><p><a class="reference internal" href="#patches" id="id7">Patches</a></p></li>
+<li><p><a class="reference internal" href="#forcefields" id="id8">Forcefields</a></p></li>
+</ul>
+</li>
+<li><p><a class="reference internal" href="#preparing-the-system" id="id9">Preparing the system</a></p></li>
+<li><p><a class="reference internal" href="#getting-residue-parameters" id="id10">Getting residue parameters</a></p>
+<ul>
+<li><p><a class="reference internal" href="#the-basics-with-paramchem" id="id11">The basics, with ParamChem</a></p></li>
+<li><p><a class="reference internal" href="#correcting-the-input-molecule" id="id12">Correcting the input molecule</a></p></li>
+<li><p><a class="reference internal" href="#running-paramchem" id="id13">Running ParamChem</a></p></li>
+</ul>
+</li>
+<li><p><a class="reference internal" href="#deriving-a-patch" id="id14">Deriving a patch</a></p>
+<ul>
+<li><p><a class="reference internal" href="#identify-deleted-atoms" id="id15">Identify deleted atoms</a></p></li>
+<li><p><a class="reference internal" href="#identify-modified-atoms" id="id16">Identify modified atoms</a></p></li>
+<li><p><a class="reference internal" href="#identify-newly-added-atoms" id="id17">Identify newly added atoms</a></p></li>
+<li><p><a class="reference internal" href="#set-connectivity" id="id18">Set connectivity</a></p></li>
+</ul>
+</li>
+<li><p><a class="reference internal" href="#integrating-protein-and-small-molecule-forcefields" id="id19">Integrating protein and small molecule forcefields</a></p>
+<ul>
+<li><p><a class="reference internal" href="#equivalency-between-cgenff-and-charmm36-types" id="id20">Equivalency between CGenFF and Charmm36 types</a></p></li>
+<li><p><a class="reference internal" href="#making-parameter-analogies" id="id21">Making parameter analogies</a></p></li>
+</ul>
+</li>
+<li><p><a class="reference internal" href="#running-dabble" id="id22">Running dabble</a></p></li>
+</ul>
+</nav>
+<p>In this tutorial, we will prepare to set up a simulation of murine adipocyte
+lipid-binding protein (ALBP) with a covalently attached phenanthroline, from
+PDB ID <a class="reference external" href="https://rcsb.org/structure/1A18">1A18</a>, using the Charmm36 forcefield
+and Dabble.</p>
+<p>You should be familiar with preparing a basic protein-ligand system, and how to
+parameterize a ligand using ParamChem before starting this tutorial, but don't
+have to be an expert. This tutorial is written from the perspective of a
+typical researcher, and will go through a few debugging strategies when
+problems are encountered.</p>
+<p>Answer the questions in <strong>bold</strong> as you go through the tutorial.
+.. TODO bold more questions</p>
+<div class="admonition note">
+<p class="admonition-title">Note</p>
+<p>In order to be maximally accessible, this tutorial avoids the use of
+proprietary software that requires a license or fee. If you have access to
+programs like Schrodinger's Maestro, a lot of the steps become much simpler.
+Feel free to accomplish tasks like editing molecules with any software
+you prefer, as long as you carefully check the results are what you expect.</p>
+</div>
+<section id="introduction">
+<h2><a class="toc-backref" href="#contents" role="doc-backlink">Introduction</a><a class="headerlink" href="#introduction" title="Link to this heading">¶</a></h2>
+<p>ALBP is a good scaffold for exploring steroselective reactions, and the PDB
+structure has an attached covalent modification that can perform catalysis. In
+order to simulate the protein, we'll have to derive parameters for the NPH
+residue.</p>
+<p>Download <a class="reference external" href="https://files.rcsb.org/download/1A18.pdb">the structure</a> and open
+it in VMD. Look at the NPH residue. It's a covalently modified cysteine. Let's
+first think about how amino acids are represented in CHARMM, before building
+parameters for the NPH residue.</p>
+<section id="amino-acids">
+<h3><a class="toc-backref" href="#contents" role="doc-backlink">Amino acids</a><a class="headerlink" href="#amino-acids" title="Link to this heading">¶</a></h3>
+<p>CHARMM topology files usually end in <code class="docutils literal notranslate"><span class="pre">.rtf</span></code>, and contain multiple residue
+definitions. All of the topology files that Dabble uses can be found in <a class="reference external" href="https://github.com/Eigenstate/dabble/tree/master/dabble/param/parameters">the
+source directory</a>.</p>
+<div class="admonition note">
+<p class="admonition-title">Note</p>
+<p>Don't hesitate to poke around in text files that contain information your
+simulation programs use. They're far easier to understand than you might
+think, and you can learn a lot about how molecular systems can be represented
+in a computer.</p>
+</div>
+<p>Definitions of protein-related residues are in <code class="docutils literal notranslate"><span class="pre">top_all36_prot.rtf</span></code>. Let's
+open it up.</p>
+<p>After scrolling by some comments (lines beginning with <code class="docutils literal notranslate"><span class="pre">!</span></code>), definitions of
+atom types (starting with <code class="docutils literal notranslate"><span class="pre">MASS</span></code>), declarations of extraresidue atoms
+(starting with <code class="docutils literal notranslate"><span class="pre">DECL</span></code>), and CHARMM-related housekeeping (starting with
+<code class="docutils literal notranslate"><span class="pre">DEFA</span></code> or <code class="docutils literal notranslate"><span class="pre">AUTO</span></code>), we get to the first residue topology template, starting
+with <code class="docutils literal notranslate"><span class="pre">RESI</span></code>. It's alanine! Here are the relevant parts of the residue
+definition:</p>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span>RESI ALA          0.00
+GROUP
+ATOM N    NH1    -0.47  !     |
+ATOM HN   H       0.31  !  HN-N
+ATOM CA   CT1     0.07  !     |     HB1
+ATOM HA   HB1     0.09  !     |    /
+GROUP                   !  HA-CA--CB-HB2
+ATOM CB   CT3    -0.27  !     |    \
+ATOM HB1  HA3     0.09  !     |     HB3
+ATOM HB2  HA3     0.09  !   O=C
+ATOM HB3  HA3     0.09  !     |
+GROUP                   !
+ATOM C    C       0.51
+ATOM O    O      -0.51
+BOND CB CA  N  HN  N  CA
+BOND C  CA  C  +N  CA HA  CB HB1  CB HB2  CB HB3
+DOUBLE O  C
+IMPR N -C CA HN  C CA +N O
+CMAP -C  N  CA  C   N  CA  C  +N
+</pre></div>
+</div>
+<p>A helpful ASCII art shows how all of the atoms are arranged, by name.  Each
+<code class="docutils literal notranslate"><span class="pre">ATOM</span></code> line contains the atom <em>name</em>, <em>type</em>, and <em>partial charge</em>.  <code class="docutils literal notranslate"><span class="pre">BOND</span></code>
+lines list pairs of atoms that are bonded to each other.  <code class="docutils literal notranslate"><span class="pre">DOUBLE</span></code> lines list
+pairs of atoms that are double bonded to each other (although the concept of a
+double bond is not necessary for most MD simulations). There are two improper
+terms defined on the <code class="docutils literal notranslate"><span class="pre">IMPR</span></code> line, and one <code class="docutils literal notranslate"><span class="pre">CMAP</span></code> term.</p>
+<p>Other information about this residue, such as <code class="docutils literal notranslate"><span class="pre">GROUP</span></code>, <code class="docutils literal notranslate"><span class="pre">DONOR</span></code>,
+<code class="docutils literal notranslate"><span class="pre">ACCEPTOR</span></code> and internal coordinate <code class="docutils literal notranslate"><span class="pre">IC</span></code> lines aren't necessary for our
+work today. Groups are used to track partial charges, and internal
+coordinates used to assign locations for missing atoms. Donor and acceptor is
+used for some types of calculation in CHARMM, but are not necessary for running
+traditional MD simulation with the CHARMM forcefield. A more rigorous
+explanation of <code class="docutils literal notranslate"><span class="pre">.rtf</span></code> files can be found in <a class="reference external" href="https://www.ks.uiuc.edu/Training/Tutorials/namd/namd-tutorial-unix-html/node24.html">this NAMD tutorial</a>.</p>
+<p>One thing you might notice about this definition is that some atoms listed in
+the bonded terms (bonds, impropers, cmaps, etc) are not present in the ASCII
+art. The <code class="docutils literal notranslate"><span class="pre">+N</span></code> and <code class="docutils literal notranslate"><span class="pre">-C</span></code> atoms are <em>extraresidue atoms,</em> that is, atoms that
+are present on the residues to which this one is bonded. In this case, the
+atoms are the connections to the next and previous amino acids in the chain.</p>
+<p>Frustratingly in CHARMM, bonds to these extraresidue atoms are not required to
+be explicitly defined. A <code class="docutils literal notranslate"><span class="pre">C</span> <span class="pre">+N</span></code> bond is defined, but the <code class="docutils literal notranslate"><span class="pre">-C</span> <span class="pre">N</span></code> bond on
+the other side is implicitly defined by the CMAP term. Keep this in mind when
+reading CHARMM topology files.</p>
+</section>
+<section id="patches">
+<h3><a class="toc-backref" href="#contents" role="doc-backlink">Patches</a><a class="headerlink" href="#patches" title="Link to this heading">¶</a></h3>
+<p>CHARMM handles covalent modifications by applying patches to template
+topologies. A <em>patch</em> is a list of modifications to a residue, and possibly
+additional parameters, that will produce a new residue. Patches are defined
+in CHARMM topology files with the <code class="docutils literal notranslate"><span class="pre">PRES</span></code> directive.</p>
+<p>Here is serine, with unnecessary lines removed for clarity:</p>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span>RESI SER          0.00
+ATOM N    NH1    -0.47  !     |
+ATOM HN   H       0.31  !  HN-N   HB1
+ATOM CA   CT1     0.07  !     |   |
+ATOM HA   HB1     0.09  !  HA-CA--CB--OG
+ATOM CB   CT2     0.05  !     |   |     \
+ATOM HB1  HA2     0.09  !     |   HB2    HG1
+ATOM HB2  HA2     0.09  !   O=C
+ATOM OG   OH1    -0.66  !     |
+ATOM HG1  H       0.43
+ATOM C    C       0.51
+ATOM O    O      -0.51
+BOND CB CA   OG CB  N HN  N  CA
+BOND C  CA  C +N  CA HA  CB HB1
+BOND CB HB2  OG HG1
+DOUBLE   O  C
+IMPR N -C CA HN  C CA +N O
+CMAP -C  N  CA  C   N  CA  C  +N
+</pre></div>
+</div>
+<p>The <code class="docutils literal notranslate"><span class="pre">SP1</span></code> patch, when applied to a serine residue, will add a phosphate
+group, turning it into phosphoserine. This patch is defined in
+<code class="docutils literal notranslate"><span class="pre">toppar_all36_prot_na_combined.str</span></code>, which contains parameters and template
+topologies for protein and nucleic acid residues:</p>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span>PRES SP1        -1.00  ! convert serine to monoanionic phosphoserine
+                       ! use in a patch statement as follows
+DELE ATOM 1HG1
+GROUP
+ATOM CB   CT2    -0.08  !
+ATOM HB1  HA2     0.09  !
+ATOM HB2  HA2     0.09  !
+ATOM OG   ON2    -0.62  !maintain NA atom type
+ATOM P    P       1.50
+ATOM O1P  ON3    -0.82
+ATOM O2P  ON3    -0.82
+ATOM OT   ON4    -0.68
+ATOM HT   HN4     0.34
+BOND OG   P    P   OT   OT  HT
+BOND P    O1P  P   O2P
+</pre></div>
+</div>
+<p>The syntax of a patch is very similar to that of a residue definition. The
+<code class="docutils literal notranslate"><span class="pre">DELE</span></code> line removes the <code class="docutils literal notranslate"><span class="pre">HG1</span></code> atom from the original template (the <code class="docutils literal notranslate"><span class="pre">1HG1</span></code>
+means delete the <code class="docutils literal notranslate"><span class="pre">HG1</span></code> atom from the first residue to be patched, as sometimes
+patches may be applied to join multiple residues.)</p>
+<p><code class="docutils literal notranslate"><span class="pre">ATOM</span></code> directives can define new atoms, update partial charges, or in the
+case of the <code class="docutils literal notranslate"><span class="pre">OG</span></code> atom, change its type from <code class="docutils literal notranslate"><span class="pre">OH1</span></code> to <code class="docutils literal notranslate"><span class="pre">ON2</span></code>. <code class="docutils literal notranslate"><span class="pre">BOND</span></code>
+lines are the same and can refer to both added and original atoms.</p>
+<p>The resulting residue can be drawn as:</p>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span>   <span class="o">|</span>
+<span class="n">HN</span><span class="o">-</span><span class="n">N</span>   <span class="n">HB1</span>    <span class="n">O1P</span>
+   <span class="o">|</span>   <span class="o">|</span>       <span class="o">|</span>
+<span class="n">HA</span><span class="o">-</span><span class="n">CA</span><span class="o">--</span><span class="n">CB</span><span class="o">--</span><span class="n">OG</span><span class="o">--</span><span class="n">P</span><span class="o">--</span><span class="n">OT</span><span class="o">--</span><span class="n">HT</span>
+   <span class="o">|</span>   <span class="o">|</span>       <span class="o">|</span>
+   <span class="o">|</span>   <span class="n">HB2</span>    <span class="n">O2P</span>
+ <span class="n">O</span><span class="o">=</span><span class="n">C</span>
+   <span class="o">|</span>
+</pre></div>
+</div>
+</section>
+<section id="forcefields">
+<h3><a class="toc-backref" href="#contents" role="doc-backlink">Forcefields</a><a class="headerlink" href="#forcefields" title="Link to this heading">¶</a></h3>
+<p>The easiest way to represent a covalently modified residue in CHARMM is to
+write a new patch. In the rest of this tutorial, we will develop a patch that
+can be applied to a cysteine to add the phenanthroline. There are a few
+complications, though:</p>
+<p>The CHARMM force field is actually several different force fields, each
+describing different classes of molecules. Each force field defines its own
+<em>atom types,</em> and provides large lists of bonded and nonbonded parameters for
+these types.</p>
+<p>The example topology templates above are from the Charmm36m <em>protein</em>
+forcefield. However, we want to covalently link a small molecule to the protein.
+It's unlikely there are atom types present in the protein force field that
+will accurately describe the carbons in the phenanthroline. Using the Charm
+General Force Field (CGenFF) for this molecule is a better choice, but we'll
+have to integrate it with the protein force field parameters for the cysteine to
+which it is attached.</p>
+<p>Furthermore, there are so many different atom types---more than one individual
+can reliably recall. We also have the problem of calculating the partial charges
+on the molecule using the CHARMM philosophy. We'll therefore use a computer
+program, ParamChem, that is part of the CHARMM workflow, to help us with
+atom typing and other parameter assignment.</p>
+</section>
+</section>
+<section id="preparing-the-system">
+<h2><a class="toc-backref" href="#contents" role="doc-backlink">Preparing the system</a><a class="headerlink" href="#preparing-the-system" title="Link to this heading">¶</a></h2>
+<p>We'll have to add hydrogens to the PDB structure so that the residue we
+submit to the parameterization server is exactly the one that will be simulated.</p>
+<p>The nonstandard NPH residue somewhat complicates additions of hydrogens, as
+many tools (like the very useful <a class="reference external" href="https://github.com/pandegroup/pdbfixer">pdbfixer</a>)
+only support standard amino acids.</p>
+<div class="admonition note">
+<p class="admonition-title">Note</p>
+<p>Always visualize any and all structure files you generate along the way.
+Catching a missing hydrogen now is much easier than having to redo the
+entire process after analyzing simulations that were of an incorrect system.</p>
+</div>
+<p>Schrödinger makes an excellent molecular manipulation called Maestro. A
+restricted version of the program is available <a class="reference external" href="https://schrodinger.com/freemaestro">free for academic use</a>. This was used for the preparation
+in this tutorial.</p>
+<p>Using your workflow of choice, add hydrogens and capping groups to the protein.
+Here, we used Maestro to add ACE and NMA caps, as well as hydrogens. The
+resulting prepared structure is in <code class="docutils literal notranslate"><span class="pre">.mae</span></code> format, which includes explicit
+integer charges and bond information. For a full tutorial on this process, read
+<a class="reference internal" href="maestro.html#maestro"><span class="std std-ref">Preparing protein systems with Free Maestro</span></a>.</p>
+<p><a class="reference download internal" download="" href="_downloads/c344b7025c0070f71337963eadf4d25f/1A18_h.mae"><code class="xref download docutils literal notranslate"><span class="pre">1A18_h.mae</span></code></a></p>
+<div class="admonition note">
+<p class="admonition-title">Note</p>
+<p>Check that the bond orders are correct in the modified residue before adding
+hydrogens, as many programs require this information to function correctly.
+PDB files do not usually contain bond order information.</p>
+</div>
+</section>
+<section id="getting-residue-parameters">
+<h2><a class="toc-backref" href="#contents" role="doc-backlink">Getting residue parameters</a><a class="headerlink" href="#getting-residue-parameters" title="Link to this heading">¶</a></h2>
+<section id="the-basics-with-paramchem">
+<h3><a class="toc-backref" href="#contents" role="doc-backlink">The basics, with ParamChem</a><a class="headerlink" href="#the-basics-with-paramchem" title="Link to this heading">¶</a></h3>
+<p>Since we want to parameterize only the NPH residue, let's clip it out of the
+prepared protein system and save it as a <code class="docutils literal notranslate"><span class="pre">.mol2</span></code> file for input to the
+ParamChem parameterization server. These first steps are identical to
+parameterizing a normal ligand.</p>
+<p>Using the <a class="reference external" href="https://vmd.robinbetz.com">vmd-python API</a>, and our downloaded
+file <a class="reference external" href="https://files.rcsb.org/download/1A18.pdb">1A18.pdb</a>, we can grab just
+the residue of interest. ParamChem has trouble with a lot of atom types, so
+we set the type field to be the same as the element field so that it
+understands the atom types in the output <code class="docutils literal notranslate"><span class="pre">mol2</span></code> file.</p>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="kn">from</span> <span class="nn">vmd</span> <span class="kn">import</span> <span class="n">atomsel</span><span class="p">,</span> <span class="n">molecule</span>
+<span class="n">m</span> <span class="o">=</span> <span class="n">molecule</span><span class="o">.</span><span class="n">load</span><span class="p">(</span><span class="s2">&quot;mae&quot;</span><span class="p">,</span> <span class="s2">&quot;1A18_h.mae&quot;</span><span class="p">)</span>
+<span class="n">nph</span> <span class="o">=</span> <span class="n">atomsel</span><span class="p">(</span><span class="s2">&quot;resname NPH&quot;</span><span class="p">)</span>
+<span class="n">nph</span><span class="o">.</span><span class="n">type</span> <span class="o">=</span> <span class="n">nph</span><span class="o">.</span><span class="n">element</span>
+<span class="n">nph</span><span class="o">.</span><span class="n">write</span><span class="p">(</span><span class="s2">&quot;mol2&quot;</span><span class="p">,</span> <span class="s2">&quot;nph.mol2&quot;</span><span class="p">)</span>
+</pre></div>
+</div>
+<p><a class="reference download internal" download="" href="_downloads/1aed92199812b04326073ada0bc7f21a/nph.mol2"><code class="xref download docutils literal notranslate"><span class="pre">nph.mol2</span></code></a></p>
+<div class="admonition note">
+<p class="admonition-title">Note</p>
+<p>We save only the NPH residue, and are missing the +N and -C atoms / linkages
+to the previous and next amino acids in the chain. This means the partial
+charges provided by ParamCharm for the backbone atoms won't be accurate.
+That's okay for now as we're going to fix this later.</p>
+</div>
+<p>Upload <code class="docutils literal notranslate"><span class="pre">nph.mol2</span></code> to the
+<a class="reference external" href="https://cgenff.umaryland.edu/initguess/">ParamChem server</a>, and run with
+the default options (no boxes checked).</p>
+</section>
+<section id="correcting-the-input-molecule">
+<h3><a class="toc-backref" href="#contents" role="doc-backlink">Correcting the input molecule</a><a class="headerlink" href="#correcting-the-input-molecule" title="Link to this heading">¶</a></h3>
+<p>Unfortunately, we don't get any valid output from this ParamChem run. Let's
+see what's wrong:</p>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="n">Now</span> <span class="n">processing</span> <span class="n">molecule</span> <span class="n">generate</span> <span class="o">...</span>
+<span class="n">attype</span> <span class="n">warning</span><span class="p">:</span> <span class="n">amide</span> <span class="n">base</span> <span class="ow">not</span> <span class="n">supported</span><span class="p">;</span>
+<span class="n">skipped</span> <span class="n">molecule</span><span class="o">.</span>
+</pre></div>
+</div>
+<p>Visualize <code class="docutils literal notranslate"><span class="pre">nph.mol2</span></code> in VMD and you'll see what the error message is referring
+to. In clipping out just the NPH residue, we truncated the protein chain and
+left the N and C atoms that would usually be connected dangling, and ParamChem
+doesn't think the chemical context of those atoms makes sense.</p>
+<p>Let's truncate the NPH residue a little differently to
+avoid this problem. Instead of keeping the whole amino acid backbone, we'll
+take the sidechain and the alpha-carbon <code class="docutils literal notranslate"><span class="pre">CA</span></code>, and ensure it's bonded to enough
+hydrogens.</p>
+<figure class="align-center" id="id2">
+<a class="reference internal image-reference" href="_images/nph_mods.gif"><img alt="NPH, with atoms to be removed or altered highlighted." src="_images/nph_mods.gif" style="width: 200px;" /></a>
+<figcaption>
+<p><span class="caption-text">We'll delete the atoms highlighted in red (or rather, not include them at all
+in our <code class="docutils literal notranslate"><span class="pre">.mol2</span></code> file), and change the atoms highlighted in blue to hydrogens.
+This will produce a NPH residue that only includes the alpha carbon and
+sidechain, to make ParamChem happy.</span><a class="headerlink" href="#id2" title="Link to this image">¶</a></p>
+</figcaption>
+</figure>
+<div class="admonition note">
+<p class="admonition-title">Note</p>
+<p>There are many correct ways to truncate your residue when solving these kinds
+of problem. Keep in mind that you want to preserve as much as possible of
+the chemical context of the sidechain and modification together. Later in
+this tutorial when we integrate the protein parameters, you'll get a better
+idea of what's needed.</p>
+</div>
+<p>You can do this in Free Maestro, but can do this any way you like, including
+using the vmd-python API. Returning to python, let's make some changes to
+<code class="docutils literal notranslate"><span class="pre">nph.mol2</span></code>.</p>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="kn">from</span> <span class="nn">vmd</span> <span class="kn">import</span> <span class="n">atomsel</span><span class="p">,</span> <span class="n">molecule</span>
+<span class="n">m</span> <span class="o">=</span> <span class="n">molecule</span><span class="o">.</span><span class="n">load</span><span class="p">(</span><span class="s2">&quot;mol2&quot;</span><span class="p">,</span> <span class="s2">&quot;nph.mol2&quot;</span><span class="p">)</span>
+<span class="n">new_hs</span> <span class="o">=</span> <span class="n">atomsel</span><span class="p">(</span><span class="s2">&quot;name C N&quot;</span><span class="p">)</span>          <span class="c1"># Select the two atoms to change to H</span>
+<span class="n">new_hs</span><span class="o">.</span><span class="n">element</span> <span class="o">=</span> <span class="s2">&quot;H&quot;</span>                  <span class="c1"># Set element of both to hydrogen</span>
+<span class="n">new_hs</span><span class="o">.</span><span class="n">type</span> <span class="o">=</span> <span class="s2">&quot;H&quot;</span>                     <span class="c1"># Set type of both to &#39;H&#39;</span>
+<span class="n">new_hs</span><span class="o">.</span><span class="n">name</span> <span class="o">=</span> <span class="p">[</span><span class="s2">&quot;HA2&quot;</span><span class="p">,</span> <span class="s2">&quot;HA3&quot;</span><span class="p">]</span>          <span class="c1"># Set names individually</span>
+<span class="n">nph</span> <span class="o">=</span> <span class="n">atomsel</span><span class="p">(</span><span class="s2">&quot;not name HN HO O HXT&quot;</span><span class="p">)</span> <span class="c1"># Omit backbone atoms when saving</span>
+<span class="n">nph</span><span class="o">.</span><span class="n">write</span><span class="p">(</span><span class="s2">&quot;mol2&quot;</span><span class="p">,</span> <span class="s2">&quot;nph_sidechain.mol2&quot;</span><span class="p">)</span>
+</pre></div>
+</div>
+<p><a class="reference download internal" download="" href="_downloads/e2913290b200dde8c57230abd5434e4c/nph_sidechain.mol2"><code class="xref download docutils literal notranslate"><span class="pre">nph_sidechain.mol2</span></code></a></p>
+<p>Visualise this file and you'll see there is a nice methyl carbon at the CA
+position, and the valency of all atoms makes more sense.</p>
+<div class="admonition note">
+<p class="admonition-title">Note</p>
+<p>Bond orders may not display correctly in VMD. Always check the file itself
+to be completely sure the data you expect are present.</p>
+</div>
+</section>
+<section id="running-paramchem">
+<h3><a class="toc-backref" href="#contents" role="doc-backlink">Running ParamChem</a><a class="headerlink" href="#running-paramchem" title="Link to this heading">¶</a></h3>
+<p>Upload <code class="docutils literal notranslate"><span class="pre">nph_sidechain.mol2</span></code> to the ParamChem server, and we finally get output!
+Save it as <code class="docutils literal notranslate"><span class="pre">nph.str</span></code>.</p>
+<p><a class="reference download internal" download="" href="_downloads/89bb7170dcb5256c218d5741ea97d4c6/nph.str"><code class="xref download docutils literal notranslate"><span class="pre">nph.str</span></code></a></p>
+<p>Inspect this file and ensure that the generated parameters are reasonable.
+If not, fix or re-derive them now as described in other tutorials.</p>
+</section>
+</section>
+<section id="deriving-a-patch">
+<h2><a class="toc-backref" href="#contents" role="doc-backlink">Deriving a patch</a><a class="headerlink" href="#deriving-a-patch" title="Link to this heading">¶</a></h2>
+<p>Now that we're satisfied with the atom types, partial charges, and bonded
+parameter analogies for the &quot;small molecule&quot; part of the phenanthroline,
+it's time to deal with the protein part of this residue.</p>
+<p>The goal in this section is to transform our <code class="docutils literal notranslate"><span class="pre">.str</span></code> file that describes
+a residue (<code class="docutils literal notranslate"><span class="pre">RESI</span></code>) into a patch (<code class="docutils literal notranslate"><span class="pre">PRES</span></code>) that can be applied on top of
+a cysteine.</p>
+<p>Find the residue definition for an unmodified cysteine in the Charmm36m
+topology file <code class="docutils literal notranslate"><span class="pre">top_all36_prot.rtf</span></code>:</p>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span>RESI CYS          0.00
+GROUP
+ATOM N    NH1    -0.47  !     |
+ATOM HN   H       0.31  !  HN-N
+ATOM CA   CT1     0.07  !     |   HB1
+ATOM HA   HB1     0.09  !     |   |
+GROUP                   !  HA-CA--CB--SG
+ATOM CB   CT2    -0.11  !     |   |     \
+ATOM HB1  HA2     0.09  !     |   HB2    HG1
+ATOM HB2  HA2     0.09  !   O=C
+ATOM SG   S      -0.23  !     |
+ATOM HG1  HS      0.16
+GROUP
+ATOM C    C       0.51
+ATOM O    O      -0.51
+BOND CB CA   SG CB   N HN  N  CA
+BOND C  CA   C +N  CA HA  CB HB1
+BOND CB HB2  SG HG1
+DOUBLE O  C
+IMPR N -C CA HN  C CA +N O
+CMAP -C  N  CA  C   N  CA  C  +N
+</pre></div>
+</div>
+<p>Recall that a CHARMM patch can delete, modify, or add atoms to the residue to
+which it is applied.</p>
+<p>Make a text file, <code class="docutils literal notranslate"><span class="pre">nph_patch.str</span></code>. We'll begin assembling the patch directives
+here. Since it's a patch, and the resulting patched residue is neutral,
+the first lines in the file are:</p>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span>! This patch converts CYS to cysteine-methylene-carbamoyl-1,10-phenanthroline
+PRES NPH         0.00
+</pre></div>
+</div>
+<section id="identify-deleted-atoms">
+<h3><a class="toc-backref" href="#contents" role="doc-backlink">Identify deleted atoms</a><a class="headerlink" href="#identify-deleted-atoms" title="Link to this heading">¶</a></h3>
+<p><strong>Which atoms need to be deleted from the CYS residue definition to get the
+NPH residue?</strong></p>
+<p>It's the sulfur hydrogen, with name <code class="docutils literal notranslate"><span class="pre">HG1</span></code>. Remember that CHARMM patches can
+sometimes apply to multiple residues, so when specifying the atom name to
+delete, prefix it with <code class="docutils literal notranslate"><span class="pre">1</span></code> to indicate the atom is from the first (and only)
+residue to which the patch is applied. Add the following line to
+<code class="docutils literal notranslate"><span class="pre">nph_patch.str</span></code>:</p>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="n">DELE</span> <span class="n">ATOM</span> <span class="mi">1</span><span class="n">HG1</span>
+</pre></div>
+</div>
+</section>
+<section id="identify-modified-atoms">
+<h3><a class="toc-backref" href="#contents" role="doc-backlink">Identify modified atoms</a><a class="headerlink" href="#identify-modified-atoms" title="Link to this heading">¶</a></h3>
+<p>Patches can modify atom types and partial charges in the original residue.
+Now look at the <code class="docutils literal notranslate"><span class="pre">.str</span></code> file. <strong>Which atoms in this file correspond to
+atoms in the cysteine residue?</strong></p>
+<p>Atom types will be different between the two, as cysteine uses the protein atom
+types while ParamChem produces CGenFF types. Names will also differ. It's
+easiest to visualize the <code class="docutils literal notranslate"><span class="pre">nph_double.mol2</span></code> that we inputted to ParamChem in
+VMD to match up atoms, then look at the <code class="docutils literal notranslate"><span class="pre">nph.str</span></code> file for the type and
+charge information.</p>
+<p>Fill in the following table for all atoms that are present in both, making a note
+of their type and partial charge. The protein backbone atoms <code class="docutils literal notranslate"><span class="pre">HN</span> <span class="pre">N</span> <span class="pre">C</span> <span class="pre">O</span></code> were
+deleted from the ParamChem residue, so they're not listed. Equivalent hydrogen
+atoms are listed on the same line.</p>
+<table class="docutils align-center">
+<thead>
+<tr class="row-odd"><th class="head"><p>CYS name</p></th>
+<th class="head"><p>Type</p></th>
+<th class="head"><p>Partial charge</p></th>
+<th class="head"><p>ParamChem name</p></th>
+<th class="head"><p>Type</p></th>
+<th class="head"><p>Partial charge</p></th>
+</tr>
+</thead>
+<tbody>
+<tr class="row-even"><td><p>CA</p></td>
+<td><p>CT1</p></td>
+<td><p>0.070</p></td>
+<td><p>CA</p></td>
+<td><p>CG331</p></td>
+<td><p>-0.270</p></td>
+</tr>
+<tr class="row-odd"><td><p>HA</p></td>
+<td><p>HB1</p></td>
+<td><p>0.090</p></td>
+<td><p>HA</p></td>
+<td><p>HGA3</p></td>
+<td><p>0.090</p></td>
+</tr>
+<tr class="row-even"><td><p>CB</p></td>
+<td><p>CT2</p></td>
+<td><p>-0.110</p></td>
+<td><p>CB</p></td>
+<td><p>CG321</p></td>
+<td><p>-0.065</p></td>
+</tr>
+<tr class="row-odd"><td><p>HB1, HB2</p></td>
+<td><p>HA2</p></td>
+<td><p>0.090</p></td>
+<td><p>HB1, HB2</p></td>
+<td><p>HGA2</p></td>
+<td><p>0.090</p></td>
+</tr>
+<tr class="row-even"><td><p>SG</p></td>
+<td><p>S</p></td>
+<td><p>-0.230</p></td>
+<td><p>SG</p></td>
+<td><p>SG311</p></td>
+<td><p>-0.175</p></td>
+</tr>
+</tbody>
+</table>
+<p><strong>Which atoms have significantly different partial charge?</strong> When answering this
+question, consider both how the CGenFF forcefield works and the differences in
+chemical context between cysteine and the residue we inputted to ParamChem.</p>
+<div class="admonition note">
+<p class="admonition-title">Note</p>
+<p>In the case of this molecule, the CYS and ParamChem atom names are identical.
+This won't always be the case for your input molecule, so make sure to
+check what the mapping is and when to use which atom name. As the patch is
+applied on top of a residue, you always want to use names referring to
+atoms in the original residue, otherwise it will look like you're adding
+an extra atom.</p>
+</div>
+<p>The charges on the hydrogens is unchanged. The charge on <code class="docutils literal notranslate"><span class="pre">CA</span></code> is significantly
+different, but the context of this atom for ParamChem doesn't match a real
+cysteine, so we'll keep the cysteine charge for that atom. Same thing for
+its hydrogen <code class="docutils literal notranslate"><span class="pre">HA</span></code>; we'll keep the name and type the same. The <code class="docutils literal notranslate"><span class="pre">CB</span></code> and
+<code class="docutils literal notranslate"><span class="pre">SG</span></code> atoms do gave changes in their partial charge, so we'll add those to
+our patch.</p>
+<div class="admonition note">
+<p class="admonition-title">Note</p>
+<p>Aliphatic hydrogens in CHARMM should always have a charge of 0.09 unless
+they are in a 5-membered ring directly adjacent to a postively charged
+nitrogen, in which case they have a charge of 0.28. This is a fundamental
+philosophy of the forcefield. Read <a class="reference external" href="https://www.ncbi.nlm.nih.gov/pmc/articles/PMC3528813/">the CGENFF paper</a> for more
+information.</p>
+</div>
+<p>Atom types are a little more complicated and we'll discuss those in the next
+section. For now, use the CGenFF types for these atoms. Copy the following two
+lines from <code class="docutils literal notranslate"><span class="pre">nph.str</span></code> to <code class="docutils literal notranslate"><span class="pre">nph_patch.str</span></code> to change types and partial charges
+on these two atoms:</p>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span>ATOM CB     CG321  -0.065 !    2.500
+ATOM SG     SG311  -0.175 !   10.789
+</pre></div>
+</div>
+</section>
+<section id="identify-newly-added-atoms">
+<h3><a class="toc-backref" href="#contents" role="doc-backlink">Identify newly added atoms</a><a class="headerlink" href="#identify-newly-added-atoms" title="Link to this heading">¶</a></h3>
+<p><strong>Which atoms are added by the patch?</strong> That is, which atoms are added to a
+cysteine residue to transform it into a NPH? Visualizing in VMD can help
+distinguish these atoms from those we added to the &quot;backbone&quot; region to make
+ParamChem work (we don't want <code class="docutils literal notranslate"><span class="pre">HA2</span> <span class="pre">HA3</span></code>, etc).</p>
+<p>Copy the lines defining these atoms into <code class="docutils literal notranslate"><span class="pre">nph_patch.str</span></code>:</p>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span>ATOM CD     CG321  -0.103 !   10.789
+ATOM CE     CG2O1   0.506 !    4.071
+ATOM OZ     OG2D1  -0.522 !    1.805
+ATOM NZ     NG2S1  -0.462 !    2.500
+ATOM C6     CG2R61  0.140 !    0.000
+ATOM C5     CG2R61 -0.120 !    0.000
+ATOM C6A    CG2R61 -0.012 !    0.000
+ATOM C4A    CG2R61 -0.003 !    0.000
+ATOM C10    CG2R61  0.371 !    0.000
+ATOM C7     CG2R61 -0.113 !    0.000
+ATOM C4     CG2R61 -0.116 !    0.000
+ATOM C1A    CG2R61  0.368 !    0.000
+ATOM N10    NG2R60 -0.626 !    0.000
+ATOM C8     CG2R61 -0.117 !    0.000
+ATOM C3     CG2R61 -0.117 !    0.000
+ATOM N1     NG2R60 -0.626 !    0.000
+ATOM C9     CG2R61  0.145 !    0.000
+ATOM C2     CG2R61  0.145 !    0.000
+ATOM H9     HGR62   0.124 !    0.000
+ATOM H7     HGR61   0.115 !    0.000
+ATOM H8     HGR61   0.115 !    0.000
+ATOM H5     HGR61   0.115 !    0.000
+ATOM H2     HGR62   0.124 !    0.000
+ATOM H4     HGR61   0.115 !    0.000
+ATOM H3     HGR61   0.115 !    0.000
+ATOM HB1    HGA2    0.090 !    0.000
+ATOM HB2    HGA2    0.090 !    0.000
+ATOM HD1    HGA2    0.090 !    0.000
+ATOM HD2    HGA2    0.090 !    0.000
+ATOM HNZ    HGP1    0.319 !    0.000
+</pre></div>
+</div>
+</section>
+<section id="set-connectivity">
+<h3><a class="toc-backref" href="#contents" role="doc-backlink">Set connectivity</a><a class="headerlink" href="#set-connectivity" title="Link to this heading">¶</a></h3>
+<p>Below the atom information in <code class="docutils literal notranslate"><span class="pre">nph.str</span></code> are many lines beginning with
+<code class="docutils literal notranslate"><span class="pre">BOND</span></code> that define which atoms are connected to which. Copy this section
+into <code class="docutils literal notranslate"><span class="pre">nph_patch.str</span></code>, then delete any bonds that refer to atoms that aren't
+included in the final file (like <code class="docutils literal notranslate"><span class="pre">BOND</span> <span class="pre">CA</span> <span class="pre">HA3</span></code>). Also delete bonds that
+are already present in the definition of cysteine (like <code class="docutils literal notranslate"><span class="pre">BOND</span> <span class="pre">CA</span> <span class="pre">CB</span></code>).
+Keep the improper term ParamChem generated, too, as it applies to atoms that
+are part of the phenanthroline:</p>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="n">BOND</span> <span class="n">SG</span>   <span class="n">CD</span>
+<span class="n">BOND</span> <span class="n">CD</span>   <span class="n">CE</span>
+<span class="n">BOND</span> <span class="n">CD</span>   <span class="n">HD1</span>
+<span class="n">BOND</span> <span class="n">CD</span>   <span class="n">HD2</span>
+<span class="n">BOND</span> <span class="n">CE</span>   <span class="n">NZ</span>
+<span class="n">BOND</span> <span class="n">CE</span>   <span class="n">OZ</span>
+<span class="n">BOND</span> <span class="n">NZ</span>   <span class="n">C6</span>
+<span class="n">BOND</span> <span class="n">NZ</span>   <span class="n">HNZ</span>
+<span class="n">BOND</span> <span class="n">C6</span>   <span class="n">C6A</span>
+<span class="n">BOND</span> <span class="n">C6</span>   <span class="n">C5</span>
+<span class="n">BOND</span> <span class="n">C5</span>   <span class="n">H5</span>
+<span class="n">BOND</span> <span class="n">C5</span>   <span class="n">C4A</span>
+<span class="n">BOND</span> <span class="n">C6A</span>  <span class="n">C10</span>
+<span class="n">BOND</span> <span class="n">C6A</span>  <span class="n">C7</span>
+<span class="n">BOND</span> <span class="n">C4A</span>  <span class="n">C1A</span>
+<span class="n">BOND</span> <span class="n">C4A</span>  <span class="n">C4</span>
+<span class="n">BOND</span> <span class="n">C10</span>  <span class="n">C1A</span>
+<span class="n">BOND</span> <span class="n">C10</span>  <span class="n">N10</span>
+<span class="n">BOND</span> <span class="n">C7</span>   <span class="n">H7</span>
+<span class="n">BOND</span> <span class="n">C7</span>   <span class="n">C8</span>
+<span class="n">BOND</span> <span class="n">C4</span>   <span class="n">H4</span>
+<span class="n">BOND</span> <span class="n">C4</span>   <span class="n">C3</span>
+<span class="n">BOND</span> <span class="n">C1A</span>  <span class="n">N1</span>
+<span class="n">BOND</span> <span class="n">N10</span>  <span class="n">C9</span>
+<span class="n">BOND</span> <span class="n">C8</span>   <span class="n">H8</span>
+<span class="n">BOND</span> <span class="n">C8</span>   <span class="n">C9</span>
+<span class="n">BOND</span> <span class="n">C3</span>   <span class="n">H3</span>
+<span class="n">BOND</span> <span class="n">C3</span>   <span class="n">C2</span>
+<span class="n">BOND</span> <span class="n">N1</span>   <span class="n">C2</span>
+<span class="n">BOND</span> <span class="n">C9</span>   <span class="n">H9</span>
+<span class="n">BOND</span> <span class="n">C2</span>   <span class="n">H2</span>
+<span class="n">IMPR</span> <span class="n">CE</span>     <span class="n">CD</span>     <span class="n">NZ</span>     <span class="n">OZ</span>
+</pre></div>
+</div>
+<div class="admonition note">
+<p class="admonition-title">Note</p>
+<p>Atom names will not necessarily match between the original CHARMM amino acid
+and the file ran through ParamChem. Filling out the table above is a
+critical step for establishing a correspondence between atoms with different
+names in the two files. Bonds to the original amino acid should use atom
+names from the CHARMM <code class="docutils literal notranslate"><span class="pre">top_all36_prot.rtf</span></code> to refer
+to atoms there.</p>
+</div>
+<p>Make sure there is a bond line that connects the added patch atoms to the
+original residue. In this case, the sulfur atoms in our ParamChem input and
+the original cysteine topology have the same name, so the <code class="docutils literal notranslate"><span class="pre">BOND</span> <span class="pre">SG</span> <span class="pre">CD</span></code> line
+included above handles this.</p>
+<p>Now we have a patch that, when applied to a cysteine, adds the covalent NPH
+modification.</p>
+<p>However, our patch only gets the topology, atom types, and partial charges
+correct. The parameters between the backbone atoms, which have Charmm36m
+protein atom types, and the added phenanthroline atoms, which have CGenFF
+atom types, are undefined.</p>
+<p>Indeed, if you try to parameterize the system with the Dabble API, you'll
+get an error like:</p>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="n">Traceback</span> <span class="p">(</span><span class="n">most</span> <span class="n">recent</span> <span class="n">call</span> <span class="n">last</span><span class="p">):</span>
+  <span class="n">File</span> <span class="s2">&quot;/home/robin/miniconda/lib/python3.7/site-packages/parmed/charmm/psf.py&quot;</span><span class="p">,</span> <span class="n">line</span> <span class="mi">542</span><span class="p">,</span> <span class="ow">in</span> <span class="n">load_parameters</span>
+    <span class="n">bond</span><span class="o">.</span><span class="n">type</span> <span class="o">=</span> <span class="n">parmset</span><span class="o">.</span><span class="n">bond_types</span><span class="p">[</span><span class="n">key</span><span class="p">]</span>
+<span class="ne">KeyError</span><span class="p">:</span> <span class="p">(</span><span class="s1">&#39;CG321&#39;</span><span class="p">,</span> <span class="s1">&#39;CT1&#39;</span><span class="p">)</span>
+
+<span class="n">During</span> <span class="n">handling</span> <span class="n">of</span> <span class="n">the</span> <span class="n">above</span> <span class="n">exception</span><span class="p">,</span> <span class="n">another</span> <span class="n">exception</span> <span class="n">occurred</span><span class="p">:</span>
+
+<span class="n">Traceback</span> <span class="p">(</span><span class="n">most</span> <span class="n">recent</span> <span class="n">call</span> <span class="n">last</span><span class="p">):</span>
+  <span class="n">File</span> <span class="s2">&quot;try_dabble.py&quot;</span><span class="p">,</span> <span class="n">line</span> <span class="mi">12</span><span class="p">,</span> <span class="ow">in</span> <span class="o">&lt;</span><span class="n">module</span><span class="o">&gt;</span>
+    <span class="n">w</span><span class="o">.</span><span class="n">write</span><span class="p">(</span><span class="s2">&quot;test&quot;</span><span class="p">)</span>
+  <span class="n">File</span> <span class="s2">&quot;/home/robin/miniconda/lib/python3.7/site-packages/dabble-2.7.12-py3.7.egg/dabble/param/charmm.py&quot;</span><span class="p">,</span> <span class="n">line</span> <span class="mi">181</span><span class="p">,</span> <span class="ow">in</span> <span class="n">write</span>
+    <span class="bp">self</span><span class="o">.</span><span class="n">_check_psf_parameters</span><span class="p">()</span>
+  <span class="n">File</span> <span class="s2">&quot;/home/robin/miniconda/lib/python3.7/site-packages/dabble-2.7.12-py3.7.egg/dabble/param/charmm.py&quot;</span><span class="p">,</span> <span class="n">line</span> <span class="mi">625</span><span class="p">,</span> <span class="ow">in</span> <span class="n">_check_psf_parameters</span>
+    <span class="n">psf</span><span class="o">.</span><span class="n">load_parameters</span><span class="p">(</span><span class="n">params</span><span class="p">)</span>
+  <span class="n">File</span> <span class="s2">&quot;/home/robin/miniconda/lib/python3.7/site-packages/parmed/charmm/psf.py&quot;</span><span class="p">,</span> <span class="n">line</span> <span class="mi">544</span><span class="p">,</span> <span class="ow">in</span> <span class="n">load_parameters</span>
+    <span class="k">raise</span> <span class="n">ParameterError</span><span class="p">(</span><span class="s1">&#39;Missing bond type for </span><span class="si">%r</span><span class="s1">&#39;</span> <span class="o">%</span> <span class="n">bond</span><span class="p">)</span>
+<span class="n">parmed</span><span class="o">.</span><span class="n">exceptions</span><span class="o">.</span><span class="n">ParameterError</span><span class="p">:</span> <span class="n">Missing</span> <span class="n">bond</span> <span class="nb">type</span> <span class="k">for</span> <span class="o">&lt;</span><span class="n">Bond</span> <span class="o">&lt;</span><span class="n">Atom</span> <span class="n">CB</span> <span class="p">[</span><span class="mi">1940</span><span class="p">];</span> <span class="n">In</span> <span class="n">CYS</span> <span class="mi">155</span><span class="o">&gt;--&lt;</span><span class="n">Atom</span> <span class="n">CA</span> <span class="p">[</span><span class="mi">1938</span><span class="p">];</span> <span class="n">In</span> <span class="n">CYS</span> <span class="mi">155</span><span class="o">&gt;</span><span class="p">;</span> <span class="nb">type</span><span class="o">=</span><span class="kc">None</span><span class="o">&gt;</span>
+</pre></div>
+</div>
+<p>Parameters for the <code class="docutils literal notranslate"><span class="pre">CB</span> <span class="pre">-</span> <span class="pre">CA</span></code> bond (that is, a bond between atom types
+<code class="docutils literal notranslate"><span class="pre">CG321</span> <span class="pre">-</span> <span class="pre">CT1</span></code>) are missing.</p>
+</section>
+</section>
+<section id="integrating-protein-and-small-molecule-forcefields">
+<h2><a class="toc-backref" href="#contents" role="doc-backlink">Integrating protein and small molecule forcefields</a><a class="headerlink" href="#integrating-protein-and-small-molecule-forcefields" title="Link to this heading">¶</a></h2>
+<p>This step is the most challenging in the tutorial, and also requires the most
+subjective judgement. We'll combine the protein and small molecule force fields
+to find parameters to bridge the gap between atom types in the molecule.</p>
+<p>We'll use parameters from the general force field to describe the missing
+terms, even if they're also available in the protein force field. This is
+because usually the protein parameters are a subset of the general ones, and
+the sidechain we've added doesn't necessarily have &quot;protein character&quot;.</p>
+<figure class="align-center" id="id3">
+<a class="reference internal image-reference" href="_images/atom_types.svg"><img alt="NPH backbone and beginning of sidechain region, with atom types labeled." src="_images/atom_types.svg" style="width: 800px;" /></a>
+<figcaption>
+<p><span class="caption-text">The backbone and beginning of sidechain region for NPH are shown, with
+atom elements, names, and types shown as Dabble interprets them. CGenFF
+atom types are shown in red, and apply to the part of the molecule that
+is not shown as well. We need to obtain forcefield parameters between
+these types and the protein atom types that descibe the backbone region.</span><a class="headerlink" href="#id3" title="Link to this image">¶</a></p>
+</figcaption>
+</figure>
+<p>First, copy the parameters ParamChem generated by analogy in our <code class="docutils literal notranslate"><span class="pre">nph.str</span></code>
+to <code class="docutils literal notranslate"><span class="pre">nph_patch.str</span></code> as a starting point to which we will add the missing
+ones.</p>
+<section id="equivalency-between-cgenff-and-charmm36-types">
+<h3><a class="toc-backref" href="#contents" role="doc-backlink">Equivalency between CGenFF and Charmm36 types</a><a class="headerlink" href="#equivalency-between-cgenff-and-charmm36-types" title="Link to this heading">¶</a></h3>
+<p>When we ran our truncated molecule through ParamChem, we did include the
+alpha carbon, which was assigned a CGenFF type of <code class="docutils literal notranslate"><span class="pre">CG331</span></code>. In the Charmm36m
+protein forcefield, alpha carbons are given a type of <code class="docutils literal notranslate"><span class="pre">CT1</span></code>.</p>
+<p>Atom types are defined with a <code class="docutils literal notranslate"><span class="pre">MASS</span></code> line at the beginning of force field
+files. These definitions usually include a comment that describes the intended
+chemical context of the type. Looking at <code class="docutils literal notranslate"><span class="pre">top_all36_prot.rtf</span></code> (<a class="reference external" href="https://github.com/Eigenstate/dabble/blob/master/dabble/param/parameters/top_all36_prot.rtf">here</a>),
+we see that the protein <code class="docutils literal notranslate"><span class="pre">CT1</span></code> type is &quot;<em>aliphatic sp3 C for CH</em>&quot;. Similarly,
+<code class="docutils literal notranslate"><span class="pre">top_all36_cgenff.rtf</span></code> (<a class="reference external" href="https://github.com/Eigenstate/dabble/blob/master/dabble/param/parameters/top_all36_cgenff.rtf">here</a>) defines the general <code class="docutils literal notranslate"><span class="pre">CG331</span></code> type
+as &quot;<em>aliphatic C for methyl group</em>&quot;. These atom types are clearly <strong>not
+equivalent</strong>.</p>
+<p>However, looking around the CGenFF atom types, the <code class="docutils literal notranslate"><span class="pre">CG311</span></code> type, &quot;<em>aliphatic
+C with 1H, CH</em>&quot; <strong>is equivalent</strong> to the <code class="docutils literal notranslate"><span class="pre">CT1</span></code> protein atom type.</p>
+<p>You'll need to determine equivalencies for the atom types for all atoms with
+protein types that are <strong>three or fewer</strong> bonds away from the CGenFF typed atoms.</p>
+<div class="admonition note">
+<p class="admonition-title">Note</p>
+<p>In addition to reading the description of the atom types, you can look at
+the residues defined in <code class="docutils literal notranslate"><span class="pre">top_all36_cgenff.rtf</span></code> for examples of the atom
+types in action. For example, looking at the topology of N-methylacetamide,
+there is a peptide backbone-like series of atoms from which you can infer
+several atom type equivalencies.</p>
+</div>
+<p>This results in the following table:</p>
+<table class="docutils align-center">
+<thead>
+<tr class="row-odd"><th class="head"><p>Name</p></th>
+<th class="head"><p>Charmm36m type</p></th>
+<th class="head"><p>CGenFF type</p></th>
+<th class="head"><p>Description</p></th>
+</tr>
+</thead>
+<tbody>
+<tr class="row-even"><td><p>CA</p></td>
+<td><p>CT1</p></td>
+<td><p>CG311</p></td>
+<td><p>Aliphatic C with 1H, CH</p></td>
+</tr>
+<tr class="row-odd"><td><p>N</p></td>
+<td><p>NH1</p></td>
+<td><p>NG2S1</p></td>
+<td><p>Peptide nitrogen</p></td>
+</tr>
+<tr class="row-even"><td><p>C</p></td>
+<td><p>C</p></td>
+<td><p>CG2O1</p></td>
+<td><p>Carbonyl C, peptide backbone / amides</p></td>
+</tr>
+<tr class="row-odd"><td><p>HA</p></td>
+<td><p>HB1</p></td>
+<td><p>HGA1</p></td>
+<td><p>Backbone hydrogen</p></td>
+</tr>
+<tr class="row-even"><td><p>O</p></td>
+<td><p>O</p></td>
+<td><p>OG2D1</p></td>
+<td><p>Carbonyl O, amides</p></td>
+</tr>
+<tr class="row-odd"><td><p>H</p></td>
+<td><p>HN</p></td>
+<td><p>HGP1</p></td>
+<td><p>Polar hydrogen</p></td>
+</tr>
+</tbody>
+</table>
+</section>
+<section id="making-parameter-analogies">
+<h3><a class="toc-backref" href="#contents" role="doc-backlink">Making parameter analogies</a><a class="headerlink" href="#making-parameter-analogies" title="Link to this heading">¶</a></h3>
+<p>Now that we know which CGenFF types are applicable to our molecule, we'll get
+all of the CGenFF parameters for the NPH residue from ParamChem, and change
+the types of the parameters that apply across the gap to use the appropriate
+types.</p>
+<p>Start with the bonds. Looking at the picture, we need to define bond parameters
+for <code class="docutils literal notranslate"><span class="pre">CG321</span> <span class="pre">-</span> <span class="pre">CT1</span></code>. Using the table of atom equivalencies, that's <code class="docutils literal notranslate"><span class="pre">CG321</span> <span class="pre">-</span>
+<span class="pre">CG311</span></code>. However, this parameter is nowhere to be found in the <code class="docutils literal notranslate"><span class="pre">BONDS</span></code>
+section of the file. That's because the <code class="docutils literal notranslate"><span class="pre">CA</span></code> atom was assigned a different
+type by ParamChem. We'll have to look in the full CGenFF parameter file,
+<a class="reference external" href="https://github.com/Eigenstate/dabble/blob/master/dabble/param/parameters/par_all36_cgenff.prm">par_all36_cgenff.prm</a>
+for the bond parameter:</p>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span>CG311  CG321   222.50     1.5380 ! PROT alkane update, adm jr., 3/2/92
+</pre></div>
+</div>
+<p>Indeed, the comment says this parameter originally come from the protein
+force field.</p>
+<div class="admonition note">
+<p class="admonition-title">Note</p>
+<p>The order of atoms in bond, angle, and dihedral (not improper) terms can
+be reversed without consequence, so make sure to check for both orders
+when looking in the <code class="docutils literal notranslate"><span class="pre">.str</span></code> file.</p>
+</div>
+<p>We can now add this parameter to the <code class="docutils literal notranslate"><span class="pre">BONDS</span></code> section of <code class="docutils literal notranslate"><span class="pre">nph_patch.str</span></code>.
+As the NPH patch contains an atom type of <code class="docutils literal notranslate"><span class="pre">CT1</span></code> instead of <code class="docutils literal notranslate"><span class="pre">CG311</span></code>, replace
+the type (and add a comment to make things clear):</p>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span>CT1    CG321   222.50     1.5380 ! Equivalent to CG311-CG321
+</pre></div>
+</div>
+<p>Repeat this process for any remaining bonds, angles, and dihedral terms.
+Use the drawing with atom types and the table of type equivalencies to help
+you.</p>
+<p>Don't forget that dihedrals can have multiple terms (up to 6 in CHARMM),
+each defined on a separate line of the <code class="docutils literal notranslate"><span class="pre">.prm</span></code> file. You'll copy all of these
+lines to get the correct overall parameters for each dihedral term needed.</p>
+<div class="admonition note">
+<p class="admonition-title">Note</p>
+<p>While it may be tempting to use <code class="docutils literal notranslate"><span class="pre">sed</span></code> or similar to change atom types in
+bulk, this will mess up parameters where there are multiple atoms of the
+same type. For example, <code class="docutils literal notranslate"><span class="pre">s/NG2S1/NH1</span>&#160; <span class="pre">/g</span></code> will result in missing
+parameters for the <code class="docutils literal notranslate"><span class="pre">NZ</span></code> atom in the carbamoyl region. It's always best to
+take extra time to be sure the parameters in your molecule are exactly what
+they should be, as debugging related problems in simulation is nearly
+impossible.</p>
+</div>
+<p>Dabble will output an error message when parameters are missing, meaning you
+can do your best at gathering them, attempt to Dabble, then fill in any more
+that you missed that it errors on.</p>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="kn">from</span> <span class="nn">dabble.param</span> <span class="kn">import</span> <span class="n">CharmmWriter</span>
+<span class="kn">from</span> <span class="nn">vmd</span> <span class="kn">import</span> <span class="n">molecule</span>
+
+<span class="n">m</span> <span class="o">=</span> <span class="n">molecule</span><span class="o">.</span><span class="n">load</span><span class="p">(</span><span class="s2">&quot;mae&quot;</span><span class="p">,</span> <span class="s2">&quot;1A18_h.mae&quot;</span><span class="p">)</span>
+<span class="n">w</span> <span class="o">=</span> <span class="n">CharmmWriter</span><span class="p">(</span><span class="n">molid</span><span class="o">=</span><span class="n">m</span><span class="p">,</span>
+                 <span class="n">extra_topos</span><span class="o">=</span><span class="p">[</span><span class="s2">&quot;nph_patch.str&quot;</span><span class="p">],</span>
+                 <span class="n">extra_params</span><span class="o">=</span><span class="p">[</span><span class="s2">&quot;nph_patch.str&quot;</span><span class="p">])</span>
+<span class="n">w</span><span class="o">.</span><span class="n">write</span><span class="p">(</span><span class="s2">&quot;test&quot;</span><span class="p">)</span>
+</pre></div>
+</div>
+<p>There is one parameter not present in CGenFF at all: the <code class="docutils literal notranslate"><span class="pre">CT1</span> <span class="pre">-</span> <span class="pre">CG321</span> <span class="pre">-</span> <span class="pre">SG311</span>
+<span class="pre">-</span> <span class="pre">CG321</span></code> dihedral that captures rotation about the <code class="docutils literal notranslate"><span class="pre">CB</span> <span class="pre">-</span> <span class="pre">SG</span></code> bond. There are
+several ways to handle this situation, but the simplest is to browse the
+parameter list for one that is similar enough.</p>
+<p>Indeed, there are parameters for <code class="docutils literal notranslate"><span class="pre">CG321</span> <span class="pre">-</span> <span class="pre">CG321</span> <span class="pre">-</span> <span class="pre">SG311</span> <span class="pre">-</span> <span class="pre">CG321</span></code>, which only
+differs in type for the first atom (<code class="docutils literal notranslate"><span class="pre">CG321</span></code>, a carbon with two hydrogens,
+instead of <code class="docutils literal notranslate"><span class="pre">CG311</span></code>, a carbon with one hydrogen). This feels like a reasonable
+analogy thinking about the chemical context of this dihedral.</p>
+<p>Another strategy is generating a molecule that ParamChem will assign the
+correct atom types to and using the analogies the server makes.</p>
+<div class="admonition note">
+<p class="admonition-title">Note</p>
+<p><strong>This takes practice.</strong> Knowing which atom types are available helps a lot
+when making analogies yourself, and the only way to do that is to get a lot
+of experience working with the parameter files. Give yourself lots of time
+for this step, and it will get easier the more molecules you work with.</p>
+</div>
+<p>We end up with the following table of <strong>newly defined</strong> parameter lines:</p>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span>BONDS
+! CGenFF-Charmm36m combination parameters follow
+CT1    CG321   222.50     1.5380 ! PROT alkane update, adm jr., 3/2/92
+
+ANGLES
+! CGenFF-Charmm36m combination parameters follow
+CT1    CG321  HGA2     33.43    110.10   22.53   2.17900 ! CG311-CG321-HGA2
+CT1    CG321  SG311    58.00    112.50 ! CG311-CG321-SG311
+C      CT1    CG321    52.00    108.00 ! CG2O1-CG311-CG321
+CG321  CT1    NH1      70.00    113.50 ! CG321-CG321-NG2S1
+CG321  CT1    HB1      34.50    110.10   22.53   2.17900 ! CG321-CG311-HGA1
+
+DIHEDRALS
+! CGenFF-Charmm36m combination parameters follow
+CG321  CT1    NH1    C          1.8000  1     0.00 ! CG321-CG311-NG2S1-CG2O1
+NH1    CT1    CG321  SG311      0.2000  3     0.00 ! NG2S1-CG311-CG321-SG311
+NH1    CT1    CG321  HGA2       0.2000  3     0.00 ! NG2S1-CG311-CG321-HGA2
+CG321  CT1    NH1    H          0.0000  1     0.00 ! CG321-CG311-NG2S1-HGP1
+HB1    CT1    CG321  HGA2       0.1950  3     0.00 ! HGA1-CG311-CG321-HGA2
+HB1    CT1    CG321  SG311      0.1950  3     0.00 ! HGA1-CG311-CG321-SG311
+NH1    C      CT1    CG321      0.0000  1     0.00 ! NG2S1-CG2O1-CG311-CG321
+O      C      CT1    CG321      1.4000  1     0.00 ! OG2D1-CG2O1-CG311-CG321
+C      CT1    CG321  HGA2       0.2000  3     0.00 ! CG2O1-CG311-CG321-HGA2
+C      CT1    CG321  SG311      0.2000  3     0.00 ! CG2O1-CG311-CG321-SG311
+! Manual analogy, CG321 ~= CG311
+CT1    CG321  SG311  CG321      0.2400  1   180.00 ! CG321*-CG321-SG311-CG321
+CT1    CG321  SG311  CG321      0.3700  3     0.00 ! &quot;, second term
+</pre></div>
+</div>
+<p><a class="reference download internal" download="" href="_downloads/879234965e31544b2b2aac811620ec29/nph_patch.str"><code class="xref download docutils literal notranslate"><span class="pre">nph_patch.str</span></code></a></p>
+</section>
+</section>
+<section id="running-dabble">
+<h2><a class="toc-backref" href="#contents" role="doc-backlink">Running dabble</a><a class="headerlink" href="#running-dabble" title="Link to this heading">¶</a></h2>
+<p>Now that you have both <em>topology</em> and <em>parameter</em> information for the NPH patch,
+you can run Dabble and it will figure out the rest.</p>
+<p>If you want to add water and ions, you can use the command-line:</p>
+<div class="highlight-bash notranslate"><div class="highlight"><pre><span></span>dabble<span class="w"> </span>-i<span class="w"> </span>1A18_h.mae<span class="w"> </span><span class="se">\</span>
+<span class="w">       </span>-o<span class="w"> </span>1A18_solvated.psf<span class="w"> </span><span class="se">\</span>
+<span class="w">       </span>--membrane<span class="o">=</span>none<span class="w"> </span>--water-buffer<span class="o">=</span><span class="m">10</span><span class="w"> </span><span class="se">\</span>
+<span class="w">       </span>--forcefield<span class="o">=</span>charmm<span class="w"> </span>--water<span class="o">=</span>tip3<span class="w"> </span><span class="se">\</span>
+<span class="w">       </span>-top<span class="w"> </span>nph_patch.str<span class="w"> </span>-par<span class="w"> </span>nph_patch.str
+</pre></div>
+</div>
+<p><a class="reference download internal" download="" href="_downloads/7278c8e26ac4d538da960d0cfc6c8c87/1A18_solvated.psf"><code class="xref download docutils literal notranslate"><span class="pre">1A18_solvated.psf</span></code></a>
+<a class="reference download internal" download="" href="_downloads/925e257734a9caac1e9f342a38b1776a/1A18_solvated.pdb"><code class="xref download docutils literal notranslate"><span class="pre">1A18_solvated.pdb</span></code></a></p>
+<div class="admonition note">
+<p class="admonition-title">Note</p>
+<p>Don't forget to visualize the output and verify the protein is as expected,
+the solvent box is adequate, and the covalent modification is correctly
+represented. Always load the <code class="docutils literal notranslate"><span class="pre">.psf</span></code> file first, then add the <code class="docutils literal notranslate"><span class="pre">.pdb</span></code>
+file to the molecule, so the topology information in the psf file is used.</p>
+</div>
+<p>If you just want to parameterize the system as-is (perhaps for an implicit
+solvent simulation), you can use the Dabble API:</p>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="kn">from</span> <span class="nn">dabble.param</span> <span class="kn">import</span> <span class="n">CharmmWriter</span>
+<span class="kn">from</span> <span class="nn">vmd</span> <span class="kn">import</span> <span class="n">molecule</span>
+
+<span class="n">m</span> <span class="o">=</span> <span class="n">molecule</span><span class="o">.</span><span class="n">load</span><span class="p">(</span><span class="s2">&quot;mae&quot;</span><span class="p">,</span> <span class="s2">&quot;1A18_h.mae&quot;</span><span class="p">)</span>
+<span class="n">w</span> <span class="o">=</span> <span class="n">CharmmWriter</span><span class="p">(</span><span class="n">molid</span><span class="o">=</span><span class="n">m</span><span class="p">,</span> <span class="n">forcefield</span><span class="o">=</span><span class="s2">&quot;charmm&quot;</span><span class="p">,</span>
+                 <span class="n">extra_topos</span><span class="o">=</span><span class="p">[</span><span class="s2">&quot;nph_patch.str&quot;</span><span class="p">],</span>
+                 <span class="n">extra_params</span><span class="o">=</span><span class="p">[</span><span class="s2">&quot;nph_patch.str&quot;</span><span class="p">])</span>
+<span class="n">w</span><span class="o">.</span><span class="n">write</span><span class="p">(</span><span class="s2">&quot;1A18_nosolvent&quot;</span><span class="p">)</span>
+</pre></div>
+</div>
+<p><a class="reference download internal" download="" href="_downloads/ac6f4b7723f81ba657a55cda07316b87/1A18_nosolvent.psf"><code class="xref download docutils literal notranslate"><span class="pre">1A18_nosolvent.psf</span></code></a>
+<a class="reference download internal" download="" href="_downloads/510c041cffa68cfa42d90158710bfe65/1A18_nosolvent.pdb"><code class="xref download docutils literal notranslate"><span class="pre">1A18_nosolvent.pdb</span></code></a></p>
+<figure class="align-center" id="id4">
+<a class="reference internal image-reference" href="_images/built.png"><img alt="Built 1A18 system with covalent modification" src="_images/built.png" style="width: 400px;" /></a>
+<figcaption>
+<p><span class="caption-text">The modified NPH residue still appears as Cys:117 in the file, but
+visualizing this residue shows the phenanthroline is present and correctly
+connected.</span><a class="headerlink" href="#id4" title="Link to this image">¶</a></p>
+</figcaption>
+</figure>
+</section>
+</section>
+
+
+           </div>
+          </div>
+          <footer><div class="rst-footer-buttons" role="navigation" aria-label="Footer">
+        <a href="maestro.html" class="btn btn-neutral float-left" title="Preparing protein systems with Free Maestro" accesskey="p" rel="prev"><span class="fa fa-arrow-circle-left" aria-hidden="true"></span> Previous</a>
+        <a href="parameter_api.html" class="btn btn-neutral float-right" title="Parameterization with Dabble" accesskey="n" rel="next">Next <span class="fa fa-arrow-circle-right" aria-hidden="true"></span></a>
+    </div>
+
+  <hr/>
+
+  <div role="contentinfo">
+    <p>&#169; Copyright 2019, Robin Betz.</p>
+  </div>
+
+  Built with <a href="https://www.sphinx-doc.org/">Sphinx</a> using a
+    <a href="https://github.com/readthedocs/sphinx_rtd_theme">theme</a>
+    provided by <a href="https://readthedocs.org">Read the Docs</a>.
+   
+
+</footer>
+        </div>
+      </div>
+    </section>
+  </div>
+  <script>
+      jQuery(function () {
+          SphinxRtdTheme.Navigation.enable(true);
+      });
+  </script> 
+
+</body>
+</html>
